@@ -1,0 +1,866 @@
+{$H+}
+Unit Procs;
+
+ Interface
+ Uses Machine;
+
+ Procedure op_(M: TMachine);
+
+ Procedure op_NOP(M: TMachine);
+ Procedure op_STOP(M: TMachine);
+ Procedure op_PUSH(M: TMachine);
+ Procedure op_POP(M: TMachine);
+ Procedure op_ADD(M: TMachine);
+ Procedure op_SUB(M: TMachine);
+ Procedure op_MUL(M: TMachine);
+ Procedure op_DIV(M: TMachine);
+ Procedure op_NEG(M: TMachine);
+ Procedure op_MOV(M: TMachine);
+ Procedure op_JMP(M: TMachine);
+ Procedure op_TJMP(M: TMachine);
+ Procedure op_FJMP(M: TMachine);
+ Procedure op_CALL(M: TMachine);
+ Procedure op_ICALL(M: TMachine);
+ Procedure op_RET(M: TMachine);
+ Procedure op_IF_E(M: TMachine);
+ Procedure op_IF_NE(M: TMachine);
+ Procedure op_IF_G(M: TMachine);
+ Procedure op_IF_L(M: TMachine);
+ Procedure op_IF_GE(M: TMachine);
+ Procedure op_IF_LE(M: TMachine);
+ Procedure op_STRJOIN(M: TMachine);
+ Procedure op_NOT(M: TMachine);
+ Procedure op_OR(M: TMachine);
+ Procedure op_XOR(M: TMachine);
+ Procedure op_AND(M: TMachine);
+ Procedure op_SHL(M: TMachine);
+ Procedure op_SHR(M: TMachine);
+ Procedure op_MOD(M: TMachine);
+ Procedure op_ARSET(M: TMachine);
+ Procedure op_ARGET(M: TMachine);
+
+ Implementation
+Uses SysUtils, Opcodes;
+
+{ qmagic }
+Function qmagic(Param: TOpParam): TOpParam;
+Begin
+ With Result do
+ Begin
+  Case Param.Typ of
+   ptBoolReg: Typ := ptBool;
+   ptCharReg: Typ := ptChar;
+   ptIntReg: Typ := ptInt;
+   ptFloatReg: Typ := ptFloat;
+   ptStringReg: Typ := ptString;
+   ptReferenceReg: Typ := ptInt;
+   else Typ := Param.Typ;
+  End;
+
+  M    := Param.M;
+  Val  := Param.Val;
+  fVal := Param.fVal;
+  sVal := Param.sVal;
+ End;
+
+ if (Param.Typ = ptStackVal) Then
+  With Param.M do
+   Result := Stack[StackPos^+Param.Val];
+End;
+
+{ = }
+Operator = (P1, P2: TOpParam): Boolean;
+Begin
+ Result := False;
+
+ P1 := qmagic(P1);
+ P2 := qmagic(P2);
+
+ if (P1.Typ <> P2.Typ) Then
+  Exit(False);
+
+ Case P1.Typ of
+  ptBool, ptChar, ptInt: Exit(P1.Val = P2.Val);
+  ptFloat: Exit(P2.fVal = P2.fVal);
+ End;
+End;
+
+{ <> }
+Operator <> (P1, P2: TOpParam): Boolean;
+Begin
+ Result := not (P1 = P2);
+End;
+
+{ > }
+Operator > (P1, P2: TOpParam): Boolean;
+Begin
+ Result := False;
+
+ P1 := qmagic(P1);
+ P2 := qmagic(P2);
+
+ if (P1.Typ <> P2.Typ) Then
+  Exit(False);
+
+ Case P1.Typ of
+  ptBool, ptChar, ptInt: Exit(P1.Val > P2.Val);
+  ptFloat: Exit(P2.fVal > P2.fVal);
+ End;
+End;
+
+{ < }
+Operator < (P1, P2: TOpParam): Boolean;
+Begin
+ Result := False;
+
+ P1 := qmagic(P1);
+ P2 := qmagic(P2);
+
+ if (P1.Typ <> P2.Typ) Then
+  Exit(False);
+
+ Case P1.Typ of
+  ptBool, ptChar, ptInt: Exit(P1.Val < P2.Val);
+  ptFloat: Exit(P2.fVal < P2.fVal);
+ End;
+End;
+
+{ >= }
+Operator >= (P1, P2: TOpParam): Boolean;
+Begin
+ Result := False;
+
+ P1 := qmagic(P1);
+ P2 := qmagic(P2);
+
+ if (P1.Typ <> P2.Typ) Then
+  Exit(False);
+
+ Case P1.Typ of
+  ptBool, ptChar, ptInt: Exit(P1.Val >= P2.Val);
+  ptFloat: Exit(P2.fVal >= P2.fVal);
+ End;
+End;
+
+{ <= }
+Operator <= (P1, P2: TOpParam): Boolean;
+Begin
+ Result := False;
+
+ P1 := qmagic(P1);
+ P2 := qmagic(P2);
+
+ if (P1.Typ <> P2.Typ) Then
+  Exit(False);
+
+ Case P1.Typ of
+  ptBool, ptChar, ptInt: Exit(P1.Val <= P2.Val);
+  ptFloat: Exit(P2.fVal <= P2.fVal);
+ End;
+End;
+
+{ _ }
+Procedure op_(M: TMachine);
+Begin
+ raise Exception.Create('Opcode '''+OpcodeList[M.Code[M.Position-1]].Name+''' unimplemented');
+End;
+
+{ NOP }
+Procedure op_NOP(M: TMachine);
+Begin
+End;
+
+{ STOP }
+Procedure op_STOP(M: TMachine);
+Begin
+ Log('');
+ Log('-- STOP --');
+ raise Exception.Create('');
+End;
+
+{ PUSH }
+Procedure op_PUSH(M: TMachine);
+Var P: TOpParam;
+Begin
+With M do
+Begin
+ P := qmagic(read_param);
+ Inc(StackPos^);
+ Stack[StackPos^] := P;
+End;
+End;
+
+{ POP }
+Procedure op_POP(M: TMachine);
+Var reg, val: TOpParam;
+Begin
+With M do
+Begin
+ reg := read_param;
+ val := StackPop;
+
+ Case reg.Typ of
+  ptBoolReg: breg[reg.Index] := val.getBool;
+  ptCharReg: creg[reg.Index] := val.getChar;
+  ptIntReg: ireg[reg.Index] := val.getInt;
+  ptFloatReg: freg[reg.Index] := val.getFloat;
+  ptStringReg: sreg[reg.Index] := val.getString;
+  ptReferenceReg: rreg[reg.Index] := val.getReference;
+  else raise Exception.Create('''pop'' called with arguments: '+reg.getTypeName+', '+val.getTypeName);
+ End;
+End;
+End;
+
+{ ADD }
+Procedure op_ADD(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ Case reg.Typ of
+  ptCharReg: creg[reg.Index] := chr(ord(creg[reg.Index])+param.getInt);
+  ptIntReg: ireg[reg.Index] += param.getInt;
+  ptFloatReg: freg[reg.Index] += param.getFloat;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptChar, ptInt: Val += param.getInt;
+     ptFloat: fVal += param.getFloat;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''add'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ SUB }
+Procedure op_SUB(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ Case reg.Typ of
+  ptCharReg: creg[reg.Index] := chr(ord(creg[reg.Index])-param.getInt);
+  ptIntReg: ireg[reg.Index] -= param.getInt;
+  ptFloatReg: freg[reg.Index] -= param.getFloat;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val -= param.getInt;
+     ptFloat: fVal -= param.getFloat;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''sub'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ MUL }
+Procedure op_MUL(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ Case reg.Typ of
+  ptCharReg: creg[reg.Index] := chr(ord(creg[reg.Index])*param.getInt);
+  ptIntReg: ireg[reg.Index] *= param.getInt;
+  ptFloatReg: freg[reg.Index] *= param.getFloat;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val *= param.getInt;
+     ptFloat: fVal *= param.getFloat;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''mul'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ DIV }
+Procedure op_DIV(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ if (param.getFloat = 0) Then
+  raise Exception.Create('Division by zero.');
+
+ Case reg.Typ of
+  ptCharReg: creg[reg.Index] := chr(ord(creg[reg.Index]) div param.getInt);
+  ptIntReg: ireg[reg.Index] := ireg[reg.Index] div param.getInt;
+  ptFloatReg: freg[reg.Index] /= param.getFloat;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val := Val div param.getInt;
+     ptFloat: fVal /= param.getFloat;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''div'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ NEG }
+Procedure op_NEG(M: TMachine);
+Var reg: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg := read_param;
+
+ Case reg.Typ of
+  ptIntReg: ireg[reg.Index] := -ireg[reg.Index];
+  ptFloatReg: freg[reg.Index] := -freg[reg.Index];
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val := -Val;
+     ptFloat: fVal := -fVal;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''neg'' called with argument: '+reg.getTypeName);
+End;
+End;
+
+{ MOV }
+Procedure op_MOV(M: TMachine);
+Var reg, val: TOpParam;
+Begin
+With M do
+Begin
+ reg := read_param;
+ val := read_param;
+
+ Case reg.Typ of
+  ptBoolReg: breg[reg.Index] := val.getBool;
+  ptCharReg: creg[reg.Index] := val.getChar;
+  ptIntReg: ireg[reg.Index] := val.getInt;
+  ptFloatReg: freg[reg.Index] := val.getFloat;
+  ptStringReg: sreg[reg.Index] := val.getString;
+  ptReferenceReg: rreg[reg.Index] := val.getReference;
+  ptStackVal: Stack[StackPos^+reg.Val] := qmagic(val);
+  else raise Exception.Create('''mov'' called with arguments: '+reg.getTypeName+', '+val.getTypeName);
+ End;
+End;
+End;
+
+{ JMP }
+Procedure op_JMP(M: TMachine);
+Var NewAddr: LongWord;
+Begin
+With M do
+Begin
+ NewAddr := Position;
+ NewAddr += read_param.getInt-1;
+ Position := NewAddr;
+End;
+End;
+
+{ TJMP }
+Procedure op_TJMP(M: TMachine);
+Var NewAddr: LongWord;
+Begin
+With M do
+Begin
+ NewAddr := Position;
+ NewAddr += read_param.getInt-1;
+ if (breg[5]) Then
+  Position := NewAddr;
+End;
+End;
+
+{ FJMP }
+Procedure op_FJMP(M: TMachine);
+Var NewAddr: LongWord;
+Begin
+With M do
+Begin
+ NewAddr := Position;
+ NewAddr += read_param.getInt-1;
+ if (not breg[5]) Then
+  Position := NewAddr;
+End;
+End;
+
+{ CALL }
+Procedure op_CALL(M: TMachine);
+Var NewAddr: Integer;
+Begin
+With M do
+Begin
+ Inc(CallstackPos);
+
+ if (CallstackPos >= CALLSTACK_SIZE) Then
+  raise Exception.Create('Cannot do ''call'' - no space left on callstack.');
+
+ NewAddr                 := Position;
+ NewAddr                 += read_param.getInt-1;
+ Callstack[CallstackPos] := Position;
+ Position                := NewAddr;
+End;
+End;
+
+{ ICALL }
+Procedure op_ICALL(M: TMachine);
+Var Str, PackageName, FunctionName: String;
+Begin
+With M do
+Begin
+ Str := read_param.getString;
+
+ if (Str = 'breakpoint') Then
+ Begin
+  DebugMode := True;
+  Exit;
+ End;
+
+ PackageName  := Copy(Str, 1, Pos('.', Str)-1);
+ FunctionName := Copy(Str, Pos('.', Str)+1, Length(Str));
+
+ RunFunction(PackageName, FunctionName);
+End;
+End;
+
+{ RET }
+Procedure op_RET(M: TMachine);
+Begin
+With M do
+Begin
+ if (CallstackPos < 1) Then
+  raise Exception.Create('Cannot do ''ret'' - callstack is empty.');
+
+ Position := Callstack[CallstackPos];
+ Dec(CallstackPos);
+End;
+End;
+
+{ IF_E }
+Procedure op_IF_E(M: TMachine);
+Var P1, P2: TOpParam;
+Begin
+With M do
+Begin
+ P1 := read_param;
+ P2 := read_param;
+
+ breg[5] := (P1 = P2); // set 'IF' register
+End;
+End;
+
+{ IF_NE }
+Procedure op_IF_NE(M: TMachine);
+Var P1, P2: TOpParam;
+Begin
+With M do
+Begin
+ P1 := read_param;
+ P2 := read_param;
+
+ breg[5] := (P1 <> P2); // set 'IF' register
+End;
+End;
+
+{ IF_G }
+Procedure op_IF_G(M: TMachine);
+Var P1, P2: TOpParam;
+Begin
+With M do
+Begin
+ P1 := read_param;
+ P2 := read_param;
+
+ breg[5] := (P1 > P2); // set 'IF' register
+End;
+End;
+
+{ IF_L }
+Procedure op_IF_L(M: TMachine);
+Var P1, P2: TOpParam;
+Begin
+With M do
+Begin
+ P1 := read_param;
+ P2 := read_param;
+
+ breg[5] := (P1 < P2); // set 'IF' register
+End;
+End;
+
+{ IF_GE }
+Procedure op_IF_GE(M: TMachine);
+Var P1, P2: TOpParam;
+Begin
+With M do
+Begin
+ P1 := read_param;
+ P2 := read_param;
+
+ breg[5] := (P1 >= P2); // set 'IF' register
+End;
+End;
+
+{ IF_LE }
+Procedure op_IF_LE(M: TMachine);
+Var P1, P2: TOpParam;
+Begin
+With M do
+Begin
+ P1 := read_param;
+ P2 := read_param;
+
+ breg[5] := (P1 <= P2); // set 'IF' register
+End;
+End;
+
+{ STRJOIN }
+Procedure op_STRJOIN(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ Case reg.Typ of
+  ptStringReg: sreg[reg.Index] += param.getString;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptString: sVal += param.getString;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''strjoin'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ NOT }
+Procedure op_NOT(M: TMachine);
+Var reg: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg := read_param;
+
+ Case reg.Typ of
+  ptIntReg: ireg[reg.Index] := not ireg[reg.Index];
+  ptBoolReg: breg[reg.Index] := not breg[reg.Index];
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val := not Val;
+     ptBool: Val := not Val;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''not'' called with argument: '+reg.getTypeName);
+End;
+End;
+
+{ OR }
+Procedure op_OR(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ Case reg.Typ of
+  ptIntReg: ireg[reg.Index] := ireg[reg.Index] or param.getInt;
+  ptBoolReg: breg[reg.Index] := breg[reg.Index] or param.getBool;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val := Val or param.getInt;
+     ptBool: Val := Integer(Boolean(Val) or param.getBool);
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''or'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ XOR }
+Procedure op_XOR(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ Case reg.Typ of
+  ptIntReg: ireg[reg.Index] := ireg[reg.Index] xor param.getInt;
+  ptBoolReg: breg[reg.Index] := breg[reg.Index] xor param.getBool;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val := Val xor param.getInt;
+     ptBool: Val := Integer(Boolean(Val) xor param.getBool);
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''xor'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ AND }
+Procedure op_AND(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ Case reg.Typ of
+  ptIntReg: ireg[reg.Index] := ireg[reg.Index] and param.getInt;
+  ptBoolReg: breg[reg.Index] := breg[reg.Index] and param.getBool;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val := Val and param.getInt;
+     ptBool: Val := Integer(Boolean(Val) and param.getBool);
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''and'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ SHL }
+Procedure op_SHL(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ Case reg.Typ of
+  ptIntReg: ireg[reg.Index] := ireg[reg.Index] shl param.getInt;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val := Val shl param.getInt;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''shl'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ SHR }
+Procedure op_SHR(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ Case reg.Typ of
+  ptIntReg: ireg[reg.Index] := ireg[reg.Index] shr param.getInt;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val := Val shr param.getInt;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''shr'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ MOD }
+Procedure op_MOD(M: TMachine);
+Var reg, param: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ reg   := read_param;
+ param := read_param;
+
+ if (param.getFloat = 0) Then
+  raise Exception.Create('Division by zero.');
+
+ Case reg.Typ of
+  ptIntReg: ireg[reg.Index] := ireg[reg.Index] mod param.getInt;
+  ptStackVal:
+   With Stack[StackPos^+reg.Val] do
+    Case Typ of
+     ptInt: Val := Val div param.getInt;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''mod'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+End;
+End;
+
+{ ARSET }
+Procedure op_ARSET(M: TMachine);
+Var vArray, vIndex, vNewValue: TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ vArray    := read_param;
+ vIndex    := read_param;
+ vNewValue := read_param;
+
+ Case vArray.Typ of
+  ptString, ptStringReg: sreg[vArray.Index][vIndex.getInt] := vNewValue.getChar;
+  ptStackVal:
+   With Stack[StackPos^+vArray.Val] do
+    Case Typ of
+     ptString: sVal[vIndex.getInt] := vNewValue.getChar;
+     else goto Fail;
+    End;
+  else goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''arset'' called with arguments: '+vArray.getTypeName+', '+vIndex.getTypeName+', '+vNewValue.getTypeName);
+End;
+End;
+
+{ ARGET }
+Procedure op_ARGET(M: TMachine);
+Var vArray, vIndex, vOutReg: TOpParam;
+
+Procedure Fail;
+Begin
+ raise Exception.Create('''arget'' called with arguments: '+vArray.getTypeName+', '+vIndex.getTypeName+', '+vOutReg.getTypeName);
+End;
+
+Procedure setval(Val: Char);
+Begin
+With M do
+ Case vOutReg.Typ of
+  ptCharReg: creg[vOutReg.Index] := Val;
+  else Fail;
+ End;
+End;
+
+Begin
+With M do
+Begin
+ vArray  := read_param;
+ vIndex  := read_param;
+ vOutReg := read_param;
+
+ if (Length(vArray.getString) = 0) Then
+ Begin
+  setval(#0);
+  Exit;
+ End;
+
+ Case vArray.Typ of
+  ptString, ptStringReg: setval(vArray.getString[vIndex.getInt]);
+  ptStackVal:
+   With Stack[StackPos^+vArray.Val] do
+    Case Typ of
+     ptString: setval(sVal[vIndex.getInt]);
+     else Fail;
+    End;
+  else Fail;
+ End;
+End;
+End;
+End.

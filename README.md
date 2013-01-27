@@ -1,2 +1,1 @@
-SScript-VM
-==========
+SScript Virtual Machine

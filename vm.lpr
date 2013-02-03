@@ -1,7 +1,28 @@
 {$MODE OBJFPC}
 {$H+}
+(*
+ SScript Virtual Machine
+ Copyright © by Patryk Wychowaniec, 2013
+
+ -------------------------------------------------------------------------------
+ SScript Compiler is free software; you can redistribute it and/or modify
+ it under the terms of the GNU Lesser General Public License as published by
+ the Free Software Foundation; either version 2.1 of the License, or
+ (at your option) any later version.
+
+ SScript Compiler is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ GNU Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public License
+ along with SScript Compiler; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA   
+*)
+
 Program vm;
 Uses CRT, Windows, SysUtils, Machine, Registry;
+Const Version = '0.2 nightly';
 
 { getBoolOption }
 Function getBoolOption(O: String; Default: Boolean): Boolean;
@@ -58,6 +79,8 @@ Begin
 
  if (ParamCount < 1) Then
  Begin
+  Writeln('SScript Virtual Machine v.', Version);
+
   Writeln('Usage:');
   Writeln('vm.exe [input file]');
   Writeln;
@@ -135,16 +158,16 @@ Begin
 
      if (getBoolOption('err', False)) and (Assigned(M)) Then // detailed error log
      Begin
-      M.Position := M.LastOpcodePos;
+      M.setPosition(M.LastOpcodePos);
 
       Writeln;
       Writeln('Position:');
-      Writeln('-> CODE:0x', IntToHex(M.Position, 8));
-      Writeln('-> FILE:0x', IntToHex(M.Position+M.SectionList[M.CodeSection].DataPnt, 8));
+      Writeln('-> CODE:0x', IntToHex(M.getPosition, 8));
+      Writeln('-> FILE:0x', IntToHex(M.getPosition+M.SectionList[M.CodeSection].DataPnt, 8));
       Writeln;
 
       Writeln('Error opcode:');
-      Writeln('> ', M.disasm(M.Position));
+      Writeln('> ', M.disasm(M.getPosition));
       Writeln;
 
       Writeln('Callstack (first 15):');
@@ -210,7 +233,10 @@ Begin
   Writeln('-- END --');
   Writeln('Time   : '+IntToStr(Time)+' ms');
   Writeln('Opcodes: ', M.OpcodeNo);
-  Writeln('kHz    : ', FloatToStr(M.OpcodeNo/Time/1000));
+
+  if (Time = 0) Then
+   Writeln('Opc/ms : > ', M.OpcodeNo) Else
+   Writeln('Opc/ms : ', IntToStr(Round(M.OpcodeNo/Time)));
  End;
 
  if (getBoolOption('wait', False)) Then

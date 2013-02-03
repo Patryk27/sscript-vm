@@ -1,3 +1,7 @@
+(*
+ Copyright © by Patryk Wychowaniec, 2013
+ All rights reserved.
+*)
 {$H+}
 Unit mOutput;
 
@@ -10,6 +14,7 @@ Uses CRT, Windows, Machine, Opcodes, SysUtils, FileUtil;
 Var isBuffered  : Boolean=False;
     BufferString: String = '';
 
+// SetScreenSize
 Procedure SetScreenSize(Width, Height: Integer);
 Var Rect : TSmallRect;
     Coord: TCoord;
@@ -29,6 +34,7 @@ Begin
  CRT.WindMaxY := Height;
 End;
 
+// strdisplay
 Procedure strdisplay(Str: String);
 Var Ch: Char;
 Begin

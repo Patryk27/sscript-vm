@@ -1,3 +1,7 @@
+(*
+ Copyright © by Patryk Wychowaniec, 2013
+ All rights reserved.
+*)
 {$H+}
 Unit Procs;
 
@@ -43,7 +47,7 @@ Unit Procs;
 Uses SysUtils, Opcodes;
 
 { qmagic }
-Function qmagic(Param: TOpParam): TOpParam;
+Function qmagic(Param: TOpParam): TOpParam; inline;
 Begin
  With Result do
  Begin
@@ -76,12 +80,18 @@ Begin
  P1 := qmagic(P1);
  P2 := qmagic(P2);
 
+ if (P1.Typ = ptFloat) and (P2.Typ = ptInt) Then
+  Exit(P1.fVal = P2.Val);
+
+ if (P1.Typ = ptInt) and (P2.Typ = ptFloat) Then
+  Exit(P1.Val = P2.fVal);
+
  if (P1.Typ <> P2.Typ) Then
   Exit(False);
 
  Case P1.Typ of
   ptBool, ptChar, ptInt: Exit(P1.Val = P2.Val);
-  ptFloat: Exit(P2.fVal = P2.fVal);
+  ptFloat: Exit(P1.fVal = P2.fVal);
  End;
 End;
 
@@ -99,12 +109,18 @@ Begin
  P1 := qmagic(P1);
  P2 := qmagic(P2);
 
+ if (P1.Typ = ptFloat) and (P2.Typ = ptInt) Then
+  Exit(P1.fVal > P2.Val);
+
+ if (P1.Typ = ptInt) and (P2.Typ = ptFloat) Then
+  Exit(P1.Val > P2.fVal);
+
  if (P1.Typ <> P2.Typ) Then
   Exit(False);
 
  Case P1.Typ of
   ptBool, ptChar, ptInt: Exit(P1.Val > P2.Val);
-  ptFloat: Exit(P2.fVal > P2.fVal);
+  ptFloat: Exit(P1.fVal > P2.fVal);
  End;
 End;
 
@@ -116,12 +132,18 @@ Begin
  P1 := qmagic(P1);
  P2 := qmagic(P2);
 
+ if (P1.Typ = ptFloat) and (P2.Typ = ptInt) Then
+  Exit(P1.fVal < P2.Val);
+
+ if (P1.Typ = ptInt) and (P2.Typ = ptFloat) Then
+  Exit(P1.Val < P2.fVal);
+
  if (P1.Typ <> P2.Typ) Then
   Exit(False);
 
  Case P1.Typ of
   ptBool, ptChar, ptInt: Exit(P1.Val < P2.Val);
-  ptFloat: Exit(P2.fVal < P2.fVal);
+  ptFloat: Exit(P1.fVal < P2.fVal);
  End;
 End;
 
@@ -133,12 +155,18 @@ Begin
  P1 := qmagic(P1);
  P2 := qmagic(P2);
 
+ if (P1.Typ = ptFloat) and (P2.Typ = ptInt) Then
+  Exit(P1.fVal >= P2.Val);
+
+ if (P1.Typ = ptInt) and (P2.Typ = ptFloat) Then
+  Exit(P1.Val >= P2.fVal);
+
  if (P1.Typ <> P2.Typ) Then
   Exit(False);
 
  Case P1.Typ of
   ptBool, ptChar, ptInt: Exit(P1.Val >= P2.Val);
-  ptFloat: Exit(P2.fVal >= P2.fVal);
+  ptFloat: Exit(P1.fVal >= P2.fVal);
  End;
 End;
 
@@ -150,19 +178,25 @@ Begin
  P1 := qmagic(P1);
  P2 := qmagic(P2);
 
+ if (P1.Typ = ptFloat) and (P2.Typ = ptInt) Then
+  Exit(P1.fVal <= P2.Val);
+
+ if (P1.Typ = ptInt) and (P2.Typ = ptFloat) Then
+  Exit(P1.Val <= P2.fVal);
+
  if (P1.Typ <> P2.Typ) Then
   Exit(False);
 
  Case P1.Typ of
   ptBool, ptChar, ptInt: Exit(P1.Val <= P2.Val);
-  ptFloat: Exit(P2.fVal <= P2.fVal);
+  ptFloat: Exit(P1.fVal <= P2.fVal);
  End;
 End;
 
 { _ }
 Procedure op_(M: TMachine);
 Begin
- raise Exception.Create('Opcode '''+OpcodeList[M.Code[M.Position-1]].Name+''' unimplemented');
+ raise Exception.Create('Opcode '''+getOpcodeName(M.Code[LongWord(M.Position)-sizeof(Byte)])+''' unimplemented');
 End;
 
 { NOP }
@@ -259,7 +293,7 @@ Begin
   ptStackVal:
    With Stack[StackPos^+reg.Val] do
     Case Typ of
-     ptInt: Val -= param.getInt;
+     ptChar, ptInt: Val -= param.getInt;
      ptFloat: fVal -= param.getFloat;
      else goto Fail;
     End;
@@ -290,7 +324,7 @@ Begin
   ptStackVal:
    With Stack[StackPos^+reg.Val] do
     Case Typ of
-     ptInt: Val *= param.getInt;
+     ptChar, ptInt: Val *= param.getInt;
      ptFloat: fVal *= param.getFloat;
      else goto Fail;
     End;
@@ -324,7 +358,7 @@ Begin
   ptStackVal:
    With Stack[StackPos^+reg.Val] do
     Case Typ of
-     ptInt: Val := Val div param.getInt;
+     ptChar, ptInt: Val := Val div param.getInt;
      ptFloat: fVal /= param.getFloat;
      else goto Fail;
     End;
@@ -395,9 +429,9 @@ Var NewAddr: LongWord;
 Begin
 With M do
 Begin
- NewAddr := Position;
+ NewAddr := getPosition;
  NewAddr += read_param.getInt-1;
- Position := NewAddr;
+ setPosition(NewAddr);
 End;
 End;
 
@@ -407,10 +441,10 @@ Var NewAddr: LongWord;
 Begin
 With M do
 Begin
- NewAddr := Position;
+ NewAddr := getPosition;
  NewAddr += read_param.getInt-1;
  if (breg[5]) Then
-  Position := NewAddr;
+  setPosition(NewAddr);
 End;
 End;
 
@@ -420,10 +454,10 @@ Var NewAddr: LongWord;
 Begin
 With M do
 Begin
- NewAddr := Position;
+ NewAddr := getPosition;
  NewAddr += read_param.getInt-1;
  if (not breg[5]) Then
-  Position := NewAddr;
+  setPosition(NewAddr);
 End;
 End;
 
@@ -438,10 +472,10 @@ Begin
  if (CallstackPos >= CALLSTACK_SIZE) Then
   raise Exception.Create('Cannot do ''call'' - no space left on callstack.');
 
- NewAddr                 := Position;
+ NewAddr                 := getPosition;
  NewAddr                 += read_param.getInt-1;
- Callstack[CallstackPos] := Position;
- Position                := NewAddr;
+ Callstack[CallstackPos] := getPosition;
+ setPosition(NewAddr);
 End;
 End;
 
@@ -474,7 +508,7 @@ Begin
  if (CallstackPos < 1) Then
   raise Exception.Create('Cannot do ''ret'' - callstack is empty.');
 
- Position := Callstack[CallstackPos];
+ setPosition(Callstack[CallstackPos]);
  Dec(CallstackPos);
 End;
 End;

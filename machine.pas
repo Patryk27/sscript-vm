@@ -1,3 +1,7 @@
+(*
+ Copyright © by Patryk Wychowaniec, 2013
+ All rights reserved.
+*)
 {$MODE OBJFPC}
 {$H+}
 {$MODESWITCH ADVANCEDRECORDS}
@@ -7,7 +11,7 @@ Unit Machine;
  Interface
  Uses SysUtils, Opcodes;
 
- Const Header: Array[0..2] of Byte = ($53, $53, $02);
+ Const Header: Array[0..2] of Byte = ($53, $53, $03);
        SectionNames: Array[0..6] of String = ('unusable', 'info', 'unknown', 'exports', 'unknown', 'code', 'debug data');
 
        { section types }
@@ -67,13 +71,13 @@ Unit Machine;
                    sVal : String;
                    Index: Byte;
 
-                   Function getBool: Boolean;
-                   Function getChar: Char;
-                   Function getInt: Integer;
-                   Function getLongword: LongWord;
-                   Function getFloat: Extended;
-                   Function getString: String;
-                   Function getReference: LongWord;
+                   Function getBool: Boolean; inline;
+                   Function getChar: Char; inline;
+                   Function getInt: Integer; inline;
+                   Function getLongword: LongWord; inline;
+                   Function getFloat: Extended; inline;
+                   Function getString: String; inline;
+                   Function getReference: LongWord; inline;
 
                    Function getBoolReg: Pointer;
                    Function getCharReg: Pointer;
@@ -106,7 +110,7 @@ Unit Machine;
                    sreg: Array[1..4] of String;
                    rreg: Array[1..4] of Integer;
 
-                   Position     : LongWord; // current position in `Code` section
+                   Position     : PByte; // current position in `Code` section
                    LastOpcodePos: LongWord;
                    CallstackPos : LongWord;
                    StackPos     : PLongWord;
@@ -119,6 +123,7 @@ Unit Machine;
                    Function c_read_integer: Integer; inline;
                    Function c_read_longword: LongWord; inline;
                    Function c_read_extended: Extended; inline;
+                   Function c_read_string: String; inline;
 
                    Function getString(Pos: LongWord): String;
 
@@ -131,6 +136,9 @@ Unit Machine;
                    Procedure StackPush(Value: Boolean);
                    Procedure StackPush(Value: TOpParam);
                    Function StackPop: TOpParam;
+
+                   Function getPosition: LongWord; inline;
+                   Procedure setPosition(NewPos: LongWord); inline;
 
                    Constructor Create(fFileBuffer: Pointer; BufferSize: LongWord);
                    Constructor Create(FileName: String);
@@ -154,7 +162,7 @@ Unit Machine;
  Procedure Log(Txt: String);
  Procedure NewFunction(PackageName, FunctionName: String; fHandler: THandlerProc);
 
- Var VerboseMode: Boolean=False;
+ Var VerboseMode: Boolean=True;
 
  Implementation
 Uses Procs, mOutput, mString, mMath, mTime, mInput, mVM;
@@ -316,45 +324,46 @@ End;
 { TMachine.c_read_byte }
 Function TMachine.c_read_byte: Byte;
 Begin
- if ((Position+sizeof(Byte)) > SectionList[CodeSection].Length) Then
-  raise Exception.Create('Reached end of the code section.');
-
- Result := Code[Position];
+ Result := Position^;
  Inc(Position, sizeof(Byte));
 End;
 
 { TMachine.c_read_integer }
 Function TMachine.c_read_integer: Integer;
 Begin
- if ((Position+sizeof(Integer)) > SectionList[CodeSection].Length) Then
-  raise Exception.Create('Reached end of the code section.');
-
- Result := PInteger(@Code[Position])^;
+ Result := PInteger(Position)^;
  Inc(Position, sizeof(Integer));
 End;
 
 { TMachine.c_read_longword }
 Function TMachine.c_read_longword: LongWord;
 Begin
- if ((Position+sizeof(LongWord)) > SectionList[CodeSection].Length) Then
-  raise Exception.Create('Reached end of the code section.');
-
- Result := PLongWord(@Code[Position])^;
+ Result := PLongWord(Position)^;
  Inc(Position, sizeof(LongWord));
 End;
 
 { TMachine.c_read_extended }
 Function TMachine.c_read_extended: Extended;
 Begin
- if ((Position+sizeof(Extended)) > SectionList[CodeSection].Length) Then
-  raise Exception.Create('Reached end of the code section.');
-
- Result := PExtended(@Code[Position])^;
+ Result := PExtended(Position)^;
  Inc(Position, sizeof(Extended));
+End;
+
+{ TMachine.c_read_string }
+Function TMachine.c_read_string: String;
+Begin
+ Result := '';
+
+ While (Position^ <> 0) Do
+ Begin
+  Result += chr(Position^);
+  Inc(Position);
+ End;
 End;
 
 { TMachine.getString }
 Function TMachine.getString(Pos: LongWord): String;
+Var Ch: PChar;
 Begin
  Result := '';
 
@@ -363,11 +372,12 @@ Begin
   if (Pos >= Length) Then
    raise Exception.Create('String address is above available address space. Tried to read string at CODE:0x'+IntToHex(Pos, 2*sizeof(Pos))+' | FILE:0x'+IntToHex(SectionList[CodeSection].DataPnt+Pos, 8));
 
-  While (PByte(Data)[Pos] <> 0) do // fetch string until the terminator (null) char
+  Ch := Data + Pos;
+
+  While (Ch^ <> #0) do // fetch string until the terminator (null) char
   Begin
-   // @TODO
-   Result += PChar(Data)[Pos];
-   Inc(Pos);
+   Result += Ch^;
+   Inc(Ch);
   End;
  End;
 End;
@@ -379,7 +389,7 @@ Begin
  Result.Typ := TPrimaryType(c_read_byte);
 
  if (Result.Typ in [ptBoolReg..ptReferenceReg]) Then
-  Result.Index := c_read_byte;
+  Result.Index := c_read_byte; // register ID
 
  Case Result.Typ of
   ptBoolReg: Result.Val := Int64(breg[Result.Index]);
@@ -392,7 +402,7 @@ Begin
   ptBool: Result.Val := c_read_byte;
   ptChar: Result.Val := c_read_byte;
   ptFloat: Result.fVal := c_read_extended;
-  ptString: Result.sVal := getString(c_read_longword+LastOpcodePos);
+  ptString: Result.sVal := c_read_string;
 
   else Result.Val := c_read_integer;
  End;
@@ -474,6 +484,18 @@ Begin
 
  Result := Stack[StackPos^];
  Dec(StackPos^);
+End;
+
+{ TMachine.getPosition }
+Function TMachine.getPosition: LongWord;
+Begin
+ Result := LongWord(Position) - LongWord(SectionList[CodeSection].Data);
+End;
+
+{ TMachine.setPosition }
+Procedure TMachine.setPosition(NewPos: LongWord);
+Begin
+ Position := PByte(NewPos) + LongWord(SectionList[CodeSection].Data);
 End;
 
 { TMachine.Create }
@@ -649,13 +671,13 @@ Begin
   Exit;
  End;
 
- Position     := InfoSectionD.EntryPoint;
+ setPosition(InfoSectionD.EntryPoint);
  CallstackPos := 0;
 
  ireg[5]  := 0; // mov(stp, 0)
  StackPos := @ireg[5];
 
- if (Position >= SectionList[CodeSection].Length) Then
+ if (getPosition >= SectionList[CodeSection].Length) Then
   Exit;
 End;
 
@@ -696,10 +718,9 @@ Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc =
  @op_SHR,
  @op_MOD,
  @op_ARSET,
- @op_ARGET,
- { Not opcodes, in fact: } nil, nil, nil, nil);
+ @op_ARGET);
 Begin
- LastOpcodePos := Position;
+ LastOpcodePos := getPosition;
  Inc(OpcodeNo);
 
  //if (DebugMode) Then
@@ -753,17 +774,17 @@ Var TmpPos: LongWord;
     Param : TOpParam;
 Begin
  Try
-  TmpPos   := Position;
-  Position := Pos;
+  TmpPos := getPosition;
+  setPosition(Pos);
 
   Opcode := c_read_byte;
 
-  if (Opcode > High(OpcodeList)) Then
+  if (Opcode > OPCODE_MAX) Then
    Exit('invalid opcode');
 
-  Result := OpcodeList[Opcode].Name+'(';
+  Result := getOpcodeName(Opcode)+'(';
 
-  For I := 1 To OpcodeList[Opcode].ParamC Do
+  For I := 1 To OpcodesParamCount[TOpcode_E(Opcode)] Do
   Begin
    if (I <> 1) Then
     Result += ', ';
@@ -793,7 +814,7 @@ Begin
 
   Result += ')';
 
-  Position := TmpPos;
+  setPosition(TmpPos);
  Except
   On E: Exception Do
    Exit('invalid opcode -> '+E.Message);

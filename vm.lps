@@ -9,10 +9,11 @@
         <Filename Value="vm.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="vm"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="36" Y="20"/>
+        <CursorPos X="21" Y="25"/>
         <UsageCount Value="236"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -29,11 +30,10 @@
       <Unit2>
         <Filename Value="procs.pas"/>
         <UnitName Value="Procs"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="792"/>
-        <CursorPos X="58" Y="813"/>
+        <TopLine Value="771"/>
+        <CursorPos X="65" Y="809"/>
         <UsageCount Value="123"/>
         <Loaded Value="True"/>
       </Unit2>

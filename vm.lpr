@@ -22,7 +22,7 @@
 
 Program vm;
 Uses CRT, Windows, SysUtils, Machine, Registry;
-Const Version = '0.2 nightly';
+Const Version = '0.2';
 
 { getBoolOption }
 Function getBoolOption(O: String; Default: Boolean): Boolean;

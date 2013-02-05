@@ -9,7 +9,6 @@
         <Filename Value="vm.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="vm"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
@@ -30,10 +29,11 @@
       <Unit2>
         <Filename Value="procs.pas"/>
         <UnitName Value="Procs"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="771"/>
-        <CursorPos X="65" Y="809"/>
+        <TopLine Value="434"/>
+        <CursorPos X="42" Y="31"/>
         <UsageCount Value="123"/>
         <Loaded Value="True"/>
       </Unit2>
@@ -104,8 +104,8 @@
         <UnitName Value="mOutput"/>
         <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="73"/>
-        <CursorPos X="28" Y="58"/>
+        <TopLine Value="76"/>
+        <CursorPos X="36" Y="98"/>
         <UsageCount Value="88"/>
         <Loaded Value="True"/>
       </Unit10>
@@ -166,123 +166,123 @@
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="machine.pas"/>
-        <Caret Line="752" Column="10" TopLine="738"/>
+        <Caret Line="463" Column="20" TopLine="439"/>
       </Position1>
       <Position2>
         <Filename Value="machine.pas"/>
-        <Caret Line="792" Column="22" TopLine="777"/>
+        <Caret Line="483" Column="19" TopLine="455"/>
       </Position2>
       <Position3>
-        <Filename Value="machine.pas"/>
-        <Caret Line="138" Column="60" TopLine="125"/>
-      </Position3>
-      <Position4>
-        <Filename Value="machine.pas"/>
-        <Caret Line="463" Column="20" TopLine="439"/>
-      </Position4>
-      <Position5>
-        <Filename Value="machine.pas"/>
-        <Caret Line="483" Column="19" TopLine="455"/>
-      </Position5>
-      <Position6>
         <Filename Value="vm.lpr"/>
         <Caret Line="24" Column="18" TopLine="1"/>
-      </Position6>
-      <Position7>
+      </Position3>
+      <Position4>
         <Filename Value="vm.lpr"/>
         <Caret Line="160" Column="37" TopLine="145"/>
-      </Position7>
-      <Position8>
+      </Position4>
+      <Position5>
         <Filename Value="vm.lpr"/>
         <Caret Line="165" Column="43" TopLine="149"/>
+      </Position5>
+      <Position6>
+        <Filename Value="machine.pas"/>
+        <Caret Line="485" Column="31" TopLine="462"/>
+      </Position6>
+      <Position7>
+        <Filename Value="machine.pas"/>
+        <Caret Line="729" Column="1" TopLine="694"/>
+      </Position7>
+      <Position8>
+        <Filename Value="machine.pas"/>
+        <Caret Line="139" Column="40" TopLine="125"/>
       </Position8>
       <Position9>
         <Filename Value="machine.pas"/>
-        <Caret Line="485" Column="31" TopLine="462"/>
+        <Caret Line="485" Column="19" TopLine="464"/>
       </Position9>
       <Position10>
         <Filename Value="machine.pas"/>
-        <Caret Line="729" Column="1" TopLine="694"/>
+        <Caret Line="98" Column="131" TopLine="95"/>
       </Position10>
       <Position11>
         <Filename Value="machine.pas"/>
-        <Caret Line="139" Column="40" TopLine="125"/>
+        <Caret Line="140" Column="41" TopLine="117"/>
       </Position11>
       <Position12>
         <Filename Value="machine.pas"/>
-        <Caret Line="485" Column="19" TopLine="464"/>
+        <Caret Line="485" Column="62" TopLine="468"/>
       </Position12>
       <Position13>
         <Filename Value="machine.pas"/>
-        <Caret Line="98" Column="131" TopLine="95"/>
+        <Caret Line="394" Column="1" TopLine="380"/>
       </Position13>
       <Position14>
         <Filename Value="machine.pas"/>
-        <Caret Line="140" Column="41" TopLine="117"/>
+        <Caret Line="123" Column="43" TopLine="109"/>
       </Position14>
       <Position15>
         <Filename Value="machine.pas"/>
-        <Caret Line="485" Column="62" TopLine="468"/>
+        <Caret Line="153" Column="44" TopLine="138"/>
       </Position15>
       <Position16>
         <Filename Value="machine.pas"/>
-        <Caret Line="394" Column="1" TopLine="380"/>
+        <Caret Line="165" Column="48" TopLine="155"/>
       </Position16>
       <Position17>
         <Filename Value="machine.pas"/>
-        <Caret Line="123" Column="43" TopLine="109"/>
+        <Caret Line="392" Column="42" TopLine="372"/>
       </Position17>
       <Position18>
         <Filename Value="machine.pas"/>
-        <Caret Line="153" Column="44" TopLine="138"/>
+        <Caret Line="126" Column="59" TopLine="113"/>
       </Position18>
       <Position19>
         <Filename Value="machine.pas"/>
-        <Caret Line="165" Column="48" TopLine="155"/>
+        <Caret Line="345" Column="27" TopLine="333"/>
       </Position19>
       <Position20>
         <Filename Value="machine.pas"/>
-        <Caret Line="392" Column="42" TopLine="372"/>
+        <Caret Line="346" Column="34" TopLine="333"/>
       </Position20>
       <Position21>
         <Filename Value="machine.pas"/>
-        <Caret Line="126" Column="59" TopLine="113"/>
+        <Caret Line="392" Column="42" TopLine="368"/>
       </Position21>
       <Position22>
         <Filename Value="machine.pas"/>
-        <Caret Line="345" Column="27" TopLine="333"/>
+        <Caret Line="120" Column="61" TopLine="111"/>
       </Position22>
       <Position23>
         <Filename Value="machine.pas"/>
-        <Caret Line="346" Column="34" TopLine="333"/>
+        <Caret Line="125" Column="44" TopLine="111"/>
       </Position23>
       <Position24>
         <Filename Value="machine.pas"/>
-        <Caret Line="392" Column="42" TopLine="368"/>
+        <Caret Line="24" Column="32" TopLine="16"/>
       </Position24>
       <Position25>
-        <Filename Value="machine.pas"/>
-        <Caret Line="120" Column="61" TopLine="111"/>
-      </Position25>
-      <Position26>
-        <Filename Value="machine.pas"/>
-        <Caret Line="125" Column="44" TopLine="111"/>
-      </Position26>
-      <Position27>
-        <Filename Value="machine.pas"/>
-        <Caret Line="24" Column="32" TopLine="16"/>
-      </Position27>
-      <Position28>
         <Filename Value="vm.lpr"/>
         <Caret Line="88" Column="3" TopLine="85"/>
+      </Position25>
+      <Position26>
+        <Filename Value="procs.pas"/>
+        <Caret Line="45" Column="99" TopLine="33"/>
+      </Position26>
+      <Position27>
+        <Filename Value="procs.pas"/>
+        <Caret Line="195" Column="29" TopLine="178"/>
+      </Position27>
+      <Position28>
+        <Filename Value="packages\moutput.pas"/>
+        <Caret Line="58" Column="28" TopLine="72"/>
       </Position28>
       <Position29>
         <Filename Value="procs.pas"/>
-        <Caret Line="45" Column="99" TopLine="33"/>
+        <Caret Line="809" Column="65" TopLine="771"/>
       </Position29>
       <Position30>
         <Filename Value="procs.pas"/>
-        <Caret Line="195" Column="29" TopLine="178"/>
+        <Caret Line="13" Column="19" TopLine="1"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

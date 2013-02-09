@@ -9,9 +9,9 @@
 Unit Machine;
 
  Interface
- Uses SysUtils, Opcodes;
+ Uses SysUtils, Opcodes, Objects;
 
- Const Header: Array[0..2] of Byte = ($53, $53, $03);
+ Const Header: Array[0..2] of Byte = ($53, $53, $04);
        SectionNames: Array[0..6] of String = ('unusable', 'info', 'unknown', 'exports', 'unknown', 'code', 'debug data');
 
        { section types }
@@ -22,6 +22,14 @@ Unit Machine;
        section_DEBUG    = 6;
 
        CALLSTACK_SIZE = 1000000; // in elements
+
+ Const TYPE_BOOL   = 2; // do not modify these, as they have to be exactly the same, as in the compiler
+       TYPE_CHAR   = 3;
+       TYPE_INT    = 4;
+       TYPE_FLOAT  = 5;
+       TYPE_STRING = 6;
+
+       TypeSize: Array[TYPE_BOOL..TYPE_STRING] of Byte = (sizeof(Boolean), sizeof(Char), sizeof(Integer), sizeof(Extended), sizeof(String));
 
  Type TSection = Record
                   Typ            : Byte;
@@ -62,11 +70,13 @@ Unit Machine;
 
  Type TMachine = class;
 
- Type TOpParam = Record
+ { opcode's parameters }
+ Type POpParam = ^TOpParam;
+      TOpParam = Record
                   Public
                    M    : TMachine;
                    Typ  : TPrimaryType;
-                   Val  : Int64;
+                   Val  : LongWord;
                    fVal : Extended;
                    sVal : String;
                    Index: Byte;
@@ -89,16 +99,18 @@ Unit Machine;
                    Function getTypeName: String;
                   End;
 
+ { virtual machine class }
  Type TMachine = Class
                   Private
                    InfoSectionD: TInfoSectionData;
 
                   Public
+                   // variables
                    ExportSectionD: TExportSectionData;
 
                    InputFile : String;
                    FileBuffer: PByte;
-                   Code      : PByte; // points to `SectionList[SectionCode].Data`
+                   Code      : PByte; // points at `SectionList[SectionCode].Data`
                    Callstack : PLongWord;
                    Stack     : Array of TOpParam;
                    OpcodeNo  : QWord;
@@ -119,6 +131,10 @@ Unit Machine;
                    SectionList: Array of TSection;
                    InfoSection, CodeSection, ExportsSection, ImportsSection: Integer;
 
+                  Public
+                   // methods
+
+                   { reading }
                    Function c_read_byte: Byte; inline;
                    Function c_read_integer: Integer; inline;
                    Function c_read_longword: LongWord; inline;
@@ -127,8 +143,9 @@ Unit Machine;
 
                    Function getString(Pos: LongWord): String;
 
-                   Function read_param: TOpParam;
+                   Function read_param: TOpParam; {inline (?)}
 
+                   { stack operations }
                    Procedure StackPush(Value: Integer);
                    Procedure StackPush(Value: Extended);
                    Procedure StackPush(Value: String);
@@ -137,9 +154,15 @@ Unit Machine;
                    Procedure StackPush(Value: TOpParam);
                    Function StackPop: TOpParam;
 
+                   { position-related }
                    Function getPosition: LongWord; inline;
                    Procedure setPosition(NewPos: LongWord); inline;
 
+                   { object-handling-related }
+                   Function getObject(Address: LongWord): TMObject;
+                   Function getArray(Address: LongWord): TMArray;
+
+                   { some stuff }
                    Constructor Create(fFileBuffer: Pointer; BufferSize: LongWord);
                    Constructor Create(FileName: String);
                    Procedure Prepare;
@@ -206,6 +229,8 @@ Function TOpParam.getChar: Char;
 Begin
  if (Typ in [ptChar, ptCharReg, ptInt, ptIntReg]) Then
   Exit(chr(Val)) Else
+ if (Typ in [ptString, ptStringReg]) Then
+  Exit(sVal[1]) Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getChar) Else
   raise Exception.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> char');
@@ -230,7 +255,7 @@ Begin
   Exit(Val) Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getInt) Else
-  raise Exception.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int <longword>');
+  raise Exception.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int (longword)');
 End;
 
 { TOpParam.getFloat }
@@ -319,6 +344,9 @@ End;
 Function TOpParam.getTypeName: String;
 Begin
  Result := PrimaryTypeNames[Typ];
+
+ if (Typ = ptStackVal) Then
+  Result += ' ('+M.Stack[M.StackPos^+Val].getTypeName+')';
 End;
 
 { TMachine.c_read_byte }
@@ -359,6 +387,8 @@ Begin
   Result += chr(Position^);
   Inc(Position);
  End;
+
+ Inc(Position);
 End;
 
 { TMachine.getString }
@@ -496,6 +526,23 @@ End;
 Procedure TMachine.setPosition(NewPos: LongWord);
 Begin
  Position := PByte(NewPos) + LongWord(SectionList[CodeSection].Data);
+End;
+
+{ TMachine.getObject }
+Function TMachine.getObject(Address: LongWord): TMObject;
+Var Obj: TMObject;
+Begin
+ Obj := TMObject(Address);
+
+ if (Obj.getMagic = MagicNumber) Then
+  Exit(Obj) Else
+  raise Exception.Create('Not a valid object reference: 0x'+IntToHex(Address, 2*sizeof(LongWord))+' (invalid magic number: 0x'+IntToHex(Obj.getMagic, 2*sizeof(LongWord))+')');
+End;
+
+{ TMachine.getArray }
+Function TMachine.getArray(Address: LongWord): TMArray;
+Begin
+ Result := TMArray(getObject(Address));
 End;
 
 { TMachine.Create }
@@ -646,6 +693,12 @@ Begin
 
  Log('Input file: '+FileName);
 
+ if (not FileExists(FileName)) Then // file not found
+ Begin
+  Writeln('Input file not found: ', FileName);
+  Exit;
+ End;
+
  InputFile := FileName;
 
  AssignFile(Input, FileName);
@@ -718,19 +771,23 @@ Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc =
  @op_SHR,
  @op_MOD,
  @op_ARSET,
- @op_ARGET);
+ @op_ARGET,
+ @op_ARCRT,
+ @op_, // @TODO
+ @op_OBJFREE);
 Begin
  LastOpcodePos := getPosition;
  Inc(OpcodeNo);
 
- //if (DebugMode) Then
- //Begin
- // Writeln('CODE:0x', IntToHex(Position, 8), ', FILE:', IntToHex(Position+SectionList[CodeSection].DataPnt, 8), ' -> ', disasm(Position));
- // Readln;
- //End;
+{
+ Begin
+  Writeln('CODE:0x', IntToHex(getPosition, 8), ', FILE:', IntToHex(getPosition+SectionList[CodeSection].DataPnt, 8), ' -> ', disasm(getPosition));
+  Readln;
+ End;
+}
 
  OpcodeTable[TOpcode_E(c_read_byte)](self);
-// TOpcodeProc(Pointer(PPointer(LongWord(@OpcodeTable[TOpcode_E(0)])+c_read_byte*sizeof(Pointer)))^)(self);
+// TOpcodeProc(Pointer(PPointer(LongWord(@OpcodeTable[TOpcode_E(0)])+c_read_byte*sizeof(Pointer)))^)(self); // magic!
 End;
 
 Begin

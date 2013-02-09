@@ -11,7 +11,7 @@ Unit Opcodes;
  Type TPrimaryType = (ptBoolReg=0, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg, ptBool, ptChar, ptInt, ptFloat, ptString, ptStackVal);
  Const PrimaryTypeNames: Array[TPrimaryType] of String = ('bool reg', 'char reg', 'int reg', 'float reg', 'string reg', 'reference reg', 'bool', 'char', 'int', 'float', 'string', 'stackval');
 
- Const OPCODE_MAX = 35;
+ Const OPCODE_MAX = 38;
 
  Type TOpcode_E = (o_nop, o_stop,
                    o_push, o_pop,
@@ -21,7 +21,8 @@ Unit Opcodes;
                    o_strjoin,
                    o_not, o_or, o_xor, o_and, o_shl, o_shr,
                    o_mod,
-                   o_arset, o_arget);
+                   o_arset, o_arget, o_arcrt, o_arlen,
+                   o_objfree);
 
  Const OpcodesParamCount: Array[TOpcode_E] of Byte =
  (0, 0,
@@ -32,7 +33,8 @@ Unit Opcodes;
   2,
   1, 2, 2, 2, 2, 2,
   2,
-  3, 3);
+  3, 3, 3, 1,
+  1);
 
  Function getOpcodeName(O: TOpcode_E): String;
  Function getOpcodeName(O: Byte): String;

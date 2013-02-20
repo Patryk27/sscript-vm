@@ -8,6 +8,7 @@ Unit mOutput;
  Interface
 
  Procedure strdisplay(Str: String);
+ Procedure SetScreenSize(Width, Height, WinWidth, WinHeight: Integer);
 
  Implementation
 Uses CRT, Windows, Machine, Opcodes, SysUtils, FileUtil;
@@ -15,33 +16,29 @@ Var isBuffered  : Boolean=False;
     BufferString: String = '';
 
 // SetScreenSize
-Procedure SetScreenSize(Width, Height: Integer);
+Procedure SetScreenSize(Width, Height, WinWidth, WinHeight: Integer);
 Var Rect : TSmallRect;
     Coord: TCoord;
 Begin
- Rect.Left   := 1;
- Rect.Top    := 1;
+ Rect.Left   := 1; // don't change
+ Rect.Top    := 1; // don't change
  Rect.Right  := Width;
  Rect.Bottom := Height;
- Coord.X     := Rect.Right+1-Rect.Left;
- Coord.Y     := Rect.Bottom+1-Rect.Top;
+ Coord.X     := WinWidth;
+ Coord.Y     := WinHeight;
 
  SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), Coord);
  SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE), True, Rect);
 
- Window32(1, 1, Width, Height);
- CRT.WindMaxX := Width;
- CRT.WindMaxY := Height;
+ Window32(1, 1, WinWidth, WinHeight);
+ CRT.WindMaxX := WinWidth;
+ CRT.WindMaxY := WinHeight;
 End;
 
 // strdisplay
-Procedure strdisplay(Str: String);
-Var Ch: Char;
+Procedure strdisplay(Str: String); inline;
 Begin
- For Ch in Str Do
-  if (Ch = #10) Then
-   Writeln Else
-   Write(UTF8ToConsole(AnsiToUTF8(Ch)));
+ Write(UTF8ToConsole(Str));
 End;
 
 { output.print }
@@ -72,16 +69,26 @@ Begin
 End;
 End;
 
+{ output.clear }
+Procedure _clear(M: TMachine);
+Begin
+ if (isBuffered) Then
+  BufferString := '' Else
+  ClrScr;
+End;
+
 { output.set_size }
 Procedure _set_size(M: TMachine);
-Var W, H: Integer;
+Var W, H, cW, cH: Integer;
 Begin
 With M do
 Begin
- W := StackPop.getInt;
- H := StackPop.getInt;
+ W  := StackPop.getInt;
+ H  := StackPop.getInt;
+ cW := StackPop.getInt;
+ cH := StackPop.getInt;
 
- SetScreenSize(W, H);
+ SetScreenSize(W, H, cW, cH);
 End;
 End;
 
@@ -98,9 +105,24 @@ Begin
  BufferString := '';
 End;
 
+{ output.cursor.hide }
+Procedure _cursor_hide(M: TMachine);
+Begin
+ CRT.CursorOff;
+End;
+
+{ output.cursor.show }
+Procedure _cursor_show(M: TMachine);
+Begin
+ CRT.CursorOn;
+End;
+
 initialization
  NewFunction('output', 'print', @_print);
+ NewFunction('output', 'clear', @_clear);
  NewFunction('output', 'set_size', @_set_size);
  NewFunction('output', 'set_buffered', @_set_buffered);
  NewFunction('output', 'flush', @_flush);
+ NewFunction('output', 'cursor.hide', @_cursor_hide);
+ NewFunction('output', 'cursor.show', @_cursor_show);
 End.

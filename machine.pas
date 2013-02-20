@@ -76,7 +76,7 @@ Unit Machine;
                   Public
                    M    : TMachine;
                    Typ  : TPrimaryType;
-                   Val  : LongWord;
+                   Val  : Int64;
                    fVal : Extended;
                    sVal : String;
                    Index: Byte;
@@ -239,7 +239,7 @@ End;
 { TOpParam.getInt }
 Function TOpParam.getInt: Integer;
 Begin
- if (Typ in [ptInt, ptIntReg, ptBool, ptBoolReg, ptChar, ptCharReg]) Then
+ if (Typ in [ptInt, ptIntReg, ptBool, ptBoolReg, ptChar, ptCharReg, ptReferenceReg]) Then
   Exit(Val) Else
  if (Typ in [ptFloat, ptFloatReg]) Then
   Exit(Round(fVal)) Else
@@ -251,7 +251,7 @@ End;
 { TOpParam.getLongword }
 Function TOpParam.getLongword: LongWord;
 Begin
- if (Typ in [ptInt, ptIntReg]) Then
+ if (Typ in [ptInt, ptIntReg, ptReferenceReg]) Then
   Exit(Val) Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getInt) Else
@@ -532,11 +532,15 @@ End;
 Function TMachine.getObject(Address: LongWord): TMObject;
 Var Obj: TMObject;
 Begin
- Obj := TMObject(Address);
+ Try
+  Obj := TMObject(Address);
 
- if (Obj.getMagic = MagicNumber) Then
-  Exit(Obj) Else
+  if (Obj.getMagic = MagicNumber) Then
+   Exit(Obj) Else
+   raise Exception.Create('');
+ Except
   raise Exception.Create('Not a valid object reference: 0x'+IntToHex(Address, 2*sizeof(LongWord))+' (invalid magic number: 0x'+IntToHex(Obj.getMagic, 2*sizeof(LongWord))+')');
+ End;
 End;
 
 { TMachine.getArray }
@@ -755,6 +759,7 @@ Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc =
  @op_FJMP,
  @op_CALL,
  @op_ICALL,
+ @op_ACALL,
  @op_RET,
  @op_IF_E,
  @op_IF_NE,

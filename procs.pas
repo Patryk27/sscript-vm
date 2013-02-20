@@ -25,6 +25,7 @@ Unit Procs;
  Procedure op_FJMP(M: TMachine);
  Procedure op_CALL(M: TMachine);
  Procedure op_ICALL(M: TMachine);
+ Procedure op_ACALL(M: TMachine);
  Procedure op_RET(M: TMachine);
  Procedure op_IF_E(M: TMachine);
  Procedure op_IF_NE(M: TMachine);
@@ -503,6 +504,23 @@ Begin
 End;
 End;
 
+{ ACALL }
+Procedure op_ACALL(M: TMachine);
+Var NewAddr: Integer;
+Begin
+With M do
+Begin
+ Inc(CallstackPos);
+
+ if (CallstackPos >= CALLSTACK_SIZE) Then
+  raise Exception.Create('Cannot do ''acall'' - no space left on callstack.');
+
+ NewAddr                 := read_param.getReference;
+ Callstack[CallstackPos] := getPosition;
+ setPosition(NewAddr);
+End;
+End;
+
 { RET }
 Procedure op_RET(M: TMachine);
 Begin
@@ -888,10 +906,10 @@ Begin
 
  Case refreg.Typ of
   ptInt, ptIntReg, ptReferenceReg: Value := POpParam(getArray(refreg.getReference).getValue(PosArray))^;
-  ptStringReg:
+  ptString, ptStringReg:
   Begin
    Value.Typ := ptChar;
-   Value.Val := ord(sreg[refreg.Index][PosArray[0]]);
+   Value.Val := ord(refreg.getString[PosArray[0]]);
   End;
 
   ptStackVal:

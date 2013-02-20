@@ -21,7 +21,7 @@
 *)
 {$R *.res}
 Program vm;
-Uses CRT, Windows, SysUtils, Machine, Registry;
+Uses CRT, Windows, SysUtils, Registry, Machine, mOutput;
 Const Version = '0.3 nightly';
 
 { getBoolOption }
@@ -48,7 +48,7 @@ Begin
  DefaultFormatSettings.DecimalSeparator := '.';
  Time := GetTickCount;
 
- CRT.WindMaxY := -1; // range check error is a deliberate effect
+ mOutput.SetScreenSize(CRT.WindMaxX, CRT.WindMaxY, CRT.WindMaxX, CRT.WindMaxY+1000);
 
  if (ParamCount < 1) or (ParamStr(1) = '-logo') Then
  Begin

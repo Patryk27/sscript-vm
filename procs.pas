@@ -25,6 +25,7 @@ Unit Procs;
  Procedure op_FJMP(M: TMachine);
  Procedure op_CALL(M: TMachine);
  Procedure op_ICALL(M: TMachine);
+ Procedure op_ACALL(M: TMachine);
  Procedure op_RET(M: TMachine);
  Procedure op_IF_E(M: TMachine);
  Procedure op_IF_NE(M: TMachine);
@@ -42,9 +43,11 @@ Unit Procs;
  Procedure op_MOD(M: TMachine);
  Procedure op_ARSET(M: TMachine);
  Procedure op_ARGET(M: TMachine);
+ Procedure op_ARCRT(M: TMachine);
+ Procedure op_OBJFREE(M: TMachine);
 
  Implementation
-Uses SysUtils, Opcodes;
+Uses SysUtils, Opcodes, Objects;
 
 { qmagic }
 Function qmagic(Param: TOpParam): TOpParam; inline;
@@ -61,10 +64,11 @@ Begin
    else Typ := Param.Typ;
   End;
 
-  M    := Param.M;
-  Val  := Param.Val;
-  fVal := Param.fVal;
-  sVal := Param.sVal;
+  M     := Param.M;
+  Val   := Param.Val;
+  fVal  := Param.fVal;
+  sVal  := Param.sVal;
+  Index := Param.Index;
  End;
 
  if (Param.Typ = ptStackVal) Then
@@ -196,7 +200,7 @@ End;
 { _ }
 Procedure op_(M: TMachine);
 Begin
- raise Exception.Create('Opcode '''+getOpcodeName(M.Code[LongWord(M.Position)-sizeof(Byte)])+''' unimplemented');
+ raise Exception.Create('Opcode '''+getOpcodeName(LongWord(M.Position)-sizeof(Byte))+''' unimplemented');
 End;
 
 { NOP }
@@ -497,6 +501,23 @@ Begin
  FunctionName := Copy(Str, Pos('.', Str)+1, Length(Str));
 
  RunFunction(PackageName, FunctionName);
+End;
+End;
+
+{ ACALL }
+Procedure op_ACALL(M: TMachine);
+Var NewAddr: Integer;
+Begin
+With M do
+Begin
+ Inc(CallstackPos);
+
+ if (CallstackPos >= CALLSTACK_SIZE) Then
+  raise Exception.Create('Cannot do ''acall'' - no space left on callstack.');
+
+ NewAddr                 := read_param.getReference;
+ Callstack[CallstackPos] := getPosition;
+ setPosition(NewAddr);
 End;
 End;
 
@@ -827,74 +848,135 @@ End;
 
 { ARSET }
 Procedure op_ARSET(M: TMachine);
-Var vArray, vIndex, vNewValue: TOpParam;
+Var refreg, index_count, value: TOpParam;
+    PosArray                  : TLongWordArray;
+    I                         : LongWord;
 Label Fail;
 Begin
 With M do
 Begin
- vArray    := read_param;
- vIndex    := read_param;
- vNewValue := read_param;
+ refreg      := read_param;
+ index_count := read_param;
+ value       := read_param;
 
- Case vArray.Typ of
-  ptString, ptStringReg: sreg[vArray.Index][vIndex.getInt] := vNewValue.getChar;
+ SetLength(PosArray, index_count.getInt);
+ For I := 0 To index_count.getInt-1 Do
+  PosArray[I] := StackPop.getInt;
+
+ Case refreg.Typ of
+  ptInt, ptIntReg, ptReferenceReg: getArray(refreg.getReference).setValue(PosArray, @value);
+  ptStringReg                    : sreg[refreg.Index][PosArray[0]] := value.getChar;
+
   ptStackVal:
-   With Stack[StackPos^+vArray.Val] do
+   With Stack[StackPos^+refreg.Val] do
     Case Typ of
-     ptString: sVal[vIndex.getInt] := vNewValue.getChar;
+     ptInt   : getArray(Val).setValue(PosArray, @value);
+     ptString: sval[PosArray[0]] := value.getChar;
      else goto Fail;
     End;
-  else goto Fail;
+
+  else
+   goto Fail;
  End;
 
  Exit;
 
 Fail:
- raise Exception.Create('''arset'' called with arguments: '+vArray.getTypeName+', '+vIndex.getTypeName+', '+vNewValue.getTypeName);
+ raise Exception.Create('''arset'' called with arguments: '+refreg.getTypeName+', '+index_count.getTypeName+', '+value.getTypeName);
 End;
 End;
 
 { ARGET }
 Procedure op_ARGET(M: TMachine);
-Var vArray, vIndex, vOutReg: TOpParam;
-
-Procedure Fail;
-Begin
- raise Exception.Create('''arget'' called with arguments: '+vArray.getTypeName+', '+vIndex.getTypeName+', '+vOutReg.getTypeName);
-End;
-
-Procedure setval(Val: Char);
-Begin
-With M do
- Case vOutReg.Typ of
-  ptCharReg: creg[vOutReg.Index] := Val;
-  else Fail;
- End;
-End;
-
+Var refreg, index_count, out_reg: TOpParam;
+    PosArray                    : TLongWordArray;
+    I                           : LongWord;
+    Value                       : TOpParam;
+Label Fail;
 Begin
 With M do
 Begin
- vArray  := read_param;
- vIndex  := read_param;
- vOutReg := read_param;
+ refreg      := read_param;
+ index_count := read_param;
+ out_reg     := read_param;
 
- if (Length(vArray.getString) = 0) Then
- Begin
-  setval(#0);
-  Exit;
- End;
+ SetLength(PosArray, index_count.getInt);
+ For I := 0 To index_count.getInt-1 Do
+  PosArray[I] := StackPop.getInt;
 
- Case vArray.Typ of
-  ptString, ptStringReg: setval(vArray.getString[vIndex.getInt]);
+ Case refreg.Typ of
+  ptInt, ptIntReg, ptReferenceReg: Value := POpParam(getArray(refreg.getReference).getValue(PosArray))^;
+  ptString, ptStringReg:
+  Begin
+   Value.Typ := ptChar;
+   Value.Val := ord(refreg.getString[PosArray[0]]);
+  End;
+
   ptStackVal:
-   With Stack[StackPos^+vArray.Val] do
+   With Stack[StackPos^+refreg.Val] do
     Case Typ of
-     ptString: setval(sVal[vIndex.getInt]);
-     else Fail;
+     ptInt   : Value := POpParam(getArray(Val).getValue(PosArray))^;
+     ptString:
+     Begin
+      Value.Typ := ptChar;
+      Value.Val := ord(sVal[PosArray[0]]);
+     End;
+
+     else goto Fail;
     End;
-  else Fail;
+
+  else
+   goto Fail;
+ End;
+
+ Case out_reg.Typ of
+  ptBoolReg  : breg[out_reg.Index] := Value.getBool;
+  ptCharReg  : creg[out_reg.Index] := Value.getChar;
+  ptIntReg   : ireg[out_reg.Index] := Value.getInt;
+  ptFloatReg : freg[out_reg.Index] := Value.getFloat;
+  ptStringReg: sreg[out_reg.Index] := Value.getString;
+  else
+   goto Fail;
+ End;
+
+ Exit;
+
+Fail:
+ raise Exception.Create('''arget'' called with arguments: '+refreg.getTypeName+', '+index_count.getTypeName+', '+out_reg.getTypeName);
+End;
+End;
+
+{ ARCRT }
+Procedure op_ARCRT(M: TMachine);
+Var refreg, typ, dimcount: TOpParam;
+    ArrayObj             : TMArray;
+    Sizes                : TLongWordArray;
+    I                    : LongWord;
+Begin
+With M do
+Begin
+ refreg   := read_param;
+ typ      := read_param;
+ dimcount := read_param;
+
+ SetLength(Sizes, dimcount.getInt);
+ For I := 0 To dimcount.getInt-1 Do
+  Sizes[I] := StackPop.getInt;
+
+ ArrayObj := TMArray.Create(typ.getInt, Sizes);
+
+ Case refreg.Typ of
+  ptReferenceReg: rreg[refreg.Index] := ArrayObj.getAddress;
+  else
+   raise Exception.Create('''arcrt'' called with arguments: '+refreg.getTypeName+', '+typ.getTypeName+', '+dimcount.getTypeName);
  End;
 End;
+End;
+
+{ OBJFREE }
+Procedure op_OBJFREE(M: TMachine);
+Begin
+ With M do
+  getObject(read_param.getReference).Free;
 End;
 End.

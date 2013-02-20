@@ -19,10 +19,10 @@
  along with SScript Compiler; if not, write to the Free Software
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA   
 *)
-
+{$R *.res}
 Program vm;
-Uses CRT, Windows, SysUtils, Machine, Registry;
-Const Version = '0.2';
+Uses CRT, Windows, SysUtils, Registry, Machine, mOutput;
+Const Version = '0.3 nightly';
 
 { getBoolOption }
 Function getBoolOption(O: String; Default: Boolean): Boolean;
@@ -38,49 +38,29 @@ Begin
    Exit(False);
 End;
 
-{ getStringOption }
-Function getStringOption(O: String; Default: String): String;
-Var I: Integer;
-Begin
- O := '-'+O;
-
- Result := Default;
- For I := 0 To ParamCount-1 Do
-  if (ParamStr(I) = O) Then
-  Begin
-   Result := ParamStr(I+1);
-   Exit;
-  End;
-End;
-
-{ getIntOption }
-Function getIntOption(O: String; Default: Integer): Integer;
-Begin
- Try
-  Result := StrToInt(getStringOption(O, IntToStr(Default)));
- Except
-  Result := Default;
- End;
-End;
-
 Const Ext = 'ssc';
 Var M   : TMachine;
     I   : Integer;
     Time: Cardinal;
     Reg : TRegistry;
-
-{$R *.res}
-
+Label Finish;
 Begin
  DefaultFormatSettings.DecimalSeparator := '.';
  Time := GetTickCount;
 
- CRT.WindMaxY := -1; // range check error is a deliberate effect
+ mOutput.SetScreenSize(CRT.WindMaxX, CRT.WindMaxY, CRT.WindMaxX, CRT.WindMaxY+1000);
+
+ if (ParamCount < 1) or (ParamStr(1) = '-logo') Then
+ Begin
+  Writeln('SScript Virtual Machine, version '+Version+' ['+{$I %DATE%}+']');
+  Writeln('by Patryk Wychowaniec');
+
+  if (ParamStr(1) = '-logo') Then
+   goto Finish;
+ End;
 
  if (ParamCount < 1) Then
  Begin
-  Writeln('SScript Virtual Machine v.', Version);
-
   Writeln('Usage:');
   Writeln('vm.exe [input file]');
   Writeln;
@@ -232,13 +212,22 @@ Begin
  Begin
   Writeln('-- END --');
   Writeln('Time   : '+IntToStr(Time)+' ms');
-  Writeln('Opcodes: ', M.OpcodeNo);
 
-  if (Time = 0) Then
-   Writeln('Opc/ms : > ', M.OpcodeNo) Else
-   Writeln('Opc/ms : ', IntToStr(Round(M.OpcodeNo/Time)));
+  if (Assigned(M)) Then
+  Begin
+   Writeln('Opcodes: ', M.OpcodeNo);
+
+   if (Time = 0) Then
+    Writeln('Opc/ms : > ', M.OpcodeNo) Else
+    Writeln('Opc/ms : ', IntToStr(Round(M.OpcodeNo/Time)));
+  End Else
+  Begin
+   Writeln('Opcodes: <unknown>');
+   Writeln('Opc/ms : <unknown>');
+  End;
  End;
 
+Finish:
  if (getBoolOption('wait', False)) Then
   Readln;
 End.

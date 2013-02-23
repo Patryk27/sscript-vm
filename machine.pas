@@ -23,11 +23,11 @@ Unit Machine;
 
        CALLSTACK_SIZE = 1000000; // in elements
 
- Const TYPE_BOOL   = 2; // do not modify these, as they have to be exactly the same, as in the compiler
-       TYPE_CHAR   = 3;
-       TYPE_INT    = 4;
-       TYPE_FLOAT  = 5;
-       TYPE_STRING = 6;
+ Const TYPE_BOOL   = 3; // do not modify these, as they have to be exactly the same, as in the compiler
+       TYPE_CHAR   = 4;
+       TYPE_INT    = 5;
+       TYPE_FLOAT  = 6;
+       TYPE_STRING = 7;
 
        TypeSize: Array[TYPE_BOOL..TYPE_STRING] of Byte = (sizeof(Boolean), sizeof(Char), sizeof(Integer), sizeof(Extended), sizeof(String));
 
@@ -778,7 +778,7 @@ Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc =
  @op_ARSET,
  @op_ARGET,
  @op_ARCRT,
- @op_, // @TODO
+ @op_ARLEN,
  @op_OBJFREE);
 Begin
  LastOpcodePos := getPosition;

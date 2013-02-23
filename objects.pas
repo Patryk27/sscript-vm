@@ -46,6 +46,7 @@ Unit Objects;
 
                   Procedure setValue(const Position: TLongWordArray; OpParam: Pointer);
                   Function getValue(const Position: TLongWordArray): Pointer;
+                  Function getSize(const Position: TLongWordArray): LongWord;
                  End;
 
  Implementation
@@ -136,7 +137,7 @@ Begin
 
  For I := Low(Position) To High(Position) Do
   if (Position[I] >= Sizes[I]) Then
-   raise Exception.Create('Array out of bounds; tried to access element #'+IntToStr(Position[I])+', while #'+IntToStr(Sizes[I])+' is the last one.');
+   raise Exception.Create('Array out of bounds; tried to access element #'+IntToStr(Position[I])+', while #'+IntToStr(Sizes[I]-1)+' is the last one.');
 
  Result := Position[Low(Position)]*TypeSize;
 
@@ -247,5 +248,19 @@ Begin
  End;
 
  Result := OpParam;
+End;
+
+{ TMArray.getSize }
+Function TMArray.getSize(const Position: TLongWordArray): LongWord;
+Var I: Integer;
+Begin
+ if (Length(Position) >{=} Length(Sizes)) Then
+  raise Exception.Create('Invalid array access.');
+
+ For I := Low(Position) To High(Position) Do
+  if (Position[I] >= Sizes[I]) Then
+   raise Exception.Create('Array out of bounds; tried to access element #'+IntToStr(Position[I])+', while #'+IntToStr(Sizes[I]-1)+' is the last one.');
+
+ Result := Sizes[Length(Position)];
 End;
 End.

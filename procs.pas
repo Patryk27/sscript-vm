@@ -44,6 +44,7 @@ Unit Procs;
  Procedure op_ARSET(M: TMachine);
  Procedure op_ARGET(M: TMachine);
  Procedure op_ARCRT(M: TMachine);
+ Procedure op_ARLEN(M: TMachine);
  Procedure op_OBJFREE(M: TMachine);
 
  Implementation
@@ -969,6 +970,32 @@ Begin
   ptReferenceReg: rreg[refreg.Index] := ArrayObj.getAddress;
   else
    raise Exception.Create('''arcrt'' called with arguments: '+refreg.getTypeName+', '+typ.getTypeName+', '+dimcount.getTypeName);
+ End;
+End;
+End;
+
+{ ARLEN }
+Procedure op_ARLEN(M: TMachine);
+Var refreg, index_count, out_reg: TOpParam;
+    PosArray                    : TLongWordArray;
+    I                           : Integer;
+    Value                       : TOpParam;
+Label Fail;
+Begin
+With M do
+Begin
+ refreg      := read_param;
+ index_count := read_param;
+ out_reg     := read_param;
+
+ SetLength(PosArray, index_count.getInt);
+ For I := 0 To index_count.getInt-1 Do
+  PosArray[I] := StackPop.getInt;
+
+ Case out_reg.Typ of
+  ptIntReg: ireg[out_reg.Index] := getArray(refreg.getReference).getSize(PosArray);
+  else
+   raise Exception.Create('''arlen'' called with arguments: '+refreg.getTypeName+', '+index_count.getTypeName+', '+out_reg.getTypeName);
  End;
 End;
 End;

@@ -36,6 +36,7 @@ Unit Objects;
                   Data    : Pointer;
                   Typ     : Byte;
                   TypeSize: Byte;
+                  MemSize : LongWord;
                   Sizes   : TLongWordArray;
 
                   Function getElementMemory(Position: TLongWordArray): LongWord;
@@ -149,7 +150,7 @@ End;
 
 { TMArray.Create }
 Constructor TMArray.Create(const fType: Byte; fSizes: TLongWordArray);
-Var I, Size: LongWord;
+Var I: LongWord;
 Begin
  inherited Create(otArray);
 
@@ -159,12 +160,12 @@ Begin
  Sizes    := fSizes;
 
  { allocate memory }
- Size := 0;
+ MemSize := 0;
  For I := Low(fSizes) To High(fSizes) Do
-  Size += TypeSize*fSizes[I];
+  MemSize += TypeSize*fSizes[I];
 
- Data := GetMem(Size);
- For I := 0 To Size-1 Do
+ Data := GetMem(MemSize);
+ For I := 0 To MemSize-1 Do
   PByte(Data+I)^ := 0;
 End;
 
@@ -175,7 +176,7 @@ Begin
  if (Typ = TYPE_STRING) Then
  Begin
   Mem    := LongWord(Data);
-  MemEnd := Mem+MemSize(Data)-sizeof(LongWord);
+  MemEnd := Mem+MemSize;
 
   While (Mem < MemEnd) Do
   Begin

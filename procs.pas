@@ -979,8 +979,6 @@ Procedure op_ARLEN(M: TMachine);
 Var refreg, index_count, out_reg: TOpParam;
     PosArray                    : TLongWordArray;
     I                           : Integer;
-    Value                       : TOpParam;
-Label Fail;
 Begin
 With M do
 Begin

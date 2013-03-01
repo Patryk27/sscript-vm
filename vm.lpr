@@ -38,6 +38,8 @@ Begin
    Exit(False);
 End;
 
+// @TODO: better command-line parsing
+
 Const Ext = 'ssc';
 Var M   : TMachine;
     I   : Integer;
@@ -78,7 +80,7 @@ Begin
   Writeln('-wait   wait for `enter` when finished (-)');
   Writeln('-time   display program''s execution time');
 
-  Writeln('-setdblclick     run SScript compiled (*.ssc) programs by double-click on them');
+  Writeln('-setdblclick     enable running SScript compiled (*.ssc) programs by double-click on them');
   Writeln('-removedblclick  remove option above');
  End Else
  Begin
@@ -128,6 +130,7 @@ Begin
 
    M := TMachine.Create(ParamStr(1));
    M.Prepare;
+   Time := GetTickCount;
    M.Run;
   Except
    On E: Exception Do
@@ -136,14 +139,13 @@ Begin
      Writeln('VM Exception');
      Writeln(E.Message);
 
-     if (getBoolOption('err', False)) and (Assigned(M)) Then // detailed error log
+     if (getBoolOption('err', False)) and (Assigned(M)) Then // display detailed error log?
      Begin
       M.setPosition(M.LastOpcodePos);
 
       Writeln;
       Writeln('Position:');
       Writeln('-> CODE:0x', IntToHex(M.getPosition, 8));
-      Writeln('-> FILE:0x', IntToHex(M.getPosition+M.SectionList[M.CodeSection].DataPnt, 8));
       Writeln;
 
       Writeln('Error opcode:');
@@ -190,7 +192,8 @@ Begin
        For I := Low(rreg) To High(rreg) Do
         Writeln('er',I,' = ', rreg[I]);
       End;
-     End;
+     End Else
+      Writeln('<detailed error log unavailable>');
     End;
   End;
   Finally
@@ -218,7 +221,7 @@ Begin
    Writeln('Opcodes: ', M.OpcodeNo);
 
    if (Time = 0) Then
-    Writeln('Opc/ms : > ', M.OpcodeNo) Else
+    Writeln('Opc/ms : ~', M.OpcodeNo) Else
     Writeln('Opc/ms : ', IntToStr(Round(M.OpcodeNo/Time)));
   End Else
   Begin

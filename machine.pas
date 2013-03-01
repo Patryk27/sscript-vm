@@ -9,19 +9,13 @@
 Unit Machine;
 
  Interface
- Uses SysUtils, Opcodes, Objects;
+ Uses SysUtils, Opcodes, Objects, Classes, Zipper;
 
- Const Header: Array[0..2] of Byte = ($53, $53, $04);
-       SectionNames: Array[0..6] of String = ('unusable', 'info', 'unknown', 'exports', 'unknown', 'code', 'debug data');
+ Const CALLSTACK_SIZE = 5*1024*1024 div sizeof(LongWord); // 5 MB callstack; value is elements count
+       STACK_SIZE     = 100000000;
 
-       { section types }
-       section_UNUSABLE = 0;
-       section_INFO     = 1;
-       section_EXPORTS  = 3;
-       section_CODE     = 5;
-       section_DEBUG    = 6;
-
-       CALLSTACK_SIZE = 1000000; // in elements
+       bytecode_version_major = 0;
+       bytecode_version_minor = 4;
 
  Const TYPE_BOOL   = 3; // do not modify these, as they have to be exactly the same, as in the compiler
        TYPE_CHAR   = 4;
@@ -30,43 +24,6 @@ Unit Machine;
        TYPE_STRING = 7;
 
        TypeSize: Array[TYPE_BOOL..TYPE_STRING] of Byte = (sizeof(Boolean), sizeof(Char), sizeof(Integer), sizeof(Extended), sizeof(String));
-
- Type TSection = Record
-                  Typ            : Byte;
-                  Length, DataPnt: LongWord;
-
-                  Data: Pointer;
-                 End;
-
- { 'info' section }
- Type PInfoSectionData = ^TInfoSectionData;
-      TInfoSectionData = Packed Record
-                          StackSize, EntryPoint: LongWord;
-                         End;
-
- { 'exports' section }
- Type PExport = ^TExport;
-      TExport = Packed Record
-                 FuncName, Position: LongWord;
-                End;
-
- Type PExportSectionData = ^TExportSectionData;
-      TExportSectionData = Packed Record
-                            ExportCount: Word;
-                            ExportList : Array[0..1024] of TExport;
-                           End;
-
- { 'debug data' section }
- Type PLabel = ^TLabel;
-      TLabel = Packed Record
-                Name, Position: LongWord;
-               End;
-
- Type PDebugSection = ^TDebugSection;
-      TDebugSection = Packed Record
-                       LabelsCount: LongWord;
-                       LabelList  : Array[0..10240] of TLabel; // FPC gets crazy when I use 'PLabel'...
-                      End;
 
  Type TMachine = class;
 
@@ -102,18 +59,19 @@ Unit Machine;
  { virtual machine class }
  Type TMachine = Class
                   Private
-                   InfoSectionD: TInfoSectionData;
+                   Procedure OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+                   Procedure OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+
+                   Procedure ParseHeader(const AStream: TStream);
+                   Procedure ParseBytecode(const AStream: TStream);
 
                   Public
                    // variables
-                   ExportSectionD: TExportSectionData;
+                   InputFile: String;
 
-                   InputFile : String;
-                   FileBuffer: PByte;
-                   Code      : PByte; // points at `SectionList[SectionCode].Data`
-                   Callstack : PLongWord;
-                   Stack     : Array of TOpParam;
-                   OpcodeNo  : QWord;
+                   CodeData : PByte;
+                   Callstack: PLongWord;
+                   Stack    : Array of TOpParam;
 
                    breg: Array[1..5] of Boolean;
                    creg: Array[1..4] of Char;
@@ -122,14 +80,14 @@ Unit Machine;
                    sreg: Array[1..4] of String;
                    rreg: Array[1..4] of Integer;
 
-                   Position     : PByte; // current position in `Code` section
+                   Position     : PByte; // current position in `code` section
                    LastOpcodePos: LongWord;
                    CallstackPos : LongWord;
                    StackPos     : PLongWord;
                    DebugMode    : Boolean;
+                   OpcodeNo     : QWord;
 
-                   SectionList: Array of TSection;
-                   InfoSection, CodeSection, ExportsSection, ImportsSection: Integer;
+                   is_runnable: Boolean;
 
                   Public
                    // methods
@@ -163,8 +121,7 @@ Unit Machine;
                    Function getArray(Address: LongWord): TMArray;
 
                    { some stuff }
-                   Constructor Create(fFileBuffer: Pointer; BufferSize: LongWord);
-                   Constructor Create(FileName: String);
+                   Constructor Create(const FileName: String);
                    Procedure Prepare;
                    Procedure Run;
                    Procedure RunFunction(PackageName, FunctionName: String);
@@ -349,6 +306,61 @@ Begin
   Result += ' ('+M.Stack[M.StackPos^+Val].getTypeName+')';
 End;
 
+{ TMachine.OnCreateStream }
+Procedure TMachine.OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+Begin
+ AStream := TMemoryStream.Create;
+End;
+
+{ TMachine.OnDoneStream }
+Procedure TMachine.OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+Begin
+ Log('Parsing unzipped file: '+AItem.ArchiveFileName+' (size: '+IntToStr(AItem.Size)+' bytes)');
+
+ AStream.Position := 0;
+
+ Case AItem.ArchiveFileName of
+  '.header': ParseHeader(AStream);
+  '.bytecode': ParseBytecode(AStream);
+  else
+   raise Exception.Create('Unknown file to parse: '+AItem.ArchiveFileName);
+ End;
+
+ AStream.Free;
+End;
+
+{ TMachine.ParseHeader }
+Procedure TMachine.ParseHeader(const AStream: TStream);
+Var magic_number                : Longword;
+    version_major, version_minor: Byte;
+Begin
+ Log('Parsing header...');
+ magic_number  := AStream.ReadDWord;
+ is_runnable   := Boolean(AStream.ReadByte);
+ version_major := AStream.ReadByte;
+ version_minor := AStream.ReadByte;
+
+ Log('Magic number: 0x'+IntToHex(magic_number, 8));
+ if (magic_number <> $0DEFACED) Then
+  raise Exception.Create('Invalid magic number.');
+
+ Log('Bytecode version: '+IntToStr(version_major)+'.'+IntToStr(version_minor));
+ if (version_major <> bytecode_version_major) or (version_minor <> bytecode_version_minor) Then
+  raise Exception.Create('Unsupported bytecode version.');
+End;
+
+{ TMachine.ParseBytecode }
+Procedure TMachine.ParseBytecode(const AStream: TStream);
+Var I: Integer;
+Begin
+ Log('Parsing bytecode...');
+
+ CodeData := AllocMem(AStream.Size);
+
+ For I := 0 To AStream.Size-1 Do // @TODO: why `AStream.Read` doesn't work? :|
+  CodeData[I] := AStream.ReadByte;
+End;
+
 { TMachine.c_read_byte }
 Function TMachine.c_read_byte: Byte;
 Begin
@@ -397,18 +409,12 @@ Var Ch: PChar;
 Begin
  Result := '';
 
- With SectionList[CodeSection] do
+ Ch := PChar(LongWord(CodeData)+Pos);
+
+ While (Ch^ <> #0) do // fetch string until the terminator (null) char
  Begin
-  if (Pos >= Length) Then
-   raise Exception.Create('String address is above available address space. Tried to read string at CODE:0x'+IntToHex(Pos, 2*sizeof(Pos))+' | FILE:0x'+IntToHex(SectionList[CodeSection].DataPnt+Pos, 8));
-
-  Ch := Data + Pos;
-
-  While (Ch^ <> #0) do // fetch string until the terminator (null) char
-  Begin
-   Result += Ch^;
-   Inc(Ch);
-  End;
+  Result += Ch^;
+  Inc(Ch);
  End;
 End;
 
@@ -441,7 +447,7 @@ End;
 { TMachine.StackPush }
 Procedure TMachine.StackPush(Value: Integer);
 Begin
- if (StackPos^ >= InfoSectionD.StackSize) Then
+ if (StackPos^ >= STACK_SIZE) Then
   raise Exception.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
@@ -452,7 +458,7 @@ End;
 { TMachine.StackPush }
 Procedure TMachine.StackPush(Value: Extended);
 Begin
- if (StackPos^ >= InfoSectionD.StackSize) Then
+ if (StackPos^ >= STACK_SIZE) Then
   raise Exception.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
@@ -463,7 +469,7 @@ End;
 { TMachine.StackPush }
 Procedure TMachine.StackPush(Value: String);
 Begin
- if (StackPos^ >= InfoSectionD.StackSize) Then
+ if (StackPos^ >= STACK_SIZE) Then
   raise Exception.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
@@ -474,7 +480,7 @@ End;
 { TMachine.StackPush }
 Procedure TMachine.StackPush(Value: Char);
 Begin
- if (StackPos^ >= InfoSectionD.StackSize) Then
+ if (StackPos^ >= STACK_SIZE) Then
   raise Exception.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
@@ -485,7 +491,7 @@ End;
 { TMachine.StackPush }
 Procedure TMachine.StackPush(Value: Boolean);
 Begin
- if (StackPos^ >= InfoSectionD.StackSize) Then
+ if (StackPos^ >= STACK_SIZE) Then
   raise Exception.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
@@ -496,7 +502,7 @@ End;
 { TMachine.StackPush }
 Procedure TMachine.StackPush(Value: TOpParam);
 Begin
- if (StackPos^ >= InfoSectionD.StackSize) Then
+ if (StackPos^ >= STACK_SIZE) Then
   raise Exception.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
@@ -509,8 +515,8 @@ Begin
  if (StackPos^ = 0) Then
   raise Exception.Create('Cannot ''pop'' - stack is empty.');
 
- if (StackPos^ > InfoSectionD.StackSize) Then
-  raise Exception.Create('Cannot ''pop'' - stack position is above available stack.');
+ if (StackPos^ >= STACK_SIZE) Then
+  raise Exception.Create('Cannot ''push'' - no space left on the stack.');
 
  Result := Stack[StackPos^];
  Dec(StackPos^);
@@ -519,13 +525,13 @@ End;
 { TMachine.getPosition }
 Function TMachine.getPosition: LongWord;
 Begin
- Result := LongWord(Position) - LongWord(SectionList[CodeSection].Data);
+ Result := LongWord(Position) - LongWord(CodeData);
 End;
 
 { TMachine.setPosition }
 Procedure TMachine.setPosition(NewPos: LongWord);
 Begin
- Position := PByte(NewPos) + LongWord(SectionList[CodeSection].Data);
+ Position := PByte(NewPos) + LongWord(CodeData);
 End;
 
 { TMachine.getObject }
@@ -550,151 +556,10 @@ Begin
 End;
 
 { TMachine.Create }
-Constructor TMachine.Create(fFileBuffer: Pointer; BufferSize: LongWord);
-Var I        : LongWord;
-    RHeader  : Array[0..2] of Byte;
-    BufferPos: LongWord=0;
-
-    SectionsCount: Byte;
-
-Function read_byte: Byte;
+Constructor TMachine.Create(const FileName: String);
+Var Zip     : TUnzipper;
+    FileList: TStringList;
 Begin
- if (BufferPos >= BufferSize) Then
-  raise Exception.Create('File damaged.');
-
- Result := FileBuffer[BufferPos];
- Inc(BufferPos, sizeof(Byte));
-End;
-
-Function read_longword: LongWord;
-Begin
- if (BufferPos >= BufferSize) Then
-  raise Exception.Create('File damaged.');
-
- Result := PLongword(@FileBuffer[BufferPos])^;
- Inc(BufferPos, sizeof(LongWord));
-End;
-
-Procedure read_section(ID: Byte);
-Begin
- With SectionList[ID] do
- Begin
-  Typ     := read_byte;
-  Length  := read_longword;
-  DataPnt := read_longword;
-
-  if (Typ > High(SectionNames)) Then
-   raise Exception.Create('Section #'+IntToStr(ID)+' is damaged (invalid type: '+IntToStr(Typ)+').');
-
-  if (DataPnt+Length > BufferSize) Then
-   raise Exception.Create('Section #'+IntToStr(ID)+' is damaged (invalid data pointer: '+IntToStr(DataPnt)+'; length = '+IntToStr(Length)+').');
-
-  Data := @FileBuffer[DataPnt];
-
-  Case Typ of
-   section_INFO:
-   if (InfoSection = -1) Then
-    InfoSection := ID Else
-    Log('[Warning] Multiple ''info'' sections!');
-
-   section_EXPORTS:
-   if (ExportsSection = -1) Then
-    ExportsSection := ID Else
-    Log('[Warning] Multiple ''exports'' sections!');
-
-   section_CODE:
-   if (CodeSection = -1) Then
-    CodeSection := ID Else
-    Log('[Warning] Multiple ''code'' sections!');
-  End;
-
-  Log('Section #'+IntToStr(ID)+' ('+SectionNames[Typ]+'); type='+IntToStr(Typ)+'; length='+IntToStr(Length)+'; datapnt='+IntToStr(DataPnt));
-  if (DataPnt = BufferSize) Then
-   Log('[Warning] Section #'+IntToStr(ID)+' points at the end of the file, so it''s pretty unusable...');
- End;
-End;
-
-Begin
- FileBuffer := fFileBuffer;
- Code       := nil;
-
- InfoSection    := -1;
- CodeSection    := -1;
- ExportsSection := -1;
- ImportsSection := -1;
-
- DebugMode := False;
-
- Try
-  { check header }
-  Log('Reading header...');
-  For I := Low(RHeader) To High(RHeader) Do
-  Begin
-   RHeader[I] := read_byte;
-   Log('0x'+IntToHex(RHeader[I], 2));
-  End;
-
-  Log('Checking header...');
-  For I := Low(RHeader) To High(RHeader) Do
-   if (RHeader[I] <> Header[I]) Then
-    raise Exception.Create('Invalid header!');
-
-  { read header's data }
-  SectionsCount := read_byte;
-  Log('Sections count = '+IntToStr(SectionsCount));
-
-  if (SectionsCount = 0) Then
-   raise Exception.Create('No sections found!');
-
-  SetLength(SectionList, SectionsCount);
-  Dec(SectionsCount);
-
-  { read sections }
-  Log('Reading sections...');
-  For I := 0 To SectionsCount Do
-   read_section(I);
-
-  if (InfoSection = -1) Then
-   raise Exception.Create('''info'' section not found!');
-  if (CodeSection = -1) Then
-   raise Exception.Create('''code'' section not found!');
-
-  { parse 'info' section }
-  Log('Parsing ''info'' section...');
-
-  InfoSectionD := PInfoSectionData(SectionList[InfoSection].Data)^;
-
-  With InfoSectionD do
-  Begin
-   Log('Stack size: '+IntToStr(StackSize));
-   Log('Entry point: 0x'+IntToHex(EntryPoint, sizeof(EntryPoint)*2));
-
-   SetLength(Stack, StackSize);
-  End;
-
-  if (ExportsSection > -1) Then
-  Begin
-   { parse 'exports' section }
-   Log('Parsing ''exports'' section...');
-
-   ExportSectionD := PExportSectionData(SectionList[ExportsSection].Data)^;
-  End Else
-   ExportSectionD.ExportCount := 0;
- Finally
- End;
-
- Code := SectionList[CodeSection].Data;
-
- Log('File has been loaded.');
-End;
-
-{ TMachine.Create }
-Constructor TMachine.Create(FileName: String);
-Var Input : File of Byte;
-    Buffer: PByte;
-Begin
- Log('-- create from file --');
-
  Log('Input file: '+FileName);
 
  if (not FileExists(FileName)) Then // file not found
@@ -703,39 +568,52 @@ Begin
   Exit;
  End;
 
- InputFile := FileName;
+ FileList     := TStringList.Create;
+ Zip          := TUnzipper.Create;
+ Zip.FileName := FileName;
 
- AssignFile(Input, FileName);
- Reset(Input);
- Log('Loading data to the buffer ('+IntToStr(FileSize(Input))+' bytes)...');
- Buffer := AllocMem(FileSize(Input));
- BlockRead(Input, Buffer[0], FileSize(Input));
- Create(Buffer, FileSize(Input));
- CloseFile(Input);
+ CodeData  := nil;
+ DebugMode := False;
+
+ Try
+  Zip.Examine;
+  Zip.OnCreateStream := @OnCreateStream;
+  Zip.OnDoneStream   := @OnDoneStream;
+
+  { unzip files }
+  FileList.Clear;
+  FileList.Add('.header');
+  Zip.UnzipFiles(FileList);
+
+  FileList.Clear;
+  FileList.Add('.bytecode');
+  Zip.UnzipFiles(FileList);
+ Finally
+  Zip.Free;
+  FileList.Free;
+ End;
 
  Log('Allocating memory...');
  Callstack := GetMem(sizeof(LongWord)*CALLSTACK_SIZE);
+ SetLength(Stack, STACK_SIZE);
 
- Log('Load done.');
+ Log('File has been loaded.');
 End;
 
 { TMachine.Prepare }
 Procedure TMachine.Prepare;
 Begin
- if (Code = nil) Then // no file has been loaded
+ if (CodeData = nil) Then // no file has been loaded
  Begin
   raise Exception.Create('Cannot execute program: no file has been loaded (or damaged ''code'' section).');
   Exit;
  End;
 
- setPosition(InfoSectionD.EntryPoint);
+ setPosition(0{InfoSectionD.EntryPoint});
  CallstackPos := 0;
 
  ireg[5]  := 0; // mov(stp, 0)
  StackPos := @ireg[5];
-
- if (getPosition >= SectionList[CodeSection].Length) Then
-  Exit;
 End;
 
 { TMachine.Run }
@@ -798,6 +676,13 @@ End;
 Begin
  Log('-- PROGRAM START --');
 
+ if (not is_runnable) Then
+ Begin
+  Log('Not a runnable program.');
+  Log('Stopping...');
+  Exit;
+ End;
+
  OpcodeNo := 0;
 
  While (true) do
@@ -823,9 +708,9 @@ Var I: Integer;
 Begin
  Result := -1;
 
- For I := 0 To High(SectionList) Do
-  if (SectionList[I].Typ = Typ) Then
-   Exit(I);
+// For I := 0 To High(SectionList) Do
+//  if (SectionList[I].Typ = Typ) Then
+//   Exit(I);
 End;
 
 { TMachine.disasm }
@@ -885,6 +770,7 @@ End;
 
 { TMachine.FetchLabelName }
 Function TMachine.FetchLabelName(Pos: LongWord; out Str: String): Boolean;
+{
 Var ID    : Integer;
     DebugS: PDebugSection;
     I     : Integer;
@@ -904,5 +790,9 @@ Begin
     Str := getString(LabelList[I].Name);
     Exit(True);
    End;
+End;
+}
+Begin
+ // @TODO
 End;
 End.

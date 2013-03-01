@@ -32,7 +32,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <CommandLineParams Value="..\project.ssc -wait -time"/>
+        <CommandLineParams Value="-logo -wait"/>
       </local>
     </RunParams>
     <RequiredPackages Count="1">

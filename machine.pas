@@ -15,7 +15,7 @@ Unit Machine;
        STACK_SIZE     = 100000000;
 
        bytecode_version_major = 0;
-       bytecode_version_minor = 4;
+       bytecode_version_minor = 41;
 
  Const TYPE_BOOL   = 3; // do not modify these, as they have to be exactly the same, as in the compiler
        TYPE_CHAR   = 4;
@@ -333,9 +333,18 @@ End;
 Procedure TMachine.ParseHeader(const AStream: TStream);
 Var magic_number                : Longword;
     version_major, version_minor: Byte;
+
+    // EndingZero
+    Function EndingZero(const Text: String): String;
+    Begin
+     if (Length(Text) = 1) Then
+      Exit(Text+'0') Else
+      Exit(Text);
+    End;
+
 Begin
  Log('Parsing header...');
- magic_number  := AStream.ReadDWord;
+ magic_number  := BEtoN(AStream.ReadDWord);
  is_runnable   := Boolean(AStream.ReadByte);
  version_major := AStream.ReadByte;
  version_minor := AStream.ReadByte;
@@ -344,7 +353,7 @@ Begin
  if (magic_number <> $0DEFACED) Then
   raise Exception.Create('Invalid magic number.');
 
- Log('Bytecode version: '+IntToStr(version_major)+'.'+IntToStr(version_minor));
+ Log('Bytecode version: '+IntToStr(version_major)+'.'+EndingZero(IntToStr(version_minor)));
  if (version_major <> bytecode_version_major) or (version_minor <> bytecode_version_minor) Then
   raise Exception.Create('Unsupported bytecode version.');
 End;
@@ -371,14 +380,14 @@ End;
 { TMachine.c_read_integer }
 Function TMachine.c_read_integer: Integer;
 Begin
- Result := PInteger(Position)^;
+ Result := BEtoN(PInteger(Position)^);
  Inc(Position, sizeof(Integer));
 End;
 
 { TMachine.c_read_longword }
 Function TMachine.c_read_longword: LongWord;
 Begin
- Result := PLongWord(Position)^;
+ Result := BEtoN(PLongWord(Position)^);
  Inc(Position, sizeof(LongWord));
 End;
 
@@ -428,7 +437,7 @@ Begin
   Result.Index := c_read_byte; // register ID
 
  Case Result.Typ of
-  ptBoolReg: Result.Val := Int64(breg[Result.Index]);
+  ptBoolReg: Result.Val := Byte(breg[Result.Index]);
   ptCharReg: Result.Val := ord(creg[Result.Index]);
   ptIntReg: Result.Val := ireg[Result.Index];
   ptFloatReg: Result.fVal := freg[Result.Index];

@@ -9,21 +9,21 @@
         <Filename Value="vm.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="vm"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="14"/>
-        <CursorPos X="38" Y="41"/>
+        <TopLine Value="44"/>
+        <CursorPos X="55" Y="64"/>
         <UsageCount Value="236"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="machine.pas"/>
         <UnitName Value="Machine"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="766"/>
-        <CursorPos X="3" Y="770"/>
+        <TopLine Value="328"/>
+        <CursorPos X="1" Y="337"/>
         <UsageCount Value="123"/>
         <Loaded Value="True"/>
       </Unit1>
@@ -77,7 +77,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="48" Y="14"/>
-        <UsageCount Value="0"/>
+        <UsageCount Value="10"/>
       </Unit7>
       <Unit8>
         <Filename Value="packages\mvm.pas"/>
@@ -104,8 +104,8 @@
         <UnitName Value="mOutput"/>
         <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="31"/>
-        <CursorPos X="29" Y="44"/>
+        <TopLine Value="30"/>
+        <CursorPos X="13" Y="37"/>
         <UsageCount Value="108"/>
         <Loaded Value="True"/>
       </Unit10>
@@ -197,15 +197,15 @@
       <Unit21>
         <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\classes\classesh.inc"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="802"/>
-        <CursorPos X="14" Y="802"/>
+        <TopLine Value="781"/>
+        <CursorPos X="57" Y="777"/>
         <UsageCount Value="11"/>
       </Unit21>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="5" HistoryIndex="4">
+    <JumpHistory Count="10" HistoryIndex="9">
       <Position1>
         <Filename Value="vm.lpr"/>
         <Caret Line="130" Column="23" TopLine="113"/>
@@ -226,6 +226,26 @@
         <Filename Value="machine.pas"/>
         <Caret Line="131" Column="44" TopLine="116"/>
       </Position5>
+      <Position6>
+        <Filename Value="machine.pas"/>
+        <Caret Line="359" Column="39" TopLine="325"/>
+      </Position6>
+      <Position7>
+        <Filename Value="machine.pas"/>
+        <Caret Line="344" Column="50" TopLine="325"/>
+      </Position7>
+      <Position8>
+        <Filename Value="machine.pas"/>
+        <Caret Line="447" Column="25" TopLine="426"/>
+      </Position8>
+      <Position9>
+        <Filename Value="machine.pas"/>
+        <Caret Line="96" Column="40" TopLine="81"/>
+      </Position9>
+      <Position10>
+        <Filename Value="machine.pas"/>
+        <Caret Line="397" Column="39" TopLine="388"/>
+      </Position10>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>

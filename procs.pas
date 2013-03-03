@@ -6,7 +6,10 @@
 Unit Procs;
 
  Interface
- Uses Machine;
+ Uses SysUtils, Machine;
+
+ Type eInvalidOpcode = Class(Exception);
+      eDivByZero     = Class(Exception);
 
  Procedure op_(M: TMachine);
 
@@ -48,7 +51,7 @@ Unit Procs;
  Procedure op_OBJFREE(M: TMachine);
 
  Implementation
-Uses SysUtils, Opcodes, Objects;
+Uses Opcodes, Objects;
 
 { qmagic }
 Function qmagic(Param: TOpParam): TOpParam; inline;
@@ -201,7 +204,7 @@ End;
 { _ }
 Procedure op_(M: TMachine);
 Begin
- raise Exception.Create('Opcode '''+getOpcodeName(LongWord(M.Position)-sizeof(Byte))+''' unimplemented');
+ raise eInvalidOpcode.Create('Opcode '''+getOpcodeName(LongWord(M.Position)-sizeof(Byte))+''' unimplemented');
 End;
 
 { NOP }
@@ -213,7 +216,7 @@ End;
 Procedure op_STOP(M: TMachine);
 Begin
  Log('');
- Log('-- STOP --');
+ Log('-- STOP (reason: `stop` opcode) --');
  raise Exception.Create('');
 End;
 
@@ -245,7 +248,7 @@ Begin
   ptFloatReg: freg[reg.Index] := val.getFloat;
   ptStringReg: sreg[reg.Index] := val.getString;
   ptReferenceReg: rreg[reg.Index] := val.getReference;
-  else raise Exception.Create('''pop'' called with arguments: '+reg.getTypeName+', '+val.getTypeName);
+  else raise eInvalidOpcode.Create('''pop'' called with arguments: '+reg.getTypeName+', '+val.getTypeName);
  End;
 End;
 End;
@@ -277,7 +280,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''add'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''add'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -308,7 +311,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''sub'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''sub'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -339,7 +342,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''mul'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''mul'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -354,7 +357,7 @@ Begin
  param := read_param;
 
  if (param.getFloat = 0) Then
-  raise Exception.Create('Division by zero.');
+  raise eDivByZero.Create('Division by zero.');
 
  Case reg.Typ of
   ptCharReg: creg[reg.Index] := chr(ord(creg[reg.Index]) div param.getInt);
@@ -373,7 +376,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''div'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''div'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -402,7 +405,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''neg'' called with argument: '+reg.getTypeName);
+ raise eInvalidOpcode.Create('''neg'' called with argument: '+reg.getTypeName);
 End;
 End;
 
@@ -423,7 +426,7 @@ Begin
   ptStringReg: sreg[reg.Index] := val.getString;
   ptReferenceReg: rreg[reg.Index] := val.getReference;
   ptStackVal: Stack[StackPos^+reg.Val] := qmagic(val);
-  else raise Exception.Create('''mov'' called with arguments: '+reg.getTypeName+', '+val.getTypeName);
+  else raise eInvalidOpcode.Create('''mov'' called with arguments: '+reg.getTypeName+', '+val.getTypeName);
  End;
 End;
 End;
@@ -475,7 +478,7 @@ Begin
  Inc(CallstackPos);
 
  if (CallstackPos >= CALLSTACK_SIZE) Then
-  raise Exception.Create('Cannot do ''call'' - no space left on callstack.');
+  raise eInvalidOpcode.Create('Cannot do ''call'' - no space left on callstack.');
 
  NewAddr                 := getPosition;
  NewAddr                 += read_param.getInt-1;
@@ -514,7 +517,7 @@ Begin
  Inc(CallstackPos);
 
  if (CallstackPos >= CALLSTACK_SIZE) Then
-  raise Exception.Create('Cannot do ''acall'' - no space left on callstack.');
+  raise eInvalidOpcode.Create('Cannot do ''acall'' - no space left on callstack.');
 
  NewAddr                 := read_param.getReference;
  Callstack[CallstackPos] := getPosition;
@@ -528,7 +531,7 @@ Begin
 With M do
 Begin
  if (CallstackPos < 1) Then
-  raise Exception.Create('Cannot do ''ret'' - callstack is empty.');
+  raise eInvalidOpcode.Create('Cannot do ''ret'' - callstack is empty.');
 
  setPosition(Callstack[CallstackPos]);
  Dec(CallstackPos);
@@ -637,7 +640,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''strjoin'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''strjoin'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -666,7 +669,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''not'' called with argument: '+reg.getTypeName);
+ raise eInvalidOpcode.Create('''not'' called with argument: '+reg.getTypeName);
 End;
 End;
 
@@ -696,7 +699,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''or'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''or'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -726,7 +729,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''xor'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''xor'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -756,7 +759,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''and'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''and'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -784,7 +787,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''shl'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''shl'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -812,7 +815,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''shr'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''shr'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -827,7 +830,7 @@ Begin
  param := read_param;
 
  if (param.getFloat = 0) Then
-  raise Exception.Create('Division by zero.');
+  raise eDivByZero.Create('Division by zero.');
 
  Case reg.Typ of
   ptIntReg: ireg[reg.Index] := ireg[reg.Index] mod param.getInt;
@@ -843,7 +846,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''mod'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
+ raise eInvalidOpcode.Create('''mod'' called with arguments: '+reg.getTypeName+', '+param.getTypeName);
 End;
 End;
 
@@ -883,7 +886,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''arset'' called with arguments: '+refreg.getTypeName+', '+index_count.getTypeName+', '+value.getTypeName);
+ raise eInvalidOpcode.Create('''arset'' called with arguments: '+refreg.getTypeName+', '+index_count.getTypeName+', '+value.getTypeName);
 End;
 End;
 
@@ -931,11 +934,12 @@ Begin
  End;
 
  Case out_reg.Typ of
-  ptBoolReg  : breg[out_reg.Index] := Value.getBool;
-  ptCharReg  : creg[out_reg.Index] := Value.getChar;
-  ptIntReg   : ireg[out_reg.Index] := Value.getInt;
-  ptFloatReg : freg[out_reg.Index] := Value.getFloat;
-  ptStringReg: sreg[out_reg.Index] := Value.getString;
+  ptBoolReg     : breg[out_reg.Index] := Value.getBool;
+  ptCharReg     : creg[out_reg.Index] := Value.getChar;
+  ptIntReg      : ireg[out_reg.Index] := Value.getInt;
+  ptFloatReg    : freg[out_reg.Index] := Value.getFloat;
+  ptStringReg   : sreg[out_reg.Index] := Value.getString;
+  ptReferenceReg: rreg[out_reg.Index] := Value.getReference;
   else
    goto Fail;
  End;
@@ -943,7 +947,7 @@ Begin
  Exit;
 
 Fail:
- raise Exception.Create('''arget'' called with arguments: '+refreg.getTypeName+', '+index_count.getTypeName+', '+out_reg.getTypeName);
+ raise eInvalidOpcode.Create('''arget'' called with arguments: '+refreg.getTypeName+', '+index_count.getTypeName+', '+out_reg.getTypeName);
 End;
 End;
 
@@ -969,7 +973,7 @@ Begin
  Case refreg.Typ of
   ptReferenceReg: rreg[refreg.Index] := ArrayObj.getAddress;
   else
-   raise Exception.Create('''arcrt'' called with arguments: '+refreg.getTypeName+', '+typ.getTypeName+', '+dimcount.getTypeName);
+   raise eInvalidOpcode.Create('''arcrt'' called with arguments: '+refreg.getTypeName+', '+typ.getTypeName+', '+dimcount.getTypeName);
  End;
 End;
 End;
@@ -993,7 +997,7 @@ Begin
  Case out_reg.Typ of
   ptIntReg: ireg[out_reg.Index] := getArray(refreg.getReference).getSize(PosArray);
   else
-   raise Exception.Create('''arlen'' called with arguments: '+refreg.getTypeName+', '+index_count.getTypeName+', '+out_reg.getTypeName);
+   raise eInvalidOpcode.Create('''arlen'' called with arguments: '+refreg.getTypeName+', '+index_count.getTypeName+', '+out_reg.getTypeName);
  End;
 End;
 End;

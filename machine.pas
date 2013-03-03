@@ -11,6 +11,11 @@ Unit Machine;
  Interface
  Uses SysUtils, Opcodes, Objects, Classes, Zipper;
 
+ Type eInternalError    = Class(Exception);
+      eInvalidCasting   = Class(Exception);
+      eInvalidReference = Class(Exception);
+      eInvalidFile      = Class(Exception);
+
  Const CALLSTACK_SIZE = 5*1024*1024 div sizeof(LongWord); // 5 MB callstack; value is elements count
        STACK_SIZE     = 100000000;
 
@@ -89,6 +94,8 @@ Unit Machine;
 
                    is_runnable: Boolean;
 
+                   exitcode: Integer;
+
                   Public
                    // methods
 
@@ -126,7 +133,6 @@ Unit Machine;
                    Procedure Run;
                    Procedure RunFunction(PackageName, FunctionName: String);
 
-                   Function findSection(Typ: Byte): Integer;
                    Function disasm(Pos: LongWord): String;
                    Function FetchLabelName(Pos: LongWord; out Str: String): Boolean;
                   End;
@@ -178,7 +184,7 @@ Begin
  End Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getBool) Else
-  raise Exception.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> bool');
+  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> bool');
 End;
 
 { TOpParam.getChar }
@@ -190,7 +196,7 @@ Begin
   Exit(sVal[1]) Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getChar) Else
-  raise Exception.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> char');
+  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> char');
 End;
 
 { TOpParam.getInt }
@@ -202,7 +208,7 @@ Begin
   Exit(Round(fVal)) Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getInt) Else
-  raise Exception.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int');
+  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int');
 End;
 
 { TOpParam.getLongword }
@@ -212,7 +218,7 @@ Begin
   Exit(Val) Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getInt) Else
-  raise Exception.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int (longword)');
+  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int (longword)');
 End;
 
 { TOpParam.getFloat }
@@ -224,7 +230,7 @@ Begin
   Exit(Val) Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getFloat) Else
-  raise Exception.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> float');
+  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> float');
 End;
 
 { TOpParam.getString }
@@ -236,7 +242,7 @@ Begin
   Exit(chr(Val)) Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getString) Else
-  raise Exception.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> string');
+  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> string');
 End;
 
 { TOpParam.getReference }
@@ -246,7 +252,7 @@ Begin
   Exit(Val) Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getReference) Else
-  raise Exception.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int');
+  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int');
 End;
 
 { TOpParam.getBoolReg }
@@ -254,7 +260,7 @@ Function TOpParam.getBoolReg: Pointer;
 Begin
  if (Typ = ptBoolReg) Then
   Exit(@M.breg[Index]) Else
-  raise Exception.Create('Expected register of type ''bool'' while type '''+PrimaryTypeNames[Typ]+''' found');
+  raise eInvalidCasting.Create('Expected register of type ''bool'' while type '''+PrimaryTypeNames[Typ]+''' found');
 End;
 
 { TOpParam.getCharReg }
@@ -262,7 +268,7 @@ Function TOpParam.getCharReg: Pointer;
 Begin
  if (Typ = ptCharReg) Then
   Exit(@M.creg[Index]) Else
-  raise Exception.Create('Expected register of type ''char'' while type '''+PrimaryTypeNames[Typ]+''' found');
+  raise eInvalidCasting.Create('Expected register of type ''char'' while type '''+PrimaryTypeNames[Typ]+''' found');
 End;
 
 { TOpParam.getIntReg }
@@ -270,7 +276,7 @@ Function TOpParam.getIntReg: Pointer;
 Begin
  if (Typ = ptIntReg) Then
   Exit(@M.ireg[Index]) Else
-  raise Exception.Create('Expected register of type ''int'' while type '''+PrimaryTypeNames[Typ]+''' found');
+  raise eInvalidCasting.Create('Expected register of type ''int'' while type '''+PrimaryTypeNames[Typ]+''' found');
 End;
 
 { TOpParam.getFloatReg }
@@ -278,7 +284,7 @@ Function TOpParam.getFloatReg: Pointer;
 Begin
  if (Typ = ptFloatReg) Then
   Exit(@M.freg[Index]) Else
-  raise Exception.Create('Expected register of type ''float'' while type '''+PrimaryTypeNames[Typ]+''' found');
+  raise eInvalidCasting.Create('Expected register of type ''float'' while type '''+PrimaryTypeNames[Typ]+''' found');
 End;
 
 { TOpParam.getStringReg }
@@ -286,7 +292,7 @@ Function TOpParam.getStringReg: Pointer;
 Begin
  if (Typ = ptStringReg) Then
   Exit(@M.sreg[Index]) Else
-  raise Exception.Create('Expected register of type ''string'' while type '''+PrimaryTypeNames[Typ]+''' found');
+  raise eInvalidCasting.Create('Expected register of type ''string'' while type '''+PrimaryTypeNames[Typ]+''' found');
 End;
 
 { TOpParam.getReferenceReg }
@@ -294,7 +300,7 @@ Function TOpParam.getReferenceReg: Pointer;
 Begin
  if (Typ = ptReferenceReg) Then
   Exit(@M.rreg[Index]) Else
-  raise Exception.Create('Expected register of type ''reference'' while type '''+PrimaryTypeNames[Typ]+''' found');
+  raise eInvalidCasting.Create('Expected register of type ''reference'' while type '''+PrimaryTypeNames[Typ]+''' found');
 End;
 
 { TOpParam.getTypeName }
@@ -323,7 +329,7 @@ Begin
   '.header': ParseHeader(AStream);
   '.bytecode': ParseBytecode(AStream);
   else
-   raise Exception.Create('Unknown file to parse: '+AItem.ArchiveFileName);
+   raise eInternalError.Create('Unknown file to parse: '+AItem.ArchiveFileName);
  End;
 
  AStream.Free;
@@ -351,11 +357,11 @@ Begin
 
  Log('Magic number: 0x'+IntToHex(magic_number, 8));
  if (magic_number <> $0DEFACED) Then
-  raise Exception.Create('Invalid magic number.');
+  raise eInvalidFile.Create('Invalid magic number.');
 
  Log('Bytecode version: '+IntToStr(version_major)+'.'+EndingZero(IntToStr(version_minor)));
  if (version_major <> bytecode_version_major) or (version_minor <> bytecode_version_minor) Then
-  raise Exception.Create('Unsupported bytecode version.');
+  raise eInvalidFile.Create('Unsupported bytecode version.');
 End;
 
 { TMachine.ParseBytecode }
@@ -457,7 +463,7 @@ End;
 Procedure TMachine.StackPush(Value: Integer);
 Begin
  if (StackPos^ >= STACK_SIZE) Then
-  raise Exception.Create('Cannot ''push'' - no space left on the stack.');
+  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
  Stack[StackPos^].Typ := ptInt;
@@ -468,7 +474,7 @@ End;
 Procedure TMachine.StackPush(Value: Extended);
 Begin
  if (StackPos^ >= STACK_SIZE) Then
-  raise Exception.Create('Cannot ''push'' - no space left on the stack.');
+  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
  Stack[StackPos^].Typ  := ptFloat;
@@ -479,7 +485,7 @@ End;
 Procedure TMachine.StackPush(Value: String);
 Begin
  if (StackPos^ >= STACK_SIZE) Then
-  raise Exception.Create('Cannot ''push'' - no space left on the stack.');
+  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
  Stack[StackPos^].Typ  := ptString;
@@ -490,7 +496,7 @@ End;
 Procedure TMachine.StackPush(Value: Char);
 Begin
  if (StackPos^ >= STACK_SIZE) Then
-  raise Exception.Create('Cannot ''push'' - no space left on the stack.');
+  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
  Stack[StackPos^].Typ := ptChar;
@@ -501,7 +507,7 @@ End;
 Procedure TMachine.StackPush(Value: Boolean);
 Begin
  if (StackPos^ >= STACK_SIZE) Then
-  raise Exception.Create('Cannot ''push'' - no space left on the stack.');
+  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
  Stack[StackPos^].Typ := ptBool;
@@ -512,7 +518,7 @@ End;
 Procedure TMachine.StackPush(Value: TOpParam);
 Begin
  if (StackPos^ >= STACK_SIZE) Then
-  raise Exception.Create('Cannot ''push'' - no space left on the stack.');
+  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
 
  Inc(StackPos^);
  Stack[StackPos^] := Value;
@@ -522,10 +528,10 @@ End;
 Function TMachine.StackPop: TOpParam;
 Begin
  if (StackPos^ = 0) Then
-  raise Exception.Create('Cannot ''pop'' - stack is empty.');
+  raise eInternalError.Create('Cannot ''pop'' - stack is empty.');
 
  if (StackPos^ >= STACK_SIZE) Then
-  raise Exception.Create('Cannot ''push'' - no space left on the stack.');
+  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
 
  Result := Stack[StackPos^];
  Dec(StackPos^);
@@ -552,9 +558,9 @@ Begin
 
   if (Obj.getMagic = MagicNumber) Then
    Exit(Obj) Else
-   raise Exception.Create('');
+   raise eInternalError.Create('');
  Except
-  raise Exception.Create('Not a valid object reference: 0x'+IntToHex(Address, 2*sizeof(LongWord))+' (invalid magic number: 0x'+IntToHex(Obj.getMagic, 2*sizeof(LongWord))+')');
+  raise eInvalidReference.Create('Not a valid object reference: 0x'+IntToHex(Address, 2*sizeof(LongWord)));
  End;
 End;
 
@@ -614,7 +620,7 @@ Procedure TMachine.Prepare;
 Begin
  if (CodeData = nil) Then // no file has been loaded
  Begin
-  raise Exception.Create('Cannot execute program: no file has been loaded (or damaged ''code'' section).');
+  raise eInvalidFile.Create('Cannot execute program: no file has been loaded (or damaged ''code'' section).');
   Exit;
  End;
 
@@ -671,12 +677,12 @@ Begin
  LastOpcodePos := getPosition;
  Inc(OpcodeNo);
 
-{
+//{
  Begin
-  Writeln('CODE:0x', IntToHex(getPosition, 8), ', FILE:', IntToHex(getPosition+SectionList[CodeSection].DataPnt, 8), ' -> ', disasm(getPosition));
-  Readln;
+ // Writeln('CODE:0x', IntToHex(getPosition, 8), ' -> ', disasm(getPosition));
+ // Readln;
  End;
-}
+//}
 
  OpcodeTable[TOpcode_E(c_read_byte)](self);
 // TOpcodeProc(Pointer(PPointer(LongWord(@OpcodeTable[TOpcode_E(0)])+c_read_byte*sizeof(Pointer)))^)(self); // magic!
@@ -693,6 +699,7 @@ Begin
  End;
 
  OpcodeNo := 0;
+ exitcode := 0;
 
  While (true) do
   ParseOpcode;
@@ -708,18 +715,8 @@ Begin
    FunctionList[I].Handler(self);
    Exit;
   End;
- raise Exception.Create('Invalid `icall`: '+PackageName+'.'+FunctionName);
-End;
 
-{ TMachine.findSection }
-Function TMachine.findSection(Typ: Byte): Integer;
-Var I: Integer;
-Begin
- Result := -1;
-
-// For I := 0 To High(SectionList) Do
-//  if (SectionList[I].Typ = Typ) Then
-//   Exit(I);
+ raise eInvalidOpcode.Create('Invalid `icall`: '+PackageName+'.'+FunctionName);
 End;
 
 { TMachine.disasm }

@@ -136,64 +136,26 @@ Begin
    On E: Exception Do
     if (E.Message <> '') Then
     Begin
-     Writeln('VM Exception');
-     Writeln(E.Message);
+     Writeln(E.ClassName, ': ', E.Message);
 
-     if (getBoolOption('err', False)) and (Assigned(M)) Then // display detailed error log?
+     if (Assigned(M)) Then
      Begin
-      M.setPosition(M.LastOpcodePos);
+      {
+       at FileName.ss (line: 97)
+       ... from AnotherFile.ss (line: 32)
+       ... from main.ss (line: 13)
+      }
+      Writeln('-> at 0x', IntToHex(M.getPosition, 8)); //, ' (', M.FetchLabelName(M.getPosition));
 
-      Writeln;
-      Writeln('Position:');
-      Writeln('-> CODE:0x', IntToHex(M.getPosition, 8));
-      Writeln;
+      I := M.CallstackPos;
 
-      Writeln('Error opcode:');
-      Writeln('> ', M.disasm(M.getPosition));
-      Writeln;
-
-      Writeln('Callstack (first 15):');
-      For I := M.CallstackPos-15 To M.CallstackPos-1 Do
+      For I := M.CallstackPos Downto Integer(M.CallstackPos)-10 Do
        if (I >= 0) Then
-       Begin
-        Write('-> 0x', IntToHex(M.Callstack[I], 8));
+        Writeln('--> from 0x', IntToHex(M.Callstack[I], 8));
 
-        // @TODO
-       // M.Position := M.Callstack[I]+sizeof(Byte) - sizeof(LongWord)-2*sizeof(Byte); // go back 1 param and 1 opcode (i.e. - go back to the beginning of 'call (int value)')
-       // if (M.FetchLabelName(M.read_param.Val, Str)) Then
-       //  Write(' = call(:', Str, ')');
-
-        Writeln;
-       End;
-
-      Writeln;
-      Writeln('Registers:');
-      With M do
-      Begin
-       For I := Low(breg) To High(breg) Do
-        if (I = 5) Then
-         Writeln('if  = ', breg[I]) Else
-         Writeln('eb',I,' = ', breg[I]);
-
-       For I := Low(creg) To High(creg) Do
-        Writeln('ec',I,' = #', ord(creg[I]));
-
-       For I := Low(ireg) To High(ireg) Do
-        if (I = 5) Then
-         Writeln('stp = ', ireg[5]) Else
-         Writeln('ei',I,' = ', ireg[I]);
-
-       For I := Low(freg) To High(freg) Do
-        Writeln('ef',I,' = ', FloatToStr(freg[I]));
-
-       For I := Low(sreg) To High(sreg) Do
-        Writeln('es',I,' = ', sreg[I]);
-
-       For I := Low(rreg) To High(rreg) Do
-        Writeln('er',I,' = ', rreg[I]);
-      End;
-     End Else
-      Writeln('<detailed error log unavailable>');
+      if (M.CallstackPos > 10) Then
+       Writeln('--> ... ', M.CallstackPos-10, ' more');
+     End;
     End;
   End;
   Finally

@@ -8,6 +8,9 @@ Unit Objects;
  Interface
  Uses SysUtils;
 
+ Type eInvalidAccess = Class(Exception);
+      eOutOfBounds   = Class(Exception);
+
  Const MagicNumber = $CAFEBABE;
 
  Type TObjectType = (otArray);
@@ -133,12 +136,12 @@ Begin
  Begin
   if (Typ = TYPE_STRING) and (Length(Position)-1 = Length(Sizes)) Then
    SetLength(Position, High(Position)) Else
-   raise Exception.Create('Invalid array access.');
+   raise eInvalidAccess.Create('Invalid array access.');
  End;
 
  For I := Low(Position) To High(Position) Do
   if (Position[I] >= Sizes[I]) Then
-   raise Exception.Create('Array out of bounds; tried to access element #'+IntToStr(Position[I])+', while #'+IntToStr(Sizes[I]-1)+' is the last one.');
+   raise eOutOfBounds.Create('Array out of bounds. Tried to access element #'+IntToStr(Position[I])+', while #'+IntToStr(Sizes[I]-1)+' is the last one.');
 
  Result := Position[Low(Position)]*TypeSize;
 
@@ -163,6 +166,9 @@ Begin
  MemSize := 0;
  For I := Low(fSizes) To High(fSizes) Do
   MemSize += TypeSize*fSizes[I];
+
+ if (MemSize = 0) Then
+  MemSize := 1;
 
  Data := GetMem(MemSize);
  For I := 0 To MemSize-1 Do
@@ -209,7 +215,7 @@ Begin
    TYPE_STRING                   : SaveString(DataPos, sVal);
    TYPE_FLOAT                    : PExtended(DataPos)^ := fVal;
    else
-    raise Exception.Create('Invalid type: '+IntToStr(ord(Typ)));
+    raise eInvalidAccess.Create('Invalid type: '+IntToStr(ord(Typ)));
   End;
  End;
 End;
@@ -232,7 +238,7 @@ Begin
    TYPE_FLOAT : Typ := ptFloat;
    TYPE_STRING: Typ := ptString;
    else
-    raise Exception.Create('Invalid self-type: '+IntToStr(ord(self.Typ))); // shouldn't happen
+    raise eInvalidAccess.Create('Invalid self-type: '+IntToStr(ord(self.Typ))); // shouldn't happen
   End;
 
   Case Typ of
@@ -256,11 +262,11 @@ Function TMArray.getSize(const Position: TLongWordArray): LongWord;
 Var I: Integer;
 Begin
  if (Length(Position) >{=} Length(Sizes)) Then
-  raise Exception.Create('Invalid array access.');
+  raise eInvalidAccess.Create('Invalid array access.');
 
  For I := Low(Position) To High(Position) Do
   if (Position[I] >= Sizes[I]) Then
-   raise Exception.Create('Array out of bounds; tried to access element #'+IntToStr(Position[I])+', while #'+IntToStr(Sizes[I]-1)+' is the last one.');
+   raise eOutOfBounds.Create('Array out of bounds. Tried to access element #'+IntToStr(Position[I])+', while #'+IntToStr(Sizes[I]-1)+' is the last one.');
 
  Result := Sizes[Length(Position)];
 End;

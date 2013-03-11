@@ -32,7 +32,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <CommandLineParams Value="..\project.ssc -wait -time"/>
+        <CommandLineParams Value="-logo -wait"/>
       </local>
     </RunParams>
     <RequiredPackages Count="1">
@@ -76,7 +76,7 @@
     </Other>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="7">
+    <Exceptions Count="8">
       <Item1>
         <Name Value="EAbort"/>
       </Item1>
@@ -98,6 +98,9 @@
       <Item7>
         <Name Value="eInvalidOpcode"/>
       </Item7>
+      <Item8>
+        <Name Value="eThrow"/>
+      </Item8>
     </Exceptions>
   </Debugging>
 </CONFIG>

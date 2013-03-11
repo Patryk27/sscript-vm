@@ -16,8 +16,8 @@ Unit Machine;
       eInvalidReference = Class(Exception);
       eInvalidFile      = Class(Exception);
 
- Const CALLSTACK_SIZE = 5*1024*1024 div sizeof(LongWord); // 5 MB callstack; value is elements count
-       STACK_SIZE     = 100000000;
+ Const EXCEPTIONSTACK_SIZE = 1*1024*1024; // 1 MB exception-stack
+       STACK_SIZE          = 100000000; // this value is elements count
 
        bytecode_version_major = 0;
        bytecode_version_minor = 41;
@@ -74,9 +74,9 @@ Unit Machine;
                    // variables
                    InputFile: String;
 
-                   CodeData : PByte;
-                   Callstack: PLongWord;
-                   Stack    : Array of TOpParam;
+                   CodeData      : PByte;
+                   ExceptionStack: PLongWord;
+                   Stack         : Array of TOpParam;
 
                    breg: Array[1..5] of Boolean;
                    creg: Array[1..4] of Char;
@@ -85,14 +85,17 @@ Unit Machine;
                    sreg: Array[1..4] of String;
                    rreg: Array[1..4] of Integer;
 
-                   Position     : PByte; // current position in `code` section
-                   LastOpcodePos: LongWord;
-                   CallstackPos : LongWord;
-                   StackPos     : PLongWord;
-                   DebugMode    : Boolean;
-                   OpcodeNo     : QWord;
+                   Position         : PByte; // current position in `code` section
+                   LastOpcodePos    : LongWord;
+                   ExceptionStackPos: LongWord;
+                   StackPos         : PLongWord; // points at `ireg[5]` (`stp` register)
+                   DebugMode        : Boolean;
+                   OpcodeNo         : QWord;
 
                    is_runnable: Boolean;
+
+                   exception_handler: LongWord;
+                   last_exception   : String;
 
                    exitcode: Integer;
 
@@ -123,7 +126,7 @@ Unit Machine;
                    Function getPosition: LongWord; inline;
                    Procedure setPosition(NewPos: LongWord); inline;
 
-                   { object-handling-related }
+                   { object-related }
                    Function getObject(Address: LongWord): TMObject;
                    Function getArray(Address: LongWord): TMArray;
 
@@ -609,7 +612,7 @@ Begin
  End;
 
  Log('Allocating memory...');
- Callstack := GetMem(sizeof(LongWord)*CALLSTACK_SIZE);
+ ExceptionStack := GetMem(EXCEPTIONSTACK_SIZE);
  SetLength(Stack, STACK_SIZE);
 
  Log('File has been loaded.');
@@ -625,7 +628,10 @@ Begin
  End;
 
  setPosition(0{InfoSectionD.EntryPoint});
- CallstackPos := 0;
+ ExceptionStackPos := 0;
+
+ exception_handler := 0;
+ last_exception    := '';
 
  ireg[5]  := 0; // mov(stp, 0)
  StackPos := @ireg[5];

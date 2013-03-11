@@ -42,7 +42,6 @@ End;
 
 Const Ext = 'ssc';
 Var M   : TMachine;
-    I   : Integer;
     Time: Cardinal;
     Reg : TRegistry;
 Label Finish;
@@ -54,7 +53,7 @@ Begin
 
  if (ParamCount < 1) or (ParamStr(1) = '-logo') Then
  Begin
-  Writeln('SScript Virtual Machine, version '+Version+' ['+{$I %DATE%}+']');
+  Writeln('SScript Virtual Machine, version '+Version+' [compiled '+{$I %DATE%}+']');
   Writeln('by Patryk Wychowaniec');
 
   if (ParamStr(1) = '-logo') Then
@@ -145,8 +144,9 @@ Begin
        ... from AnotherFile.ss (line: 32)
        ... from main.ss (line: 13)
       }
-      Writeln('-> at 0x', IntToHex(M.getPosition, 8)); //, ' (', M.FetchLabelName(M.getPosition));
+      Writeln('-> at 0x', IntToHex(M.LastOpcodePos, 8), ' :: ', M.disasm(M.LastOpcodePos)); //, ' (', M.FetchLabelName(M.getPosition));
 
+      {
       I := M.CallstackPos;
 
       For I := M.CallstackPos Downto Integer(M.CallstackPos)-10 Do
@@ -154,7 +154,9 @@ Begin
         Writeln('--> from 0x', IntToHex(M.Callstack[I], 8));
 
       if (M.CallstackPos > 10) Then
-       Writeln('--> ... ', M.CallstackPos-10, ' more');
+       Writeln('--> ... ', M.CallstackPos-10, ' more');}
+      Writeln('< callstack unavailable >');
+
      End;
     End;
   End;

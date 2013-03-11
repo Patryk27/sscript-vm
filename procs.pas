@@ -475,14 +475,9 @@ Var NewAddr: Integer;
 Begin
 With M do
 Begin
- Inc(CallstackPos);
-
- if (CallstackPos >= CALLSTACK_SIZE) Then
-  raise eInvalidOpcode.Create('Cannot do ''call'' - no space left on callstack.');
-
- NewAddr                 := getPosition;
- NewAddr                 += read_param.getInt-1;
- Callstack[CallstackPos] := getPosition;
+ NewAddr := getPosition;
+ NewAddr += read_param.getInt-1;
+ StackPush(getPosition);
  setPosition(NewAddr);
 End;
 End;
@@ -514,13 +509,8 @@ Var NewAddr: Integer;
 Begin
 With M do
 Begin
- Inc(CallstackPos);
-
- if (CallstackPos >= CALLSTACK_SIZE) Then
-  raise eInvalidOpcode.Create('Cannot do ''acall'' - no space left on callstack.');
-
- NewAddr                 := read_param.getReference;
- Callstack[CallstackPos] := getPosition;
+ NewAddr := read_param.getReference;
+ StackPush(getPosition);
  setPosition(NewAddr);
 End;
 End;
@@ -528,14 +518,8 @@ End;
 { RET }
 Procedure op_RET(M: TMachine);
 Begin
-With M do
-Begin
- if (CallstackPos < 1) Then
-  raise eInvalidOpcode.Create('Cannot do ''ret'' - callstack is empty.');
-
- setPosition(Callstack[CallstackPos]);
- Dec(CallstackPos);
-End;
+ With M do
+  setPosition(StackPop.getReference);
 End;
 
 { IF_E }
@@ -980,24 +964,18 @@ End;
 
 { ARLEN }
 Procedure op_ARLEN(M: TMachine);
-Var refreg, index_count, out_reg: TOpParam;
-    PosArray                    : TLongWordArray;
-    I                           : Integer;
+Var refreg, dimension, out_reg: TOpParam;
 Begin
 With M do
 Begin
- refreg      := read_param;
- index_count := read_param;
- out_reg     := read_param;
-
- SetLength(PosArray, index_count.getInt);
- For I := 0 To index_count.getInt-1 Do
-  PosArray[I] := StackPop.getInt;
+ refreg    := read_param;
+ dimension := read_param;
+ out_reg   := read_param;
 
  Case out_reg.Typ of
-  ptIntReg: ireg[out_reg.Index] := getArray(refreg.getReference).getSize(PosArray);
+  ptIntReg: ireg[out_reg.Index] := getArray(refreg.getReference).getSize(dimension.getInt);
   else
-   raise eInvalidOpcode.Create('''arlen'' called with arguments: '+refreg.getTypeName+', '+index_count.getTypeName+', '+out_reg.getTypeName);
+   raise eInvalidOpcode.Create('''arlen'' called with arguments: '+refreg.getTypeName+', '+dimension.getTypeName+', '+out_reg.getTypeName);
  End;
 End;
 End;

@@ -50,7 +50,7 @@ Unit Objects;
 
                   Procedure setValue(const Position: TLongWordArray; OpParam: Pointer);
                   Function getValue(const Position: TLongWordArray): Pointer;
-                  Function getSize(const Position: TLongWordArray): LongWord;
+                  Function getSize(const Dimension: Byte): LongWord;
                  End;
 
  Implementation
@@ -258,16 +258,11 @@ Begin
 End;
 
 { TMArray.getSize }
-Function TMArray.getSize(const Position: TLongWordArray): LongWord;
-Var I: Integer;
+Function TMArray.getSize(const Dimension: Byte): LongWord;
 Begin
- if (Length(Position) >{=} Length(Sizes)) Then
-  raise eInvalidAccess.Create('Invalid array access.');
+ if (Dimension = 0) or (Dimension > Length(Sizes)) Then
+  raise eOutOfBounds.Create('Array of of bounds. Tried to access dimension #'+IntToStr(Dimension)+', while #'+IntToStr(Length(Sizes))+' is the last one.');
 
- For I := Low(Position) To High(Position) Do
-  if (Position[I] >= Sizes[I]) Then
-   raise eOutOfBounds.Create('Array out of bounds. Tried to access element #'+IntToStr(Position[I])+', while #'+IntToStr(Sizes[I]-1)+' is the last one.');
-
- Result := Sizes[Length(Position)];
+ Result := Sizes[Dimension-1];
 End;
 End.

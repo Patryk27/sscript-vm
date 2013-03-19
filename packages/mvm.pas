@@ -25,38 +25,44 @@ Begin
 End;
 End;
 
-{ vm.save_exception_handler }
-Procedure _save_exception_handler(M: TMachine);
+{ vm.save_exception_state }
+Procedure _save_exception_state(M: TMachine);
 Begin
 With M do
 Begin
- Inc(ExceptionStackPos);
- ExceptionStack[ExceptionStackPos] := exception_handler;
+ ExceptionStack^ := StackPos^; // save stack position
+ Inc(ExceptionStack);
+
+ ExceptionStack^ := exception_handler; // save previous handler
+ Inc(ExceptionStack);
 End;
 End;
 
-{ vm.restore_exception_handler }
-Procedure _restore_exception_handler(M: TMachine);
+{ vm.restore_exception_state }
+Procedure _restore_exception_state(M: TMachine);
 Begin
 With M do
 Begin
- exception_handler := ExceptionStack[ExceptionStackPos];
- Dec(ExceptionStackPos);
+ Dec(ExceptionStack);
+ exception_handler := ExceptionStack^; // restore previous handler
+
+ Dec(ExceptionStack);
+ StackPos^ := ExceptionStack^; // restore stack position
 End;
 End;
 
 { vm.set_exception_handler }
 Procedure _set_exception_handler(M: TMachine);
 Begin
-With M do
- exception_handler := StackPop.getReference;
+ With M do
+  exception_handler := StackPop.getReference;
 End;
 
 { vm.get_exception_handler }
 Procedure _get_exception_handler(M: TMachine);
 Begin
-With M do
- StackPush(exception_handler);
+ With M do
+  StackPush(exception_handler);
 End;
 
 { vm.throw }
@@ -86,8 +92,8 @@ End;
 
 initialization
  NewFunction('vm', 'exit', @_exit);
- NewFunction('vm', 'save_exception_handler', @_save_exception_handler);
- NewFunction('vm', 'restore_exception_handler', @_restore_exception_handler);
+ NewFunction('vm', 'save_exception_state', @_save_exception_state);
+ NewFunction('vm', 'restore_exception_state', @_restore_exception_state);
  NewFunction('vm', 'set_exception_handler', @_set_exception_handler);
  NewFunction('vm', 'get_exception_handler', @_get_exception_handler);
  NewFunction('vm', 'throw', @_throw);

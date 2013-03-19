@@ -16,11 +16,11 @@ Unit Machine;
       eInvalidReference = Class(Exception);
       eInvalidFile      = Class(Exception);
 
- Const EXCEPTIONSTACK_SIZE = 1*1024*1024; // 1 MB exception-stack
-       STACK_SIZE          = 100000000; // this value is elements count
+ Const EXCEPTIONSTACK_SIZE = 1*1024*1024; // 1 MB exception-stack; I guess it's enough...
+       STACK_SIZE          = 100000000; // this value is counted in elements number
 
        bytecode_version_major = 0;
-       bytecode_version_minor = 41;
+       bytecode_version_minor = 4;
 
  Const TYPE_BOOL   = 3; // do not modify these, as they have to be exactly the same, as in the compiler
        TYPE_CHAR   = 4;
@@ -85,12 +85,11 @@ Unit Machine;
                    sreg: Array[1..4] of String;
                    rreg: Array[1..4] of Integer;
 
-                   Position         : PByte; // current position in `code` section
-                   LastOpcodePos    : LongWord;
-                   ExceptionStackPos: LongWord;
-                   StackPos         : PLongWord; // points at `ireg[5]` (`stp` register)
-                   DebugMode        : Boolean;
-                   OpcodeNo         : QWord;
+                   Position     : PByte; // current position in `code` section
+                   LastOpcodePos: LongWord;
+                   StackPos     : PLongWord; // points at `ireg[5]` (`stp` register)
+                   DebugMode    : Boolean;
+                   OpcodeNo     : QWord;
 
                    is_runnable: Boolean;
 
@@ -458,6 +457,8 @@ Begin
   ptFloat: Result.fVal := c_read_extended;
   ptString: Result.sVal := c_read_string;
 
+  ptLabelRelativeReference, ptLabelAbsoluteReference: raise eInvalidOpcode.Create('Label references cannot appear in the program code.');
+
   else Result.Val := c_read_integer;
  End;
 End;
@@ -627,13 +628,12 @@ Begin
   Exit;
  End;
 
- setPosition(0{InfoSectionD.EntryPoint});
- ExceptionStackPos := 0;
+ setPosition(0);
 
  exception_handler := 0;
  last_exception    := '';
 
- ireg[5]  := 0; // mov(stp, 0)
+ ireg[5]  := 0;
  StackPos := @ireg[5];
 End;
 

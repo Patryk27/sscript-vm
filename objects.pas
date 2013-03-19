@@ -8,27 +8,22 @@ Unit Objects;
  Interface
  Uses SysUtils;
 
+ Const MagicNumber: LongWord = $CAFEBABE; // if you wish, you can change it ;)
+
  Type eInvalidAccess = Class(Exception);
       eOutOfBounds   = Class(Exception);
-
- Const MagicNumber = $CAFEBABE;
-
- Type TObjectType = (otArray);
 
  Type TLongWordArray = Array of LongWord;
 
  { TMObject }
  Type TMObject = Class
                   Private
-                   Magic: LongWord;
+                   Magic: LongWord; // object magic number
 
                   Public
                    Property getMagic: LongWord read Magic;
 
-                  Public
-                   ObjType: TObjectType;
-
-                   Constructor Create(const fObjType: TObjectType);
+                   Constructor Create;
 
                    Function getAddress: LongWord;
                   End;
@@ -36,11 +31,11 @@ Unit Objects;
  { TMArray }
  Type TMArray = Class (TMObject)
                  Private
-                  Data    : Pointer;
-                  Typ     : Byte;
-                  TypeSize: Byte;
-                  MemSize : LongWord;
-                  Sizes   : TLongWordArray;
+                  Data    : Pointer; // array data
+                  Typ     : Byte; // array internal type ID
+                  TypeSize: Byte; // internal type size
+                  MemSize : LongWord; // total memory size used by `array data`
+                  Sizes   : TLongWordArray; // array dimensions
 
                   Function getElementMemory(Position: TLongWordArray): LongWord;
 
@@ -48,9 +43,9 @@ Unit Objects;
                   Constructor Create(const fType: Byte; fSizes: TLongWordArray);
                   Destructor Destroy; override;
 
-                  Procedure setValue(const Position: TLongWordArray; OpParam: Pointer);
-                  Function getValue(const Position: TLongWordArray): Pointer;
-                  Function getSize(const Dimension: Byte): LongWord;
+                  Procedure setValue(const Position: TLongWordArray; OpParam: Pointer); // set element's value
+                  Function getValue(const Position: TLongWordArray): Pointer; // get element's value
+                  Function getSize(const Dimension: Byte): LongWord; // get dimension's size
                  End;
 
  Implementation
@@ -73,15 +68,15 @@ Procedure SaveString(const MemPos: LongWord; Str: String);
 Var Mem: LongWord;
     Ch : Char;
 Begin
- FreeString(MemPos);
+ FreeString(MemPos); // free previous string (if possible)
 
- Mem := LongWord(AllocMem(Length(Str)+sizeof(Integer)));
+ Mem := LongWord(AllocMem(Length(Str)+sizeof(LongWord))); // allocate memory
 
- PLongword(MemPos)^ := Mem;
+ PLongword(MemPos)^ := Mem; // at `MemPos` save pointer to allocated memory (there our finally string will be hold)
 
- PLongword(Mem)^ := Length(Str);
- Inc(Mem, sizeof(LongWord));
- For Ch in Str Do
+ PLongword(Mem)^ := Length(Str); // save string length
+ Inc(Mem, sizeof(LongWord)); // move pointer (so we don't overwrite length)
+ For Ch in Str Do // save each char
  Begin
   PChar(Mem)^ := Ch;
   Inc(Mem, sizeof(Byte));
@@ -94,16 +89,15 @@ Var Mem   : LongWord;
     I, Len: LongWord;
 Begin
  Result := '';
- Mem    := PLongword(MemPos)^;
+ Mem    := PLongword(MemPos)^; // get string pointer
 
- if (Mem = 0) Then // no string assigned
+ if (Mem = 0) Then // no string associated
   Exit;
 
- Len := PLongword(Mem)^;
+ Len := PLongword(Mem)^; // get string length
+ Inc(Mem, sizeof(LongWord)); // skip length (thus we just read it)
 
- Inc(Mem, sizeof(LongWord));
-
- For I := 1 To Len Do
+ For I := 1 To Len Do // read chars
  Begin
   Result += PChar(Mem)^;
   Inc(Mem, sizeof(Byte));
@@ -113,11 +107,9 @@ End;
 (* ========== TMObject ========== *)
 
 { TMObject.Create }
-Constructor TMObject.Create(const fObjType: TObjectType);
+Constructor TMObject.Create;
 Begin
  Magic := MagicNumber;
-
- ObjType := fObjType;
 End;
 
 { TMObject.getAddress }
@@ -155,8 +147,6 @@ End;
 Constructor TMArray.Create(const fType: Byte; fSizes: TLongWordArray);
 Var I: LongWord;
 Begin
- inherited Create(otArray);
-
  { set variables }
  Typ      := fType;
  TypeSize := Machine.TypeSize[fType];
@@ -179,7 +169,7 @@ End;
 Destructor TMArray.Destroy;
 Var Mem, MemEnd: LongWord;
 Begin
- if (Typ = TYPE_STRING) Then
+ if (Typ = TYPE_STRING) Then // strings need a special destroying
  Begin
   Mem    := LongWord(Data);
   MemEnd := Mem+MemSize;
@@ -203,7 +193,7 @@ Begin
 
  With POpParam(OpParam)^ do
  Begin
-  if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING) Then
+  if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING) Then // special 'feature': immediate string's char reading
   Begin
    Str                           := LoadString(DataPos);
    Str[Position[High(Position)]] := getChar;
@@ -263,6 +253,6 @@ Begin
  if (Dimension = 0) or (Dimension > Length(Sizes)) Then
   raise eOutOfBounds.Create('Array of of bounds. Tried to access dimension #'+IntToStr(Dimension)+', while #'+IntToStr(Length(Sizes))+' is the last one.');
 
- Result := Sizes[Dimension-1];
+ Result := Sizes[Dimension-1]; // dimensions are from user-side numbered from `1`, but internally from `0`.
 End;
 End.

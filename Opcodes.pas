@@ -8,8 +8,14 @@ Unit Opcodes;
 
  Interface
 
- Type TPrimaryType = (ptBoolReg=0, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg, ptBool, ptChar, ptInt, ptFloat, ptString, ptStackVal);
- Const PrimaryTypeNames: Array[TPrimaryType] of String = ('bool reg', 'char reg', 'int reg', 'float reg', 'string reg', 'reference reg', 'bool', 'char', 'int', 'float', 'string', 'stackval');
+ Type TPrimaryType = (ptBoolReg=0, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg,
+                      ptBool, ptChar, ptInt, ptFloat, ptString, ptStackVal,
+                      ptLabelRelativeReference, ptLabelAbsoluteReference);
+
+ Const PrimaryTypeNames: Array[TPrimaryType] of String =
+                     ('bool reg', 'char reg', 'int reg', 'float reg', 'string reg', 'reference reg',
+                      'bool', 'char', 'int', 'float', 'string', 'stackval',
+                      'label relative reference', 'label absolute reference');
 
  Const OPCODE_MAX = 38;
 
@@ -24,7 +30,7 @@ Unit Opcodes;
                    o_arset, o_arget, o_arcrt, o_arlen,
                    o_objfree);
 
- Const OpcodesParamCount: Array[TOpcode_E] of Byte =
+ Const OpcodesParamCount: Array[TOpcode_E] of Byte = // used in internal disassembler
  (0, 0,
   1, 1,
   2, 2, 2, 2, 1, 2,

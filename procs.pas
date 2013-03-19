@@ -505,7 +505,7 @@ End;
 
 { ACALL }
 Procedure op_ACALL(M: TMachine);
-Var NewAddr: Integer;
+Var NewAddr: LongWord;
 Begin
 With M do
 Begin

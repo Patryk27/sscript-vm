@@ -4,335 +4,230 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="23">
+    <Units Count="12">
       <Unit0>
         <Filename Value="vm.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="vm"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="34"/>
-        <CursorPos X="65" Y="54"/>
+        <TopLine Value="171"/>
+        <CursorPos X="1" Y="200"/>
         <UsageCount Value="236"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="machine.pas"/>
         <UnitName Value="Machine"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="678"/>
-        <CursorPos X="59" Y="699"/>
+        <CursorPos X="108" Y="703"/>
         <UsageCount Value="123"/>
         <Loaded Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="procs.pas"/>
         <UnitName Value="Procs"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="3"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="508"/>
-        <CursorPos X="90" Y="533"/>
+        <TopLine Value="431"/>
+        <CursorPos X="40" Y="507"/>
         <UsageCount Value="123"/>
         <Loaded Value="True"/>
       </Unit2>
       <Unit3>
-        <Filename Value="..\opcodes.pas"/>
-        <UnitName Value="Opcodes"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="136"/>
-        <CursorPos X="7" Y="67"/>
-        <UsageCount Value="9"/>
-      </Unit3>
-      <Unit4>
         <Filename Value="packages\output.pas"/>
         <UnitName Value="Output"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="15" Y="12"/>
-        <UsageCount Value="39"/>
-      </Unit4>
-      <Unit5>
-        <Filename Value="packages\string.pas"/>
-        <UnitName Value="string"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="34" Y="11"/>
-        <UsageCount Value="9"/>
-      </Unit5>
-      <Unit6>
+        <UsageCount Value="13"/>
+      </Unit3>
+      <Unit4>
         <Filename Value="packages\mmath.pas"/>
         <UnitName Value="mMath"/>
+        <EditorIndex Value="7"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="5"/>
+        <UsageCount Value="108"/>
+        <Loaded Value="True"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="packages\mvm.pas"/>
+        <UnitName Value="mVM"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="73"/>
+        <CursorPos X="34" Y="78"/>
+        <UsageCount Value="104"/>
+        <Loaded Value="True"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="packages\minput.pas"/>
+        <UnitName Value="mInput"/>
+        <EditorIndex Value="6"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="23"/>
+        <CursorPos X="1" Y="48"/>
+        <UsageCount Value="108"/>
+        <Loaded Value="True"/>
+      </Unit6>
+      <Unit7>
+        <Filename Value="packages\moutput.pas"/>
+        <UnitName Value="mOutput"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="99"/>
+        <CursorPos X="42" Y="93"/>
+        <UsageCount Value="108"/>
+      </Unit7>
+      <Unit8>
+        <Filename Value="packages\mstring.pas"/>
+        <UnitName Value="mString"/>
         <EditorIndex Value="8"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="5"/>
         <UsageCount Value="108"/>
         <Loaded Value="True"/>
-      </Unit6>
-      <Unit7>
-        <Filename Value="packages\time.pas"/>
-        <UnitName Value="Time"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="48" Y="14"/>
-        <UsageCount Value="9"/>
-      </Unit7>
-      <Unit8>
-        <Filename Value="packages\mvm.pas"/>
-        <UnitName Value="mVM"/>
-        <EditorIndex Value="3"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="66"/>
-        <CursorPos X="64" Y="94"/>
-        <UsageCount Value="104"/>
-        <Loaded Value="True"/>
       </Unit8>
       <Unit9>
-        <Filename Value="packages\minput.pas"/>
-        <UnitName Value="mInput"/>
-        <EditorIndex Value="7"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="23"/>
-        <CursorPos X="1" Y="48"/>
-        <UsageCount Value="108"/>
-        <Loaded Value="True"/>
-      </Unit9>
-      <Unit10>
-        <Filename Value="packages\moutput.pas"/>
-        <UnitName Value="mOutput"/>
-        <EditorIndex Value="5"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="78"/>
-        <CursorPos X="42" Y="93"/>
-        <UsageCount Value="108"/>
-        <Loaded Value="True"/>
-      </Unit10>
-      <Unit11>
-        <Filename Value="packages\mstring.pas"/>
-        <UnitName Value="mString"/>
-        <EditorIndex Value="9"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="5"/>
-        <UsageCount Value="108"/>
-        <Loaded Value="True"/>
-      </Unit11>
-      <Unit12>
         <Filename Value="packages\mtime.pas"/>
         <UnitName Value="mTime"/>
-        <EditorIndex Value="10"/>
+        <EditorIndex Value="9"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="39" Y="20"/>
         <UsageCount Value="108"/>
         <Loaded Value="True"/>
-      </Unit12>
-      <Unit13>
+      </Unit9>
+      <Unit10>
         <Filename Value="Opcodes.pas"/>
         <UnitName Value="Opcodes"/>
-        <EditorIndex Value="6"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="14"/>
-        <CursorPos X="13" Y="36"/>
+        <TopLine Value="2"/>
+        <CursorPos X="29" Y="18"/>
         <UsageCount Value="110"/>
         <Loaded Value="True"/>
-      </Unit13>
-      <Unit14>
+      </Unit10>
+      <Unit11>
         <Filename Value="objects.pas"/>
         <UnitName Value="Objects"/>
-        <EditorIndex Value="4"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
+        <TopLine Value="135"/>
+        <CursorPos X="6" Y="149"/>
         <UsageCount Value="110"/>
         <Loaded Value="True"/>
-      </Unit14>
-      <Unit15>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\inc\crth.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="67"/>
-        <CursorPos X="3" Y="67"/>
-        <UsageCount Value="7"/>
-      </Unit15>
-      <Unit16>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\packages\fcl-registry\src\registry.pp"/>
-        <UnitName Value="registry"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="790"/>
-        <CursorPos X="67" Y="809"/>
-        <UsageCount Value="7"/>
-      </Unit16>
-      <Unit17>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\win\wininc\struct.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1008"/>
-        <CursorPos X="11" Y="1008"/>
-        <UsageCount Value="7"/>
-      </Unit17>
-      <Unit18>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\win\wininc\base.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="350"/>
-        <CursorPos X="51" Y="350"/>
-        <UsageCount Value="7"/>
-      </Unit18>
-      <Unit19>
-        <Filename Value="..\SScript-Compiler\compile1\syntax\parse_include.pas"/>
-        <UnitName Value="Parse_include"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="110"/>
-        <CursorPos X="66" Y="125"/>
-        <UsageCount Value="8"/>
-      </Unit19>
-      <Unit20>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\packages\paszlib\src\zipper.pp"/>
-        <UnitName Value="zipper"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="1935"/>
-        <CursorPos X="28" Y="1949"/>
-        <UsageCount Value="9"/>
-      </Unit20>
-      <Unit21>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\classes\classesh.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="781"/>
-        <CursorPos X="57" Y="777"/>
-        <UsageCount Value="10"/>
-      </Unit21>
-      <Unit22>
-        <Filename Value="C:\lazarus\fpc\2.6.0\source\rtl\objpas\sysutils\sysutilh.inc"/>
-        <WindowIndex Value="0"/>
-        <TopLine Value="133"/>
-        <CursorPos X="4" Y="133"/>
-        <UsageCount Value="9"/>
-      </Unit22>
+      </Unit11>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="25" HistoryIndex="24">
       <Position1>
-        <Filename Value="packages\mvm.pas"/>
-        <Caret Line="84" Column="28" TopLine="60"/>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="174" Column="45" TopLine="166"/>
       </Position1>
       <Position2>
-        <Filename Value="objects.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="160" Column="44" TopLine="135"/>
       </Position2>
       <Position3>
-        <Filename Value="procs.pas"/>
-        <Caret Line="216" Column="117" TopLine="208"/>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="137" Column="32" TopLine="135"/>
       </Position3>
       <Position4>
         <Filename Value="machine.pas"/>
-        <Caret Line="709" Column="51" TopLine="687"/>
+        <Caret Line="699" Column="59" TopLine="678"/>
       </Position4>
       <Position5>
         <Filename Value="machine.pas"/>
-        <Caret Line="143" Column="44" TopLine="128"/>
+        <Caret Line="67" Column="84" TopLine="52"/>
       </Position5>
       <Position6>
-        <Filename Value="procs.pas"/>
-        <Caret Line="487" Column="34" TopLine="472"/>
+        <Filename Value="machine.pas"/>
+        <Caret Line="140" Column="63" TopLine="125"/>
       </Position6>
       <Position7>
         <Filename Value="procs.pas"/>
-        <Caret Line="20" Column="51" TopLine="1"/>
+        <Caret Line="6" Column="129" TopLine="1"/>
       </Position7>
       <Position8>
         <Filename Value="procs.pas"/>
-        <Caret Line="50" Column="20" TopLine="26"/>
+        <Caret Line="31" Column="20" TopLine="6"/>
       </Position8>
       <Position9>
         <Filename Value="procs.pas"/>
-        <Caret Line="991" Column="14" TopLine="975"/>
+        <Caret Line="506" Column="8" TopLine="481"/>
       </Position9>
       <Position10>
-        <Filename Value="objects.pas"/>
-        <Caret Line="53" Column="57" TopLine="40"/>
+        <Filename Value="Opcodes.pas"/>
+        <Caret Line="20" Column="23" TopLine="1"/>
       </Position10>
       <Position11>
-        <Filename Value="procs.pas"/>
-        <Caret Line="675" Column="35" TopLine="664"/>
+        <Filename Value="machine.pas"/>
+        <Caret Line="108" Column="80" TopLine="93"/>
       </Position11>
       <Position12>
-        <Filename Value="procs.pas"/>
-        <Caret Line="252" Column="137" TopLine="245"/>
+        <Filename Value="machine.pas"/>
+        <Caret Line="114" Column="39" TopLine="93"/>
       </Position12>
       <Position13>
-        <Filename Value="packages\mvm.pas"/>
-        <Caret Line="92" Column="2" TopLine="66"/>
+        <Filename Value="machine.pas"/>
+        <Caret Line="18" Column="44" TopLine="1"/>
       </Position13>
       <Position14>
-        <Filename Value="procs.pas"/>
-        <Caret Line="483" Column="17" TopLine="461"/>
+        <Filename Value="machine.pas"/>
+        <Caret Line="17" Column="44" TopLine="1"/>
       </Position14>
       <Position15>
-        <Filename Value="machine.pas"/>
-        <Caret Line="42" Column="44" TopLine="36"/>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="54" Column="65" TopLine="34"/>
       </Position15>
       <Position16>
-        <Filename Value="machine.pas"/>
-        <Caret Line="90" Column="48" TopLine="68"/>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="200" Column="1" TopLine="171"/>
       </Position16>
       <Position17>
         <Filename Value="machine.pas"/>
-        <Caret Line="46" Column="134" TopLine="43"/>
+        <Caret Line="90" Column="37" TopLine="87"/>
       </Position17>
       <Position18>
-        <Filename Value="procs.pas"/>
-        <Caret Line="480" Column="36" TopLine="465"/>
+        <Filename Value="packages\mvm.pas"/>
+        <Caret Line="36" Column="34" TopLine="21"/>
       </Position18>
       <Position19>
-        <Filename Value="procs.pas"/>
-        <Caret Line="478" Column="10" TopLine="463"/>
+        <Filename Value="packages\mvm.pas"/>
+        <Caret Line="33" Column="23" TopLine="18"/>
       </Position19>
       <Position20>
-        <Filename Value="procs.pas"/>
-        <Caret Line="480" Column="7" TopLine="465"/>
+        <Filename Value="packages\mvm.pas"/>
+        <Caret Line="50" Column="57" TopLine="27"/>
       </Position20>
       <Position21>
-        <Filename Value="procs.pas"/>
-        <Caret Line="512" Column="9" TopLine="497"/>
+        <Filename Value="packages\mvm.pas"/>
+        <Caret Line="46" Column="20" TopLine="31"/>
       </Position21>
       <Position22>
-        <Filename Value="packages\mvm.pas"/>
-        <Caret Line="96" Column="52" TopLine="75"/>
+        <Filename Value="machine.pas"/>
+        <Caret Line="20" Column="84" TopLine="1"/>
       </Position22>
       <Position23>
-        <Filename Value="machine.pas"/>
-        <Caret Line="77" Column="42" TopLine="54"/>
+        <Filename Value="objects.pas"/>
+        <Caret Line="260" Column="65" TopLine="233"/>
       </Position23>
       <Position24>
         <Filename Value="objects.pas"/>
-        <Caret Line="254" Column="63" TopLine="240"/>
+        <Caret Line="110" Column="35" TopLine="1"/>
       </Position24>
       <Position25>
-        <Filename Value="vm.lpr"/>
-        <Caret Line="174" Column="45" TopLine="166"/>
+        <Filename Value="objects.pas"/>
+        <Caret Line="112" Column="23" TopLine="95"/>
       </Position25>
-      <Position26>
-        <Filename Value="vm.lpr"/>
-        <Caret Line="160" Column="44" TopLine="135"/>
-      </Position26>
-      <Position27>
-        <Filename Value="packages\moutput.pas"/>
-        <Caret Line="91" Column="27" TopLine="72"/>
-      </Position27>
-      <Position28>
-        <Filename Value="packages\moutput.pas"/>
-        <Caret Line="19" Column="59" TopLine="10"/>
-      </Position28>
-      <Position29>
-        <Filename Value="vm.lpr"/>
-        <Caret Line="137" Column="32" TopLine="135"/>
-      </Position29>
-      <Position30>
-        <Filename Value="packages\moutput.pas"/>
-        <Caret Line="24" Column="2" TopLine="9"/>
-      </Position30>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>

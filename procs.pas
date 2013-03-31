@@ -6,10 +6,7 @@
 Unit Procs;
 
  Interface
- Uses SysUtils, Machine;
-
- Type eInvalidOpcode = Class(Exception);
-      eDivByZero     = Class(Exception);
+ Uses SysUtils, Machine, Exceptions;
 
  Procedure op_(M: TMachine);
 
@@ -49,6 +46,7 @@ Unit Procs;
  Procedure op_ARCRT(M: TMachine);
  Procedure op_ARLEN(M: TMachine);
  Procedure op_OBJFREE(M: TMachine);
+ Procedure op_LOCATION(M: TMachine);
 
  Implementation
 Uses Opcodes, Objects;
@@ -477,7 +475,7 @@ With M do
 Begin
  NewAddr := getPosition;
  NewAddr += read_param.getInt-1;
- StackPush(getPosition);
+ CallstackPush(getPosition);
  setPosition(NewAddr);
 End;
 End;
@@ -510,7 +508,7 @@ Begin
 With M do
 Begin
  NewAddr := read_param.getReference;
- StackPush(getPosition);
+ CallstackPush(getPosition);
  setPosition(NewAddr);
 End;
 End;
@@ -519,7 +517,7 @@ End;
 Procedure op_RET(M: TMachine);
 Begin
  With M do
-  setPosition(StackPop.getReference);
+  setPosition(CallstackPop);
 End;
 
 { IF_E }
@@ -985,5 +983,15 @@ Procedure op_OBJFREE(M: TMachine);
 Begin
  With M do
   getObject(read_param.getReference).Free;
+End;
+
+{ LOCATION }
+Procedure op_LOCATION(M: TMachine);
+Begin
+ With M do
+ Begin
+  read_param; { line }
+  read_param; { file }
+ End;
 End;
 End.

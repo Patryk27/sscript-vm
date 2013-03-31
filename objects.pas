@@ -8,23 +8,17 @@ Unit Objects;
  Interface
  Uses SysUtils;
 
- Const MagicNumber: LongWord = $CAFEBABE; // if you wish, you can change it ;)
-
- Type eInvalidAccess = Class(Exception);
-      eOutOfBounds   = Class(Exception);
-
  Type TLongWordArray = Array of LongWord;
 
  { TMObject }
  Type TMObject = Class
                   Private
-                   Magic: LongWord; // object magic number
+                   SomeField: Integer;
 
                   Public
-                   Property getMagic: LongWord read Magic;
-
                    Constructor Create;
 
+                   Procedure Test;
                    Function getAddress: LongWord;
                   End;
 
@@ -49,7 +43,7 @@ Unit Objects;
                  End;
 
  Implementation
-Uses Machine, Opcodes;
+Uses Machine, Exceptions, Opcodes;
 
 { FreeString }
 Procedure FreeString(const MemPos: LongWord);
@@ -109,7 +103,12 @@ End;
 { TMObject.Create }
 Constructor TMObject.Create;
 Begin
- Magic := MagicNumber;
+End;
+
+{ TMObject.Test }
+Procedure TMObject.Test;
+Begin
+ SomeField := $CAFEBABE;
 End;
 
 { TMObject.getAddress }

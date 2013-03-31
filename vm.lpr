@@ -20,8 +20,12 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA   
 *)
 {$R *.res}
+
+{$Q-}
+{$R-}
+
 Program vm;
-Uses CRT, Windows, SysUtils, Registry, Machine, mOutput;
+Uses CRT, Windows, SysUtils, Registry, Machine, Opcodes, mOutput;
 Const Version = '0.3 nightly';
 
 { getBoolOption }
@@ -44,6 +48,10 @@ Const Ext = 'ssc';
 Var M   : TMachine;
     Time: Cardinal;
     Reg : TRegistry;
+
+    eLine: Integer;
+    eFile: String;
+
 Label Finish;
 Begin
  DefaultFormatSettings.DecimalSeparator := '.';
@@ -135,27 +143,33 @@ Begin
    On E: Exception Do
     if (E.Message <> '') Then
     Begin
-     Writeln(E.ClassName, ': ', E.Message);
+     Write(E.ClassName, ': ', E.Message);
 
      if (Assigned(M)) Then
      Begin
-      {
-       at FileName.ss (line: 97)
-       ... from AnotherFile.ss (line: 32)
-       ... from main.ss (line: 13)
-      }
-      Writeln('-> at 0x', IntToHex(M.LastOpcodePos, 8), ' :: ', M.disasm(M.LastOpcodePos)); //, ' (', M.FetchLabelName(M.getPosition));
+      Writeln;
 
-      {
-      I := M.CallstackPos;
+      M.FetchLineAndFile(M.LastOpcodePos, eLine, eFile);
 
-      For I := M.CallstackPos Downto Integer(M.CallstackPos)-10 Do
-       if (I >= 0) Then
-        Writeln('--> from 0x', IntToHex(M.Callstack[I], 8));
+      if (eLine = -1) Then
+       Write('   at unknown source (', eFile, ')') Else
+       Write('   at ', eFile, ' (line: ', eLine, ')');
 
-      if (M.CallstackPos > 10) Then
-       Writeln('--> ... ', M.CallstackPos-10, ' more');}
-      Writeln('< callstack unavailable >');
+      Writeln(' :: ', M.disasm(M.LastOpcodePos));
+
+      With M do  // @TODO: 10 references max
+       While (StackPos^ > 0) Do
+       Begin
+        if (Stack[StackPos^].Typ = ptCallstackRef) Then
+        Begin
+         M.FetchLineAndFile(Stack[StackPos^].getReference, eLine, eFile);
+
+         if (eLine = -1) Then
+          Writeln('   ... from unknown source (', eFile, ')') Else
+          Writeln('   ... from ', eFile, ' (', eLine, ')');
+        End;
+        Dec(StackPos^);
+       End;
 
      End;
     End;

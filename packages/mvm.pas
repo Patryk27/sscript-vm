@@ -8,9 +8,7 @@ Unit mVM;
  Interface
 
  Implementation
-Uses Machine, SysUtils;
-
-Type eThrow = Class(Exception);
+Uses Machine, Exceptions, SysUtils;
 
 { vm.exit }
 Procedure _exit(M: TMachine);

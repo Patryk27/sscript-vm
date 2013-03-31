@@ -9,12 +9,7 @@
 Unit Machine;
 
  Interface
- Uses SysUtils, Opcodes, Objects, Classes, Zipper;
-
- Type eInternalError    = Class(Exception);
-      eInvalidCasting   = Class(Exception);
-      eInvalidReference = Class(Exception);
-      eInvalidFile      = Class(Exception);
+ Uses SysUtils, Opcodes, Objects, Classes, Zipper, Exceptions;
 
  Const EXCEPTIONSTACK_SIZE = 1*1024*1024; // 1 MB exception-stack; I guess it's enough...
        STACK_SIZE          = 100000000; // this value is counted in elements number
@@ -22,7 +17,7 @@ Unit Machine;
        bytecode_version_major = 0;
        bytecode_version_minor = 4;
 
- Const TYPE_BOOL   = 3; // do not modify these, as they have to be exactly the same, as in the compiler
+ Const TYPE_BOOL   = 3; // do not modify
        TYPE_CHAR   = 4;
        TYPE_INT    = 5;
        TYPE_FLOAT  = 6;
@@ -119,7 +114,9 @@ Unit Machine;
                    Procedure StackPush(Value: Char);
                    Procedure StackPush(Value: Boolean);
                    Procedure StackPush(Value: TOpParam);
+                   Procedure CallstackPush(Value: LongWord);
                    Function StackPop: TOpParam;
+                   Function CallstackPop: LongWord;
 
                    { position-related }
                    Function getPosition: LongWord; inline;
@@ -136,7 +133,7 @@ Unit Machine;
                    Procedure RunFunction(PackageName, FunctionName: String);
 
                    Function disasm(Pos: LongWord): String;
-                   Function FetchLabelName(Pos: LongWord; out Str: String): Boolean;
+                   Procedure FetchLineAndFile(const Pos: LongWord; out eLine: Integer; out eFile: String);
                   End;
 
  Type TOpcodeProc = Procedure (M: TMachine);
@@ -154,6 +151,47 @@ Unit Machine;
 
  Implementation
 Uses Procs, mOutput, mString, mMath, mTime, mInput, mVM;
+
+Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc =
+(
+ @op_NOP,
+ @op_STOP,
+ @op_PUSH,
+ @op_POP,
+ @op_ADD,
+ @op_SUB,
+ @op_MUL,
+ @op_DIV,
+ @op_NEG,
+ @op_MOV,
+ @op_JMP,
+ @op_TJMP,
+ @op_FJMP,
+ @op_CALL,
+ @op_ICALL,
+ @op_ACALL,
+ @op_RET,
+ @op_IF_E,
+ @op_IF_NE,
+ @op_IF_G,
+ @op_IF_L,
+ @op_IF_GE,
+ @op_IF_LE,
+ @op_STRJOIN,
+ @op_NOT,
+ @op_OR,
+ @op_XOR,
+ @op_AND,
+ @op_SHL,
+ @op_SHR,
+ @op_MOD,
+ @op_ARSET,
+ @op_ARGET,
+ @op_ARCRT,
+ @op_ARLEN,
+ @op_OBJFREE,
+ @op_LOCATION
+);
 
 { Log }
 Procedure Log(Txt: String);
@@ -250,7 +288,7 @@ End;
 { TOpParam.getReference }
 Function TOpParam.getReference: LongWord;
 Begin
- if (Typ in [ptInt, ptIntReg, ptReferenceReg]) Then
+ if (Typ in [ptInt, ptIntReg, ptReferenceReg, ptCallstackRef]) Then
   Exit(Val) Else
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getReference) Else
@@ -457,8 +495,6 @@ Begin
   ptFloat: Result.fVal := c_read_extended;
   ptString: Result.sVal := c_read_string;
 
-  ptLabelRelativeReference, ptLabelAbsoluteReference: raise eInvalidOpcode.Create('Label references cannot appear in the program code.');
-
   else Result.Val := c_read_integer;
  End;
 End;
@@ -528,6 +564,17 @@ Begin
  Stack[StackPos^] := Value;
 End;
 
+{ TMachine.CallstackPush }
+Procedure TMachine.CallstackPush(Value: LongWord);
+Begin
+ if (StackPos^ >= STACK_SIZE) Then
+  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
+
+ Inc(StackPos^);
+ Stack[StackPos^].Typ := ptCallstackRef;
+ Stack[StackPos^].Val := Value;
+End;
+
 { TMachine.StackPop }
 Function TMachine.StackPop: TOpParam;
 Begin
@@ -535,9 +582,22 @@ Begin
   raise eInternalError.Create('Cannot ''pop'' - stack is empty.');
 
  if (StackPos^ >= STACK_SIZE) Then
-  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
+  raise eInternalError.Create('Cannot ''pop'' - pointer is outside of the stack.');
 
  Result := Stack[StackPos^];
+ Dec(StackPos^);
+End;
+
+{ TMachine.CallstackPop }
+Function TMachine.CallstackPop: LongWord;
+Begin
+ if (StackPos^ = 0) Then
+  raise eInternalError.Create('Cannot ''pop'' - stack is empty.');
+
+ if (StackPos^ >= STACK_SIZE) Then
+  raise eInternalError.Create('Cannot ''pop'' - pointer is outside of the stack.');
+
+ Result := Stack[StackPos^].getReference;
  Dec(StackPos^);
 End;
 
@@ -557,12 +617,13 @@ End;
 Function TMachine.getObject(Address: LongWord): TMObject;
 Var Obj: TMObject;
 Begin
+ if (Address = 0) Then
+  raise eNullPointerReference.Create('Null pointer reference');
+
  Try
   Obj := TMObject(Address);
-
-  if (Obj.getMagic = MagicNumber) Then
-   Exit(Obj) Else
-   raise eInternalError.Create('');
+  Obj.Test;
+  Exit(Obj);
  Except
   raise eInvalidReference.Create('Not a valid object reference: 0x'+IntToHex(Address, 2*sizeof(LongWord)));
  End;
@@ -640,60 +701,24 @@ End;
 { TMachine.Run }
 Procedure TMachine.Run;
 
-Procedure ParseOpcode; inline;
-Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc =
-(
- @op_NOP,
- @op_STOP,
- @op_PUSH,
- @op_POP,
- @op_ADD,
- @op_SUB,
- @op_MUL,
- @op_DIV,
- @op_NEG,
- @op_MOV,
- @op_JMP,
- @op_TJMP,
- @op_FJMP,
- @op_CALL,
- @op_ICALL,
- @op_ACALL,
- @op_RET,
- @op_IF_E,
- @op_IF_NE,
- @op_IF_G,
- @op_IF_L,
- @op_IF_GE,
- @op_IF_LE,
- @op_STRJOIN,
- @op_NOT,
- @op_OR,
- @op_XOR,
- @op_AND,
- @op_SHL,
- @op_SHR,
- @op_MOD,
- @op_ARSET,
- @op_ARGET,
- @op_ARCRT,
- @op_ARLEN,
- @op_OBJFREE);
-Begin
- LastOpcodePos := getPosition;
- Inc(OpcodeNo);
+  // ParseOpcode
+  Procedure ParseOpcode; inline;
+  Begin
+   LastOpcodePos := getPosition;
+   Inc(OpcodeNo);
 
-//{
- Begin
- // Writeln('CODE:0x', IntToHex(getPosition, 8), ' -> ', disasm(getPosition));
- // Readln;
- End;
-//}
+  //{
+   Begin
+   // Writeln('CODE:0x', IntToHex(getPosition, 8), ' -> ', disasm(getPosition));
+   // Readln;
+   End;
+  //}
 
- OpcodeTable[TOpcode_E(c_read_byte)](self);
-// TOpcodeProc(Pointer(PPointer(LongWord(@OpcodeTable[TOpcode_E(0)])+c_read_byte*sizeof(Pointer)))^)(self); // magic!
-End;
+   OpcodeTable[TOpcode_E(c_read_byte)](self);
+  End;
 
+
+// function body
 Begin
  Log('-- PROGRAM START --');
 
@@ -780,31 +805,31 @@ Begin
  End;
 End;
 
-{ TMachine.FetchLabelName }
-Function TMachine.FetchLabelName(Pos: LongWord; out Str: String): Boolean;
-{
-Var ID    : Integer;
-    DebugS: PDebugSection;
-    I     : Integer;
+{ TMachine.FetchLineAndFile }
+Procedure TMachine.FetchLineAndFile(const Pos: LongWord; out eLine: Integer; out eFile: String);
+Var Opcode, Param: Byte;
 Begin
- Result := False;
+ eLine := -1;
+ eFile := '0x'+IntToHex(Pos, sizeof(LongWord)*2);
 
- ID := findSection(section_DEBUG); // find 'debug' section
- if (ID = -1) Then // section not found
-  Exit;
+ setPosition(0);
 
- DebugS := SectionList[ID].Data;
+ While (getPosition <= Pos) Do
+ Begin
+  Opcode := c_read_byte;
 
- With DebugS^ do
-  For I := 0 To LabelsCount-1 Do
-   if (LabelList[I].Position = Pos) Then
-   Begin
-    Str := getString(LabelList[I].Name);
-    Exit(True);
-   End;
-End;
-}
-Begin
- // @TODO
+  if (Opcode > OPCODE_MAX) Then
+   Exit;
+
+  if (Opcode = ord(o_location)) Then
+  Begin
+   eLine := read_param.getInt;
+   eFile := read_param.getString;
+   Continue;
+  End;
+
+  For Param := 1 To OpcodesParamCount[TOpcode_E(Opcode)] Do
+   read_param;
+ End;
 End;
 End.

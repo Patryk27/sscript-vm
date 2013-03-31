@@ -10,14 +10,14 @@ Unit Opcodes;
 
  Type TPrimaryType = (ptBoolReg=0, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg,
                       ptBool, ptChar, ptInt, ptFloat, ptString, ptStackVal,
-                      ptLabelRelativeReference, ptLabelAbsoluteReference);
+                      ptLabelReferencem, ptCallstackRef);
 
  Const PrimaryTypeNames: Array[TPrimaryType] of String =
                      ('bool reg', 'char reg', 'int reg', 'float reg', 'string reg', 'reference reg',
                       'bool', 'char', 'int', 'float', 'string', 'stackval',
-                      'label relative reference', 'label absolute reference');
+                      'label reference', 'callstack ref');
 
- Const OPCODE_MAX = 38;
+ Const OPCODE_MAX = 39;
 
  Type TOpcode_E = (o_nop, o_stop,
                    o_push, o_pop,
@@ -28,7 +28,8 @@ Unit Opcodes;
                    o_not, o_or, o_xor, o_and, o_shl, o_shr,
                    o_mod,
                    o_arset, o_arget, o_arcrt, o_arlen,
-                   o_objfree);
+                   o_objfree,
+                   o_location);
 
  Const OpcodesParamCount: Array[TOpcode_E] of Byte = // used in internal disassembler
  (0, 0,
@@ -40,7 +41,8 @@ Unit Opcodes;
   1, 2, 2, 2, 2, 2,
   2,
   3, 3, 3, 3,
-  1);
+  1,
+  2);
 
  Function getOpcodeName(O: TOpcode_E): String;
  Function getOpcodeName(O: Byte): String;

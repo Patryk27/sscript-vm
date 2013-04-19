@@ -51,7 +51,7 @@ Var M   : TMachine;
 Label Finish;
 Begin
  DefaultFormatSettings.DecimalSeparator := '.';
- Time := GetTickCount;
+ Time := GetMilliseconds;
 
  SetConsoleSize(CRT.WindMaxX, CRT.WindMaxY, CRT.WindMaxX, CRT.WindMaxY+1000);
 
@@ -89,7 +89,7 @@ Begin
 
    M := TMachine.Create(ParamStr(1));
    M.Prepare;
-   Time := GetTickCount;
+   Time := GetMilliseconds;
    M.Run;
   Except
    On E: Exception Do
@@ -139,7 +139,7 @@ Begin
   End;
  End;
 
- Time := GetTickCount-Time;
+ Time := GetMilliseconds-Time;
 
  if (getBoolOption('v', False) or getBoolOption('time', False)) Then
  Begin

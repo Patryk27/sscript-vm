@@ -24,18 +24,18 @@ Unit os_functions;
 {$IF OS_WINDOWS}
  Windows
 {$ELSEIF OS_LINUX}
- Linux, BaseUnix, UnixType
+ Linux, UnixType
 {$ELSE}
  {$FATAL Unknown target operating system!}
 {$ENDIF};
 
- Function GetTickCount: LongWord;
+ Function GetMilliseconds: LongWord;
  Procedure SetConsoleSize(const Width, Height, WinWidth, WinHeight: Integer);
 
  Implementation
 
-{ GetTickCount }
-Function GetTickCount: LongWord;
+{ GetMilliseconds }
+Function GetMilliseconds: LongWord;
 {$IF OS_LINUX}
  Var T: timespec;
 {$ENDIF}
@@ -44,7 +44,7 @@ Begin
   Result := Windows.GetTickCount;
  {$ELSEIF OS_LINUX} { Linux }
   clock_gettime(CLOCK_MONOTONIC, @T);
-  Result := T.tv_nsec;
+  Result := (T.tv_sec*1000)+(T.tv_nsec div 1000000);
  {$ELSE} { other }
   {$WARNING GetTickCount -> unimplemented!}
   Exit(0);

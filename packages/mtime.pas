@@ -10,12 +10,12 @@ Unit mTime;
  Implementation
 Uses Machine, os_functions;
 
-{ time.get_tick_count }
-Procedure _get_tick_count(M: TMachine);
+{ time.get_milliseconds }
+Procedure _get_milliseconds(M: TMachine);
 Begin
- M.StackPush(getTickCount);
+ M.StackPush(GetMilliseconds);
 End;
 
 initialization
- NewFunction('time', 'get_tick_count', @_get_tick_count);
+ NewFunction('time', 'get_milliseconds', @_get_milliseconds);
 End.

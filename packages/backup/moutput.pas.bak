@@ -15,7 +15,7 @@ Uses CRT, Machine, Opcodes, SysUtils, FileUtil
 {$IFDEF WINDOWS}
  ,Windows
 {$ENDIF};
-Var isBuffered  : Boolean = False;
+Var isBuffered  : Boolean=False;
     BufferString: String = '';
 
 // strdisplay

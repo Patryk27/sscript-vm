@@ -8,14 +8,14 @@ Unit mTime;
  Interface
 
  Implementation
-Uses Machine, Windows;
+Uses Machine, os_functions;
 
 { time.get_tick_count }
 Procedure _get_tick_count(M: TMachine);
 Begin
- M.StackPush(GetTickCount);
+ M.StackPush(getTickCount);
 End;
 
 initialization
  NewFunction('time', 'get_tick_count', @_get_tick_count);
-End.
+End.

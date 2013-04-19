@@ -19,13 +19,11 @@
  along with SScript Compiler; if not, write to the Free Software
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA   
 *)
-{$R *.res}
 
-{$Q-}
-{$R-}
+//{$R *.res}
 
 Program vm;
-Uses CRT, Windows, SysUtils, Registry, Machine, Opcodes, mOutput;
+Uses os_functions, CRT, SysUtils, Machine, Opcodes, mOutput;
 Const Version = '0.3 nightly';
 
 { getBoolOption }
@@ -44,10 +42,8 @@ End;
 
 // @TODO: better command-line parsing
 
-Const Ext = 'ssc';
 Var M   : TMachine;
     Time: Cardinal;
-    Reg : TRegistry;
 
     eLine: Integer;
     eFile: String;
@@ -57,7 +53,7 @@ Begin
  DefaultFormatSettings.DecimalSeparator := '.';
  Time := GetTickCount;
 
- mOutput.SetScreenSize(CRT.WindMaxX, CRT.WindMaxY, CRT.WindMaxX, CRT.WindMaxY+1000);
+ SetConsoleSize(CRT.WindMaxX, CRT.WindMaxY, CRT.WindMaxX, CRT.WindMaxY+1000);
 
  if (ParamCount < 1) or (ParamStr(1) = '-logo') Then
  Begin
@@ -74,65 +70,21 @@ Begin
   Writeln('vm.exe [input file]');
   Writeln;
   Writeln('Available options:');
-  Writeln('To enable a boolean switch use `name+` (or just `name`), to disable `name-`');
+  Writeln('To enable switch use `name+` (or just `name`), to disable `name-`');
   Writeln;
 
   Writeln('name = description');
   Writeln;
 
- // Writeln('-force  load file even when eg.header is not correct (use carefully)');
-  Writeln('-v      enable verbose mode');
-  Writeln('-err    detailed error log');
- // Writeln('-debug  run with debugger');
-  Writeln('-wait   wait for `enter` when finished (-)');
-  Writeln('-time   display program''s execution time');
-
-  Writeln('-setdblclick     enable running SScript compiled (*.ssc) programs by double-click on them');
-  Writeln('-removedblclick  remove option above');
+  Writeln('-v     enable verbose mode');
+  Writeln('-err   detailed error log');
+  Writeln('-wait  wait for `enter` when finished');
+  Writeln('-time  display program''s execution time');
  End Else
  Begin
   Try
   Try
   Try
-   Reg         := TRegistry.Create;
-   Reg.RootKey := HKEY_CLASSES_ROOT;
-
-   Case ParamStr(1) of
-    '-setdblclick':
-    Begin
-     Reg.OpenKey('.'+Ext, True);
-     Reg.WriteString('', Ext+'file');
-     Reg.CloseKey;
-     Reg.OpenKey(Ext+'file', True);
-     Reg.WriteString('', 'Program MLang');
-     Reg.CloseKey;
-     Reg.OpenKey(Ext+'file\DefaultIcon', True);
-     Reg.WriteString('', ParamStr(0)+',0');
-     Reg.CloseKey;
-     Reg.OpenKey(Ext+'file\shell\open', True);
-     Reg.WriteString('', '&Otwórz w MLang Editor');
-     Reg.CloseKey;
-     Reg.OpenKey(Ext+'file\shell\open\command', True);
-     Reg.WriteString('', ParamStr(0)+' "%1"');
-
-     Writeln('Done!');
-     Exit;
-    End;
-
-    '-removedblclick':
-    Begin
-     Reg.DeleteKey('.'+Ext);
-     Reg.DeleteKey(Ext+'file');
-     Reg.DeleteKey(Ext+'file\DefaultIcon');
-     Reg.DeleteKey(Ext+'file\shell\open');
-     Reg.DeleteKey(Ext+'file\shell\open\command');
-
-     Writeln('Done!');
-     Exit;
-    End;
-   End;
-   Reg.Free;
-
    Machine.VerboseMode := getBoolOption('v', False);
 
    M := TMachine.Create(ParamStr(1));

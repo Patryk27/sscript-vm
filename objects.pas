@@ -201,8 +201,8 @@ Begin
 
   Case self.Typ of
    TYPE_BOOL, TYPE_CHAR, TYPE_INT: PLongWord(DataPos)^ := Val;
-   TYPE_STRING                   : SaveString(DataPos, sVal);
-   TYPE_FLOAT                    : PExtended(DataPos)^ := fVal;
+   TYPE_STRING                   : SaveString(DataPos, getString);
+   TYPE_FLOAT                    : PExtended(DataPos)^ := getFloat; // @TODO: why `:= fVal` fails? :|
    else
     raise eInvalidAccess.Create('Invalid type: '+IntToStr(ord(Typ)));
   End;
@@ -218,7 +218,7 @@ Begin
 
  New(OpParam);
 
- With POpParam(OpParam)^ do
+ With OpParam^ do
  Begin
   Case self.Typ of
    TYPE_BOOL  : Typ := ptBool;

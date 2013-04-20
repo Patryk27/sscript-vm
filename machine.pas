@@ -9,7 +9,7 @@
 Unit Machine;
 
  Interface
- Uses SysUtils, Opcodes, Objects, Classes, Zipper, Exceptions;
+ Uses SysUtils, Opcodes, Objects, Exceptions, Classes, Zipper;
 
  Const EXCEPTIONSTACK_SIZE = 1*1024*1024; // 1 MB exception-stack; I guess it's enough...
        STACK_SIZE          = 100000000; // this value is counted in elements number
@@ -125,6 +125,8 @@ Unit Machine;
                    { object-related }
                    Function getObject(Address: LongWord): TMObject;
                    Function getArray(Address: LongWord): TMArray;
+
+                   Procedure ThrowException(const Msg: String);
 
                    { some stuff }
                    Constructor Create(const FileName: String);
@@ -633,6 +635,17 @@ End;
 Function TMachine.getArray(Address: LongWord): TMArray;
 Begin
  Result := TMArray(getObject(Address));
+End;
+
+{ TMachine.ThrowException }
+Procedure TMachine.ThrowException(const Msg: String);
+Begin
+ if (exception_handler = 0) Then
+  raise eThrow.Create(msg) Else
+  Begin
+   last_exception := Msg;
+   setPosition(exception_handler);
+  End;
 End;
 
 { TMachine.Create }

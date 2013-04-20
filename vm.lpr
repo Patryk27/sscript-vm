@@ -84,7 +84,6 @@ Begin
  Begin
   Try
   Try
-  Try
    Machine.VerboseMode := getBoolOption('v', False);
 
    M := TMachine.Create(ParamStr(1));
@@ -125,9 +124,6 @@ Begin
 
      End;
     End;
-  End;
-  Finally
-   //M.Free;
   End;
   Except
    On E: Exception Do

@@ -65,20 +65,9 @@ End;
 
 { vm.throw }
 Procedure _throw(M: TMachine);
-Var msg: String;
 Begin
-With M do
-Begin
- msg := StackPop.getString;
-
- if (exception_handler = 0) Then
-  raise eThrow.Create(msg) Else
-  Begin
-   last_exception := msg;
-
-   setPosition(exception_handler);
-  End;
-End;
+ With M do
+  ThrowException(StackPop.getString);
 End;
 
 { vm.get_last_exception }

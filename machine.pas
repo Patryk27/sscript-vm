@@ -811,7 +811,7 @@ Begin
      ptBool  : Result += BoolToStr(Val <> 0, 'true', 'false');
      ptChar  : Result += '#'+IntToStr(Val);
      ptInt   : Result += IntToStr(Val);
-     ptFloat : Result += FloatToStr(Val);
+     ptFloat : Result += FloatToStr(fVal);
      ptString: Result += '"'+sVal+'"';
 
      ptStackVal: Result += '['+IntToStr(Val)+']';

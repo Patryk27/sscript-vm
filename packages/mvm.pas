@@ -8,7 +8,7 @@ Unit mVM;
  Interface
 
  Implementation
-Uses Machine, Exceptions, SysUtils;
+Uses Machine, SysUtils;
 
 { vm.exit }
 Procedure _exit(M: TMachine);

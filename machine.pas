@@ -40,7 +40,7 @@ Unit Machine;
 
                    Function getBool: Boolean; inline;
                    Function getChar: Char; inline;
-                   Function getInt: Integer; inline;
+                   Function getInt: Int64; inline;
                    Function getLongword: LongWord; inline;
                    Function getFloat: Extended; inline;
                    Function getString: String; inline;
@@ -75,10 +75,10 @@ Unit Machine;
 
                    breg: Array[1..5] of Boolean;
                    creg: Array[1..4] of Char;
-                   ireg: Array[1..5] of Integer;
+                   ireg: Array[1..5] of Int64;
                    freg: Array[1..4] of Extended;
                    sreg: Array[1..4] of String;
-                   rreg: Array[1..4] of Integer;
+                   rreg: Array[1..4] of LongWord;
 
                    Position     : PByte; // current position in `code` section
                    LastOpcodePos: LongWord;
@@ -100,7 +100,8 @@ Unit Machine;
                    Function c_read_byte: Byte; inline;
                    Function c_read_integer: Integer; inline;
                    Function c_read_longword: LongWord; inline;
-                   Function c_read_extended: Extended; inline;
+                   Function c_read_int64: Int64; inline;
+                   Function c_read_float: Extended; inline;
                    Function c_read_string: String; inline;
 
                    Function getString(Pos: LongWord): String;
@@ -242,7 +243,7 @@ Begin
 End;
 
 { TOpParam.getInt }
-Function TOpParam.getInt: Integer;
+Function TOpParam.getInt: Int64;
 Begin
  if (Typ in [ptInt, ptIntReg, ptBool, ptBoolReg, ptChar, ptCharReg, ptReferenceReg]) Then
   Exit(Val) Else
@@ -408,14 +409,15 @@ End;
 
 { TMachine.ParseBytecode }
 Procedure TMachine.ParseBytecode(const AStream: TStream);
-Var I: Integer;
+Var I: LongWord;
 Begin
  Log('Parsing bytecode...');
 
  CodeData := AllocMem(AStream.Size);
 
- For I := 0 To AStream.Size-1 Do // @TODO: why `AStream.Read` doesn't work? :|
-  CodeData[I] := AStream.ReadByte;
+ if (AStream.Size <> 0) Then
+  For I := 0 To AStream.Size-1 Do // @TODO: why `AStream.Read` doesn't work? :|
+   CodeData[I] := AStream.ReadByte;
 End;
 
 { TMachine.c_read_byte }
@@ -439,8 +441,15 @@ Begin
  Inc(Position, sizeof(LongWord));
 End;
 
-{ TMachine.c_read_extended }
-Function TMachine.c_read_extended: Extended;
+{ TMachine.c_read_int64 }
+Function TMachine.c_read_int64: Int64;
+Begin
+ Result := BEtoN(PInt64(Position)^);
+ Inc(Position, sizeof(Int64));
+End;
+
+{ TMachine.c_read_float }
+Function TMachine.c_read_float: Extended;
 Begin
  Result := PExtended(Position)^;
  Inc(Position, sizeof(Extended));
@@ -494,10 +503,12 @@ Begin
 
   ptBool: Result.Val := c_read_byte;
   ptChar: Result.Val := c_read_byte;
-  ptFloat: Result.fVal := c_read_extended;
+  ptInt: Result.Val := c_read_int64;
+  ptFloat: Result.fVal := c_read_float;
   ptString: Result.sVal := c_read_string;
 
-  else Result.Val := c_read_integer;
+  else
+   Result.Val := c_read_integer;
  End;
 End;
 
@@ -722,8 +733,8 @@ Procedure TMachine.Run;
 
   //{
    Begin
-   // Writeln('CODE:0x', IntToHex(getPosition, 8), ' -> ', disasm(getPosition));
-   // Readln;
+//    Writeln('CODE:0x', IntToHex(getPosition, 8), ' -> ', disasm(getPosition));
+//    Readln;
    End;
   //}
 

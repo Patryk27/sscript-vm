@@ -469,7 +469,7 @@ End;
 
 { CALL }
 Procedure op_CALL(M: TMachine);
-Var NewAddr: Integer;
+Var NewAddr: LongWord;
 Begin
 With M do
 Begin

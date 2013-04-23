@@ -11,12 +11,13 @@ Unit mOutput;
  Procedure strdisplay(Str: String);
 
  Implementation
-Uses CRT, Machine, Opcodes, SysUtils, FileUtil
+Uses
 {$IFDEF WINDOWS}
- ,Windows
-{$ENDIF};
-Var isBuffered  : Boolean = False;
-    BufferString: String = '';
+ Windows,
+{$ENDIF} CRT, Machine, Opcodes, SysUtils, FileUtil;
+
+Var isBuffered: Boolean = False;
+    BufferData: String = '';
 
 // strdisplay
 Procedure strdisplay(Str: String); inline;
@@ -47,7 +48,7 @@ Begin
  End;
 
  if (isBuffered) Then
-  BufferString += Str Else
+  BufferData += Str Else
   strdisplay(Str);
 End;
 End;
@@ -56,7 +57,7 @@ End;
 Procedure _clear(M: TMachine);
 Begin
  if (isBuffered) Then
-  BufferString := '' Else
+  BufferData := '' Else
   ClrScr;
 End;
 
@@ -84,8 +85,8 @@ End;
 { output.flush }
 Procedure _flush(M: TMachine);
 Begin
- strdisplay(BufferString);
- BufferString := '';
+ strdisplay(BufferData);
+ BufferData := '';
 End;
 
 { output.cursor.hide }

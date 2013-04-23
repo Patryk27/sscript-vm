@@ -4,22 +4,22 @@ Unit Exceptions;
  Uses SysUtils;
 
  { base types }
- Type VMException   = Class(Exception);
-      CodeException = Class(Exception);
+ Type EUncatchable = Class(Exception);
+      ECatchable   = Class(Exception);
 
  { VM exceptions }
- Type eInternalError    = Class(VMException);
-      eInvalidCasting   = Class(VMException);
-      eInvalidReference = Class(VMException);
-      eInvalidFile      = Class(VMException);
-      eInvalidOpcode    = Class(VMException);
-      eDivByZero        = Class(VMException);
+ Type eInternalError    = Class(EUncatchable);
+      eInvalidCasting   = Class(EUncatchable);
+      eInvalidReference = Class(EUncatchable);
+      eInvalidFile      = Class(EUncatchable);
+      eInvalidOpcode    = Class(EUncatchable);
+      eDivByZero        = Class(EUncatchable);
 
- { code (user) exceptions }
- Type eThrow                = Class(CodeException);
-      eInvalidAccess        = Class(CodeException);
-      eOutOfBounds          = Class(CodeException);
-      eNullPointerReference = Class(CodeException);
+ { catchable exceptions }
+ Type eThrow                = Class(ECatchable);
+      eInvalidAccess        = Class(ECatchable);
+      eOutOfBounds          = Class(ECatchable);
+      eNullPointerReference = Class(ECatchable);
 
  Implementation
 

@@ -1,5 +1,3 @@
-{$MODE OBJFPC}
-{$H+}
 (*
  SScript Virtual Machine
  Copyright © by Patryk Wychowaniec, 2013
@@ -24,7 +22,7 @@
 
 Program vm;
 Uses os_functions, CRT, SysUtils, Machine, Opcodes, mOutput;
-Const Version = '0.3 nightly';
+Const Version = '0.3 RC0';
 
 { getBoolOption }
 Function getBoolOption(O: String; Default: Boolean): Boolean;

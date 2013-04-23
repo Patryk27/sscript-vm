@@ -60,6 +60,7 @@
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <CodeGeneration>
+      <TargetCPU Value="i386"/>
       <Optimizations>
         <VariablesInRegisters Value="True"/>
         <UncertainOptimizations Value="True"/>

@@ -20,7 +20,7 @@
 Unit os_functions;
 
  Interface
- Uses
+ Uses CRT,
 {$IF OS_WINDOWS}
  Windows
 {$ELSEIF OS_LINUX}

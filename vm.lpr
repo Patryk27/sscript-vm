@@ -18,11 +18,12 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA   
 *)
 
-//{$R *.res}
+// @TODO: better command-line parsing
 
-Program vm;
+{$R *.res}
+Program ssvm;
 Uses os_functions, CRT, SysUtils, Machine, Opcodes, mOutput;
-Const Version = '0.3 RC0';
+Const Version = '0.3 RC1';
 
 { getBoolOption }
 Function getBoolOption(O: String; Default: Boolean): Boolean;
@@ -38,14 +39,19 @@ Begin
    Exit(False);
 End;
 
-// @TODO: better command-line parsing
+{ DumpExceptionCallstack }
+Procedure DumpExceptionCallstack;
+Var I     : Integer;
+    Frames: PPointer;
+Begin
+ Writeln(BackTraceStrFunc(ExceptAddr));
+ Frames := ExceptFrames;
+ For I := 0 To ExceptFrameCount-1 Do
+  Writeln(BackTraceStrFunc(Frames[I]));
+End;
 
-Var M   : TMachine;
+Var VM  : TMachine;
     Time: Cardinal;
-
-    eLine: Integer;
-    eFile: String;
-
 Label Finish;
 Begin
  DefaultFormatSettings.DecimalSeparator := '.';
@@ -84,42 +90,24 @@ Begin
   Try
    Machine.VerboseMode := getBoolOption('v', False);
 
-   M := TMachine.Create(ParamStr(1));
-   M.Prepare;
+   VM := TMachine.Create(ParamStr(1));
+   VM.Prepare;
    Time := GetMilliseconds;
-   M.Run;
+   VM.Run;
   Except
    On E: Exception Do
     if (E.Message <> '') Then
     Begin
      Write(E.ClassName, ': ', E.Message);
 
-     if (Assigned(M)) Then
+     if (Assigned(VM)) Then
      Begin
+
+      { -- program callstack -- }
       Writeln;
-
-      M.FetchLineAndFile(M.LastOpcodePos, eLine, eFile);
-
-      if (eLine = -1) Then
-       Write('   at unknown source (', eFile, ')') Else
-       Write('   at ', eFile, ' (line: ', eLine, ')');
-
-      Writeln(' :: ', M.disasm(M.LastOpcodePos));
-
-      With M do  // @TODO: 10 references max
-       While (StackPos^ > 0) Do
-       Begin
-        if (Stack[StackPos^].Typ = ptCallstackRef) Then
-        Begin
-         M.FetchLineAndFile(Stack[StackPos^].getReference, eLine, eFile);
-
-         if (eLine = -1) Then
-          Writeln('   ... from unknown source (', eFile, ')') Else
-          Writeln('   ... from ', eFile, ' (', eLine, ')');
-        End;
-        Dec(StackPos^);
-       End;
-
+      Writeln('Callstack:');
+      VM.DumpCallstack;
+      // DumpExceptionCallstack;
      End;
     End;
   End;
@@ -127,8 +115,11 @@ Begin
    On E: Exception Do
    Begin
     Writeln;
-    Writeln('Critical fail:');
+    Writeln('Exception raised in exception handler:');
     Writeln(E.Message);
+    Writeln;
+    Writeln('VM callstack:');
+    DumpExceptionCallstack;
    End;
   End;
  End;
@@ -140,13 +131,13 @@ Begin
   Writeln('-- END --');
   Writeln('Time   : '+IntToStr(Time)+' ms');
 
-  if (Assigned(M)) Then
+  if (Assigned(VM)) Then
   Begin
-   Writeln('Opcodes: ', M.OpcodeNo);
+   Writeln('Opcodes: ', VM.OpcodeNo);
 
    if (Time = 0) Then
-    Writeln('Opc/ms : ~', M.OpcodeNo) Else
-    Writeln('Opc/ms : ', IntToStr(Round(M.OpcodeNo/Time)));
+    Writeln('Opc/ms : ~', VM.OpcodeNo) Else
+    Writeln('Opc/ms : ', IntToStr(Round(VM.OpcodeNo/Time)));
   End Else
   Begin
    Writeln('Opcodes: <unknown>');

@@ -3,6 +3,7 @@
  All rights reserved.
 *)
 {$H+}
+{$I switches.inc}
 Unit Objects;
 
  Interface
@@ -14,9 +15,13 @@ Unit Objects;
  Type TMObject = Class
                   Private
                    SomeField: Integer;
+                   RefCount : Integer;
 
                   Public
                    Constructor Create;
+
+                   Procedure IncRefcount; inline;
+                   Procedure DecRefcount; inline;
 
                    Procedure Test;
                    Function getAddress: LongWord;
@@ -46,7 +51,7 @@ Unit Objects;
 Uses Machine, Exceptions, Opcodes;
 
 { FreeString }
-Procedure FreeString(const MemPos: LongWord);
+Procedure FreeString(const MemPos: LongWord); inline;
 Var Mem: LongWord;
 Begin
  Mem := PLongword(MemPos)^;
@@ -58,44 +63,38 @@ Begin
 End;
 
 { SaveString }
-Procedure SaveString(const MemPos: LongWord; Str: String);
-Var Mem: LongWord;
-    Ch : Char;
+Procedure SaveString(const MemPos: LongWord; Str: String); inline;
+Var Mem, I: LongWord;
 Begin
- FreeString(MemPos); // free previous string (if possible)
+ FreeString(MemPos); // free string (if possible)
 
- Mem := LongWord(AllocMem(Length(Str)+sizeof(LongWord))); // allocate memory
+ Mem := LongWord(AllocMem(sizeof(LongWord)+Length(Str))); // allocate memory
 
- PLongword(MemPos)^ := Mem; // at `MemPos` save pointer to allocated memory (there our finally string will be hold)
+ PLongword(MemPos)^ := Mem; // at array element, save pointer to allocated memory (there our final string will be hold)
+ PLongword(Mem)^    := Length(Str); // save string length
 
- PLongword(Mem)^ := Length(Str); // save string length
- Inc(Mem, sizeof(LongWord)); // move pointer (so we don't overwrite length)
- For Ch in Str Do // save each char
- Begin
-  PChar(Mem)^ := Ch;
-  Inc(Mem, sizeof(Byte));
- End;
+ Inc(Mem, sizeof(LongWord));
+ For I := 1 To Length(Str) Do
+  PChar(Mem+I-1)^ := Str[I];
 End;
 
 { LoadString }
-Function LoadString(const MemPos: LongWord): String;
-Var Mem   : LongWord;
-    I, Len: LongWord;
+Function LoadString(const MemPos: LongWord): String; inline;
+Var Mem, Len, I: LongWord;
 Begin
  Result := '';
- Mem    := PLongword(MemPos)^; // get string pointer
 
+ Mem := PLongword(MemPos)^; // get string's content pointer
  if (Mem = 0) Then // no string associated
   Exit;
 
- Len := PLongword(Mem)^; // get string length
- Inc(Mem, sizeof(LongWord)); // skip length (thus we just read it)
+ Len := PLongword(Mem)^; // get string's length
+ if (Len = 0) Then // no data to be read
+  Exit;
 
- For I := 1 To Len Do // read chars
- Begin
-  Result += PChar(Mem)^;
-  Inc(Mem, sizeof(Byte));
- End;
+ Inc(Mem, sizeof(LongWord));
+ For I := 0 To Len-1 Do
+  Result += PChar(Mem+I)^;
 End;
 
 (* ========== TMObject ========== *)
@@ -103,6 +102,27 @@ End;
 { TMObject.Create }
 Constructor TMObject.Create;
 Begin
+ RefCount := 0;
+End;
+
+{ TMObject.IncRefcount }
+Procedure TMObject.IncRefcount;
+Begin
+ Inc(Refcount);
+// Writeln('0x', IntToHex(LongWord(self), 8), ' -> inc(); refcount = ', Refcount);
+End;
+
+{ TMObject.DecRefcount }
+Procedure TMObject.DecRefcount;
+Begin
+ Dec(Refcount);
+// Writeln('0x', IntToHex(LongWord(self), 8), ' -> dec(); refcount = ', Refcount);
+
+// if (Refcount = 0) Then
+//  Writeln('Object has been destroyed!');
+
+ if (Refcount = 0) Then
+  Free;
 End;
 
 { TMObject.Test }

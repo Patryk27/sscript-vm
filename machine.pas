@@ -11,8 +11,8 @@ Unit Machine;
  Interface
  Uses SysUtils, Opcodes, Objects, Exceptions, Classes, Zipper;
 
- Const EXCEPTIONSTACK_SIZE = 1*1024*1024; // 1 MB exception-stack; I guess it's enough...
-       STACK_SIZE          = 100000000; // this value is counted in elements number
+ Const EXCEPTIONSTACK_SIZE = 1*1024*1024; // 1 MB exception-stack; I guess it's enough
+       STACK_SIZE          = 100000000; // this value is counted in elements count
 
        bytecode_version_major = 0;
        bytecode_version_minor = 4;
@@ -46,13 +46,6 @@ Unit Machine;
                    Function getString: String; inline;
                    Function getReference: LongWord; inline;
 
-                   Function getBoolReg: Pointer;
-                   Function getCharReg: Pointer;
-                   Function getIntReg: Pointer;
-                   Function getFloatReg: Pointer;
-                   Function getStringReg: Pointer;
-                   Function getReferenceReg: Pointer;
-
                    Function getTypeName: String;
                   End;
 
@@ -82,7 +75,7 @@ Unit Machine;
 
                    Position     : PByte; // current position in `code` section
                    LastOpcodePos: LongWord;
-                   StackPos     : PLongWord; // points at `ireg[5]` (`stp` register)
+                   StackPos     : PLongWord; // points at `ireg[5]` (the `stp` register)
                    DebugMode    : Boolean;
                    OpcodeNo     : QWord;
 
@@ -129,11 +122,13 @@ Unit Machine;
 
                    Procedure ThrowException(const Msg: String);
 
-                   { some stuff }
+                   { some other stuff }
                    Constructor Create(const FileName: String);
                    Procedure Prepare;
                    Procedure Run;
                    Procedure RunFunction(PackageName, FunctionName: String);
+
+                   Procedure DumpCallstack;
 
                    Function disasm(Pos: LongWord): String;
                    Procedure FetchLineAndFile(const Pos: LongWord; out eLine: Integer; out eFile: String);
@@ -142,7 +137,7 @@ Unit Machine;
  Type TOpcodeProc = Procedure (M: TMachine);
       THandlerProc = Procedure (M: TMachine);
 
- Var FunctionList: Array of Record
+ Var FunctionList: Array of Record // `icall` function list
                              Name, Package: String;
                              Handler      : THandlerProc;
                             End;
@@ -193,6 +188,8 @@ Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc =
  @op_ARCRT,
  @op_ARLEN,
  @op_OBJFREE,
+ @op_OBJINC,
+ @op_OBJDEC,
  @op_LOCATION
 );
 
@@ -296,54 +293,6 @@ Begin
  if (Typ = ptStackVal) Then
   Exit(M.Stack[M.StackPos^+Val].getReference) Else
   raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int');
-End;
-
-{ TOpParam.getBoolReg }
-Function TOpParam.getBoolReg: Pointer;
-Begin
- if (Typ = ptBoolReg) Then
-  Exit(@M.breg[Index]) Else
-  raise eInvalidCasting.Create('Expected register of type ''bool'' while type '''+PrimaryTypeNames[Typ]+''' found');
-End;
-
-{ TOpParam.getCharReg }
-Function TOpParam.getCharReg: Pointer;
-Begin
- if (Typ = ptCharReg) Then
-  Exit(@M.creg[Index]) Else
-  raise eInvalidCasting.Create('Expected register of type ''char'' while type '''+PrimaryTypeNames[Typ]+''' found');
-End;
-
-{ TOpParam.getIntReg }
-Function TOpParam.getIntReg: Pointer;
-Begin
- if (Typ = ptIntReg) Then
-  Exit(@M.ireg[Index]) Else
-  raise eInvalidCasting.Create('Expected register of type ''int'' while type '''+PrimaryTypeNames[Typ]+''' found');
-End;
-
-{ TOpParam.getFloatReg }
-Function TOpParam.getFloatReg: Pointer;
-Begin
- if (Typ = ptFloatReg) Then
-  Exit(@M.freg[Index]) Else
-  raise eInvalidCasting.Create('Expected register of type ''float'' while type '''+PrimaryTypeNames[Typ]+''' found');
-End;
-
-{ TOpParam.getStringReg }
-Function TOpParam.getStringReg: Pointer;
-Begin
- if (Typ = ptStringReg) Then
-  Exit(@M.sreg[Index]) Else
-  raise eInvalidCasting.Create('Expected register of type ''string'' while type '''+PrimaryTypeNames[Typ]+''' found');
-End;
-
-{ TOpParam.getReferenceReg }
-Function TOpParam.getReferenceReg: Pointer;
-Begin
- if (Typ = ptReferenceReg) Then
-  Exit(@M.rreg[Index]) Else
-  raise eInvalidCasting.Create('Expected register of type ''reference'' while type '''+PrimaryTypeNames[Typ]+''' found');
 End;
 
 { TOpParam.getTypeName }
@@ -774,6 +723,92 @@ Begin
  raise eInvalidOpcode.Create('Invalid `icall`: '+PackageName+'.'+FunctionName);
 End;
 
+{ TMachine.DumpCallstack }
+Procedure TMachine.DumpCallstack;
+Var eLine: Integer;
+    eFile: String;
+
+    Frames    : PPointer; // VM stack frames
+    Frame     : Integer = -1;
+    FrameCount: Integer;
+
+    Procedure DisplayVMFrames(const Pnt: Integer);
+    Var UntilFunction, FDump, FFunction, FLine, FFileName: String;
+    Begin
+     Try
+      UntilFunction := UpperCase('op_'+getOpcodeName(PByte(LongWord(CodeData)+Pnt)^)); // display VM callstack until this function is found
+     Except
+      UntilFunction := '';
+     End;
+
+     While (true) Do
+     Begin
+      if (Frame > FrameCount) Then // no more frames on the stack
+       Exit;
+
+      if (Frame = -1) Then
+       FDump := BackTraceStrFunc(ExceptAddr) Else
+       FDump := BackTraceStrFunc(Frames[Frame]);
+      Inc(Frame);
+
+      FDump := Trim(StringReplace(FDump, '  ', ' ', [rfReplaceAll]));
+      { <address> <function name>, line <line> of <file name> }
+
+      Delete(FDump, 1, Pos(' ', FDump));
+      FFunction := Trim(Copy(FDump, 1, Pos(',', FDump)-1));
+
+      Delete(FDump, 1, Pos(',', FDump));
+      Delete(FDump, 1, Pos('e', FDump)+1); // delete until `line `
+      FLine := Trim(Copy(FDump, 1, Pos(' ', FDump)));
+      Delete(FDump, 1, Pos(' ', FDump));
+
+      Delete(FDump, 1, Pos('f', FDump)+1); // delete until `of `
+      FFileName := Trim(FDump);
+
+      if (FFunction = UntilFunction) or (FFunction = '') Then
+       Exit;
+
+      Writeln('  at ', FFileName, ' (function: ', FFunction, ', line: ', FLine, ') <native code>');
+     End;
+    End;
+
+Begin
+ if (CodeData = nil) Then // no code has been loaded
+ Begin
+  Writeln('No callstack available.');
+  Exit;
+ End;
+
+ Frames     := ExceptFrames; // VM except frames
+ FrameCount := ExceptFrameCount; // VM except frame count
+
+ FetchLineAndFile(LastOpcodePos, eLine, eFile);
+
+ DisplayVMFrames(LastOpcodePos);
+ if (eLine = -1) Then
+  Write('   at unknown source (', eFile, ')') Else
+  Write('   at ', eFile, ' (line: ', eLine, ')');
+
+ Writeln(' :: ', disasm(LastOpcodePos));
+
+ // @TODO: 10 references max
+ if (StackPos <> nil) Then
+  While (StackPos^ > 0) Do
+  Begin
+   if (Stack[StackPos^].Typ = ptCallstackRef) Then
+   Begin
+    FetchLineAndFile(Stack[StackPos^].getReference, eLine, eFile);
+
+    if (eLine = -1) Then
+     Writeln('   ... from unknown source (', eFile, ')') Else
+     Writeln('   ... from ', eFile, ' (', eLine, ')');
+   End;
+   Dec(StackPos^);
+  End;
+
+ DisplayVMFrames(0);
+End;
+
 { TMachine.disasm }
 Function TMachine.disasm(Pos: LongWord): String;
 Var TmpPos: LongWord;
@@ -781,6 +816,9 @@ Var TmpPos: LongWord;
     I     : Integer;
     Param : TOpParam;
 Begin
+ if (CodeData = nil) Then
+  Exit('invalid opcode');
+
  Try
   TmpPos := getPosition;
   setPosition(Pos);
@@ -835,6 +873,9 @@ Var Opcode, Param: Byte;
 Begin
  eLine := -1;
  eFile := '0x'+IntToHex(Pos, sizeof(LongWord)*2);
+
+ if (CodeData = nil) Then
+  Exit;
 
  setPosition(0);
 

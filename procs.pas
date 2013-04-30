@@ -46,6 +46,8 @@ Unit Procs;
  Procedure op_ARCRT(M: TMachine);
  Procedure op_ARLEN(M: TMachine);
  Procedure op_OBJFREE(M: TMachine);
+ Procedure op_OBJINC(M: TMachine);
+ Procedure op_OBJDEC(M: TMachine);
  Procedure op_LOCATION(M: TMachine);
 
  Implementation
@@ -202,7 +204,7 @@ End;
 { _ }
 Procedure op_(M: TMachine);
 Begin
- raise eInvalidOpcode.Create('Opcode '''+getOpcodeName(LongWord(M.Position)-sizeof(Byte))+''' unimplemented');
+ raise eInvalidOpcode.Create('Opcode '''+getOpcodeName(PByte(LongWord(M.Position)-sizeof(Byte))^)+''' unimplemented');
 End;
 
 { NOP }
@@ -983,6 +985,32 @@ Procedure op_OBJFREE(M: TMachine);
 Begin
  With M do
   getObject(read_param.getReference).Free;
+End;
+
+{ OBJINC }
+Procedure op_OBJINC(M: TMachine);
+Var Obj: TMObject;
+Begin
+ With M do
+  Try
+   Obj := TMObject(read_param.getReference);
+   Obj.IncRefcount;
+  Except
+   // do nothing
+  End;
+End;
+
+{ OBJDEC }
+Procedure op_OBJDEC(M: TMachine);
+Var Obj: TMObject;
+Begin
+ With M do
+  Try
+   Obj := TMObject(read_param.getReference);
+   Obj.DecRefcount;
+  Except
+   // do nothing
+  End;
 End;
 
 { LOCATION }

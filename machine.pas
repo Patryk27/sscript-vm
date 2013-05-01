@@ -765,10 +765,12 @@ Var eLine: Integer;
       Delete(FDump, 1, Pos('f', FDump)+1); // delete until `of `
       FFileName := Trim(FDump);
 
-      if (FFunction = UntilFunction) or (FFunction = '') Then
+      if (FFunction = UntilFunction) Then
        Exit;
 
-      Writeln('  at ', FFileName, ' (function: ', FFunction, ', line: ', FLine, ') <native code>');
+      if (FFunction = '') Then
+       Writeln('   at 0x', FFileName, ' [VM]') Else
+       Writeln('   at ', FFileName, ' (function: ', FFunction, ', line: ', FLine, ') [VM]');
      End;
     End;
 
@@ -785,6 +787,7 @@ Begin
  FetchLineAndFile(LastOpcodePos, eLine, eFile);
 
  DisplayVMFrames(LastOpcodePos);
+
  if (eLine = -1) Then
   Write('   at unknown source (', eFile, ')') Else
   Write('   at ', eFile, ' (line: ', eLine, ')');

@@ -10,7 +10,7 @@ Unit Opcodes;
 
  Type TPrimaryType = (ptBoolReg=0, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg,
                       ptBool, ptChar, ptInt, ptFloat, ptString, ptStackVal,
-                      ptLabelReferencem, ptCallstackRef);
+                      ptLabelReference, ptCallstackRef);
 
  Const PrimaryTypeNames: Array[TPrimaryType] of String =
                      ('bool reg', 'char reg', 'int reg', 'float reg', 'string reg', 'reference reg',

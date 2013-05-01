@@ -754,6 +754,11 @@ Procedure TMachine.DumpExceptionInfo;
     End;
   End;
 
+  { -- opcode list -- }
+  Procedure OpcodeList;
+  Begin
+  End;
+
 Begin
  if (CodeData = nil) Then // no code has been loaded
  Begin
@@ -764,6 +769,10 @@ Begin
  { -- stacktrace -- }
  Writeln('Stacktrace:');
  Stacktrace;
+
+ { -- opcode list -- }
+ Writeln('Opcodes near exception:');
+ OpcodeList;
 End;
 
 { TMachine.disasm }

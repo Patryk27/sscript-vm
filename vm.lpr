@@ -19,6 +19,7 @@
 *)
 
 // @TODO: better command-line parsing
+// @TODO: opcode `dllcall`
 
 {$R *.res}
 Program ssvm;
@@ -102,12 +103,8 @@ Begin
 
      if (Assigned(VM)) Then
      Begin
-
-      { -- program callstack -- }
       Writeln;
-      Writeln('Callstack:');
-      VM.DumpCallstack;
-      // DumpExceptionCallstack;
+      VM.DumpExceptionInfo;
      End;
     End;
   End;
@@ -118,7 +115,7 @@ Begin
     Writeln('Exception raised in exception handler:');
     Writeln(E.Message);
     Writeln;
-    Writeln('VM callstack:');
+    Writeln('VM stacktrace:');
     DumpExceptionCallstack;
    End;
   End;

@@ -28,7 +28,7 @@ Unit Opcodes;
                    o_not, o_or, o_xor, o_and, o_shl, o_shr,
                    o_mod,
                    o_arset, o_arget, o_arcrt, o_arlen,
-                   o_objfree, o_objinc, o_objdec,
+                   o_objfree,
                    o_location);
 
  Const OpcodesParamCount: Array[TOpcode_E] of Byte = // used in internal disassembler
@@ -41,7 +41,7 @@ Unit Opcodes;
   1, 2, 2, 2, 2, 2,
   2,
   3, 3, 3, 3,
-  1, 1, 1,
+  1,
   2);
 
  Function getOpcodeName(O: TOpcode_E): String;

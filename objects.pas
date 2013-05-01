@@ -20,9 +20,6 @@ Unit Objects;
                   Public
                    Constructor Create;
 
-                   Procedure IncRefcount; inline;
-                   Procedure DecRefcount; inline;
-
                    Procedure Test;
                    Function getAddress: LongWord;
                   End;
@@ -103,26 +100,6 @@ End;
 Constructor TMObject.Create;
 Begin
  RefCount := 0;
-End;
-
-{ TMObject.IncRefcount }
-Procedure TMObject.IncRefcount;
-Begin
- Inc(Refcount);
-// Writeln('0x', IntToHex(LongWord(self), 8), ' -> inc(); refcount = ', Refcount);
-End;
-
-{ TMObject.DecRefcount }
-Procedure TMObject.DecRefcount;
-Begin
- Dec(Refcount);
-// Writeln('0x', IntToHex(LongWord(self), 8), ' -> dec(); refcount = ', Refcount);
-
-// if (Refcount = 0) Then
-//  Writeln('Object has been destroyed!');
-
- if (Refcount = 0) Then
-  Free;
 End;
 
 { TMObject.Test }

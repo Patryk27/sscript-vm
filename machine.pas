@@ -188,8 +188,6 @@ Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc =
  @op_ARCRT,
  @op_ARLEN,
  @op_OBJFREE,
- @op_OBJINC,
- @op_OBJDEC,
  @op_LOCATION
 );
 

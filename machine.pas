@@ -128,10 +128,10 @@ Unit Machine;
                    Procedure Run;
                    Procedure RunFunction(PackageName, FunctionName: String);
 
-                   Procedure DumpCallstack;
+                   Procedure DumpExceptionInfo;
 
                    Function disasm(Pos: LongWord): String;
-                   Procedure FetchLineAndFile(const Pos: LongWord; out eLine: Integer; out eFile: String);
+                   Procedure FetchLocation(const Pos: LongWord; out eLine: Integer; out eFile, eFunc: String);
                   End;
 
  Type TOpcodeProc = Procedure (M: TMachine);
@@ -188,6 +188,8 @@ Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc =
  @op_ARCRT,
  @op_ARLEN,
  @op_OBJFREE,
+ @op_LOCATION,
+ @op_LOCATION,
  @op_LOCATION
 );
 
@@ -721,93 +723,47 @@ Begin
  raise eInvalidOpcode.Create('Invalid `icall`: '+PackageName+'.'+FunctionName);
 End;
 
-{ TMachine.DumpCallstack }
-Procedure TMachine.DumpCallstack;
-Var eLine: Integer;
-    eFile: String;
+{ TMachine.DumpExceptionInfo }
+Procedure TMachine.DumpExceptionInfo;
 
-    Frames    : PPointer; // VM stack frames
-    Frame     : Integer = -1;
-    FrameCount: Integer;
+  { -- stacktrace -- }
+  Procedure Stacktrace;
+  Var eLine       : Integer;
+      eFile, eFunc: String;
+  Begin
+   FetchLocation(LastOpcodePos, eLine, eFile, eFunc);
 
-    Procedure DisplayVMFrames(const Pnt: Integer);
-    Var UntilFunction, FDump, FFunction, FLine, FFileName: String;
+   if (eLine = -1) Then
+    Writeln('   at ', eFile, ' (unknown source)') Else
+    Writeln('   in "', eFile, '", line ', eLine, ', inside "', eFunc, '"');
+
+   // @TODO: 10 references max
+   if (StackPos <> nil) Then
+    While (StackPos^ > 0) Do
     Begin
-     Try
-      UntilFunction := UpperCase('op_'+getOpcodeName(PByte(LongWord(CodeData)+Pnt)^)); // display VM callstack until this function is found
-     Except
-      UntilFunction := '';
-     End;
-
-     While (true) Do
+     if (Stack[StackPos^].Typ = ptCallstackRef) Then
      Begin
-      if (Frame > FrameCount) Then // no more frames on the stack
-       Exit;
+      FetchLocation(Stack[StackPos^].getReference, eLine, eFile, eFunc);
 
-      if (Frame = -1) Then
-       FDump := BackTraceStrFunc(ExceptAddr) Else
-       FDump := BackTraceStrFunc(Frames[Frame]);
-      Inc(Frame);
-
-      FDump := Trim(StringReplace(FDump, '  ', ' ', [rfReplaceAll]));
-      { <address> <function name>, line <line> of <file name> }
-
-      Delete(FDump, 1, Pos(' ', FDump));
-      FFunction := Trim(Copy(FDump, 1, Pos(',', FDump)-1));
-
-      Delete(FDump, 1, Pos(',', FDump));
-      Delete(FDump, 1, Pos('e', FDump)+1); // delete until `line `
-      FLine := Trim(Copy(FDump, 1, Pos(' ', FDump)));
-      Delete(FDump, 1, Pos(' ', FDump));
-
-      Delete(FDump, 1, Pos('f', FDump)+1); // delete until `of `
-      FFileName := Trim(FDump);
-
-      if (FFunction = UntilFunction) Then
-       Exit;
-
-      if (FFunction = '') Then
-       Writeln('   at 0x', FFileName, ' [VM]') Else
-       Writeln('   at ', FFileName, ' (function: ', FFunction, ', line: ', FLine, ') [VM]');
+      if (eLine = -1) Then
+       Writeln('   ... from ', eFile, ' (unknown source)') Else
+       Writeln('   ... from "', eFile, '", line ', eLine, ', inside "', eFunc, '"');
      End;
+
+     Dec(StackPos^);
     End;
+  End;
 
 Begin
  if (CodeData = nil) Then // no code has been loaded
  Begin
-  Writeln('No callstack available.');
+  Writeln('No data available.');
   Exit;
  End;
 
- Frames     := ExceptFrames; // VM except frames
- FrameCount := ExceptFrameCount; // VM except frame count
-
- FetchLineAndFile(LastOpcodePos, eLine, eFile);
-
- DisplayVMFrames(LastOpcodePos);
-
- if (eLine = -1) Then
-  Write('   at unknown source (', eFile, ')') Else
-  Write('   at ', eFile, ' (line: ', eLine, ')');
-
- Writeln(' :: ', disasm(LastOpcodePos));
-
- // @TODO: 10 references max
- if (StackPos <> nil) Then
-  While (StackPos^ > 0) Do
-  Begin
-   if (Stack[StackPos^].Typ = ptCallstackRef) Then
-   Begin
-    FetchLineAndFile(Stack[StackPos^].getReference, eLine, eFile);
-
-    if (eLine = -1) Then
-     Writeln('   ... from unknown source (', eFile, ')') Else
-     Writeln('   ... from ', eFile, ' (', eLine, ')');
-   End;
-   Dec(StackPos^);
-  End;
-
- DisplayVMFrames(0);
+ { -- stacktrace -- }
+ Writeln('Stacktrace:');
+ Stacktrace;
 End;
 
 { TMachine.disasm }
@@ -868,12 +824,13 @@ Begin
  End;
 End;
 
-{ TMachine.FetchLineAndFile }
-Procedure TMachine.FetchLineAndFile(const Pos: LongWord; out eLine: Integer; out eFile: String);
+{ TMachine.FetchLocation }
+Procedure TMachine.FetchLocation(const Pos: LongWord; out eLine: Integer; out eFile, eFunc: String);
 Var Opcode, Param: Byte;
 Begin
  eLine := -1;
  eFile := '0x'+IntToHex(Pos, sizeof(LongWord)*2);
+ eFunc := '<unknown>';
 
  if (CodeData = nil) Then
   Exit;
@@ -887,13 +844,28 @@ Begin
   if (Opcode > OPCODE_MAX) Then
    Exit;
 
-  if (Opcode = ord(o_location)) Then
+  // loc_file
+  if (Opcode = ord(o_loc_file)) Then
   Begin
-   eLine := read_param.getInt;
    eFile := read_param.getString;
    Continue;
   End;
 
+  // loc_func
+  if (Opcode = ord(o_loc_func)) Then
+  Begin
+   eFunc := read_param.getString;
+   Continue;
+  End;
+
+  // loc_line
+  if (Opcode = ord(o_loc_line)) Then
+  Begin
+   eLine := read_param.getInt;
+   Continue;
+  End;
+
+  // other opcodes
   For Param := 1 To OpcodesParamCount[TOpcode_E(Opcode)] Do
    read_param;
  End;

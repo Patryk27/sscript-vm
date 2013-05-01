@@ -988,10 +988,6 @@ End;
 { LOCATION }
 Procedure op_LOCATION(M: TMachine);
 Begin
- With M do
- Begin
-  read_param; { line }
-  read_param; { file }
- End;
+ M.read_param;
 End;
 End.

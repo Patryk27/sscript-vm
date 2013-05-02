@@ -2,9 +2,10 @@
  Copyright © by Patryk Wychowaniec, 2013
  All rights reserved.
 *)
+
 {$MODE OBJFPC}
-{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
+{$H+}
 
 Unit Machine;
 

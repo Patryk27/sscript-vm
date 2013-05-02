@@ -51,6 +51,15 @@ Unit Procs;
  Implementation
 Uses Opcodes, Objects;
 
+Procedure CheckStringBounds(const Str: String; const Index: Integer);
+Begin
+ if (Index < 1) Then
+  raise eOutOfBounds.Create('String out of bounds. Tried to access char #'+IntToStr(Index)+', while string starts at 1');
+
+ if (Index > Length(Str)) Then
+  raise eOutOfBounds.Create('String out of bounds. Tried to access char #'+IntToStr(Index)+', while '+IntToStr(Length(Str))+' is the last one.');
+End;
+
 { qmagic }
 Function qmagic(Param: TOpParam): TOpParam; inline;
 Begin
@@ -851,13 +860,34 @@ Begin
 
  Case refreg.Typ of
   ptInt, ptIntReg, ptReferenceReg: getArray(refreg.getReference).setValue(PosArray, @value);
-  ptStringReg                    : sreg[refreg.Index][PosArray[0]] := value.getChar;
+  ptStringReg: // string reg
+  Begin
+   CheckStringBounds(sreg[refreg.Index], PosArray[0]);
+   sreg[refreg.Index][PosArray[0]] := value.getChar;
+  End;
 
-  ptStackVal:
+  ptCharReg: // char reg
+  Begin
+   CheckStringBounds(' ', PosArray[0]);
+   creg[refreg.Index] := value.getChar;
+  End;
+
+  ptStackVal: // stackval
    With Stack[StackPos^+refreg.Val] do
     Case Typ of
      ptInt   : getArray(Val).setValue(PosArray, @value);
-     ptString: sval[PosArray[0]] := value.getChar;
+     ptString: // string stackval
+     Begin
+      CheckStringBounds(sVal, PosArray[0]);
+      sVal[PosArray[0]] := value.getChar;
+     End;
+
+     ptChar: // char stackval
+     Begin
+      CheckStringBounds(' ', PosArray[0]);
+      Val := ord(value.getChar);
+     End;
+
      else goto Fail;
     End;
 
@@ -892,20 +922,36 @@ Begin
 
  Case refreg.Typ of
   ptInt, ptIntReg, ptReferenceReg: Value := POpParam(getArray(refreg.getReference).getValue(PosArray))^;
-  ptString, ptStringReg:
+  ptString, ptStringReg: // string
   Begin
    Value.Typ := ptChar;
    Value.Val := ord(refreg.getString[PosArray[0]]);
   End;
 
-  ptStackVal:
+  ptChar, ptCharReg: // char
+  Begin
+   Value.Typ := ptChar;
+   Value.Val := ord(refreg.getChar);
+  End;
+
+  ptStackVal: // stackval
    With Stack[StackPos^+refreg.Val] do
     Case Typ of
      ptInt   : Value := POpParam(getArray(Val).getValue(PosArray))^;
-     ptString:
+     ptString: // string stackval
      Begin
+      CheckStringBounds(sVal, PosArray[0]);
+
       Value.Typ := ptChar;
       Value.Val := ord(sVal[PosArray[0]]);
+     End;
+
+     ptChar: // char stackval
+     Begin
+      CheckStringBounds(' ', PosArray[0]);
+
+      Value.Typ := ptChar;
+      Value.Val := Val;
      End;
 
      else goto Fail;

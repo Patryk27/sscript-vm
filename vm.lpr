@@ -24,7 +24,7 @@
 {$R *.res}
 Program ssvm;
 Uses os_functions, CRT, SysUtils, Machine, Opcodes, mOutput;
-Const Version = '0.3 RC1';
+Const Version = '0.3.1 nightly';
 
 { getBoolOption }
 Function getBoolOption(O: String; Default: Boolean): Boolean;

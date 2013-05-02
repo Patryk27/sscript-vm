@@ -17,8 +17,6 @@ Unit Opcodes;
                       'bool', 'char', 'int', 'float', 'string', 'stackval',
                       'label reference', 'callstack ref');
 
- Const OPCODE_MAX = 39;
-
  Type TOpcode_E = (o_nop, o_stop,
                    o_push, o_pop,
                    o_add, o_sub, o_mul, o_div, o_neg, o_mov,
@@ -30,6 +28,8 @@ Unit Opcodes;
                    o_arset, o_arget, o_arcrt, o_arlen,
                    o_objfree,
                    o_loc_file, o_loc_func, o_loc_line);
+
+ Const OPCODE_MAX = ord(High(TOpcode_E));
 
  Const OpcodesParamCount: Array[TOpcode_E] of Byte = // used in internal disassembler
  (0, 0,

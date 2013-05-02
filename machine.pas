@@ -9,7 +9,7 @@
 Unit Machine;
 
  Interface
- Uses SysUtils, Opcodes, Objects, Exceptions, Classes, Zipper;
+ Uses SysUtils, Math, Opcodes, Objects, Exceptions, Classes, Zipper;
 
  Const EXCEPTIONSTACK_SIZE = 1*1024*1024; // 1 MB exception-stack; I guess it's enough
        STACK_SIZE          = 100000000; // this value is counted in elements count
@@ -130,7 +130,7 @@ Unit Machine;
 
                    Procedure DumpExceptionInfo;
 
-                   Function disasm(Pos: LongWord): String;
+                   Function disasm(const Pos: LongWord): String;
                    Procedure FetchLocation(const Pos: LongWord; out eLine: Integer; out eFile, eFunc: String);
                   End;
 
@@ -754,11 +754,6 @@ Procedure TMachine.DumpExceptionInfo;
     End;
   End;
 
-  { -- opcode list -- }
-  Procedure OpcodeList;
-  Begin
-  End;
-
 Begin
  if (CodeData = nil) Then // no code has been loaded
  Begin
@@ -767,16 +762,13 @@ Begin
  End;
 
  { -- stacktrace -- }
+ Writeln;
  Writeln('Stacktrace:');
  Stacktrace;
-
- { -- opcode list -- }
- Writeln('Opcodes near exception:');
- OpcodeList;
 End;
 
 { TMachine.disasm }
-Function TMachine.disasm(Pos: LongWord): String;
+Function TMachine.disasm(const Pos: LongWord): String;
 Var TmpPos: LongWord;
     Opcode: Byte;
     I     : Integer;
@@ -820,7 +812,8 @@ Begin
 
      ptStackVal: Result += '['+IntToStr(Val)+']';
 
-     else Result += '<invalid parameter>';
+     else
+      Result += '<invalid parameter>';
     End;
   End;
 

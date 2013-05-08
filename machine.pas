@@ -59,6 +59,15 @@ Unit Machine;
                    Procedure ParseHeader(const AStream: TStream);
                    Procedure ParseBytecode(const AStream: TStream);
 
+                   Function c_read_byte: Byte; inline;
+                   Function c_read_integer: Integer; inline;
+                   Function c_read_longword: LongWord; inline;
+                   Function c_read_int64: Int64; inline;
+                   Function c_read_float: Extended; inline;
+                   Function c_read_string: String; inline;
+
+                   Function getString(Pos: LongWord): String;
+
                   Public
                    // variables
                    InputFile: String;
@@ -67,6 +76,7 @@ Unit Machine;
                    ExceptionStack: PLongWord;
                    Stack         : Array of TOpParam;
 
+                   // registers
                    breg: Array[1..5] of Boolean;
                    creg: Array[1..4] of Char;
                    ireg: Array[1..5] of Int64;
@@ -74,7 +84,7 @@ Unit Machine;
                    sreg: Array[1..4] of String;
                    rreg: Array[1..4] of LongWord;
 
-                   Position     : PByte; // current position in `code` section
+                   Position     : PByte; // pointer to current opcode in memory
                    LastOpcodePos: LongWord;
                    StackPos     : PLongWord; // points at `ireg[5]` (the `stp` register)
                    DebugMode    : Boolean;
@@ -88,18 +98,7 @@ Unit Machine;
                    exitcode: Integer;
 
                   Public
-                   // methods
-
-                   { reading }
-                   Function c_read_byte: Byte; inline;
-                   Function c_read_integer: Integer; inline;
-                   Function c_read_longword: LongWord; inline;
-                   Function c_read_int64: Int64; inline;
-                   Function c_read_float: Extended; inline;
-                   Function c_read_string: String; inline;
-
-                   Function getString(Pos: LongWord): String;
-
+                  // methods
                    Function read_param: TOpParam; {inline (?)}
 
                    { stack operations }
@@ -127,7 +126,7 @@ Unit Machine;
                    Constructor Create(const FileName: String);
                    Procedure Prepare;
                    Procedure Run;
-                   Procedure RunFunction(PackageName, FunctionName: String);
+                   Procedure Run_icall(const icall: String);
 
                    Procedure DumpExceptionInfo;
 
@@ -135,64 +134,18 @@ Unit Machine;
                    Procedure FetchLocation(const Pos: LongWord; out eLine: Integer; out eFile, eFunc: String);
                   End;
 
- Type TOpcodeProc = Procedure (M: TMachine);
-      THandlerProc = Procedure (M: TMachine);
+ Type icall_handler = Procedure (M: TMachine);
 
- Var FunctionList: Array of Record // `icall` function list
-                             Name, Package: String;
-                             Handler      : THandlerProc;
-                            End;
-
- Procedure Log(Txt: String);
- Procedure NewFunction(PackageName, FunctionName: String; fHandler: THandlerProc);
+ Procedure Add_icall(const PackageName, FuncName: String; const fHandler: icall_handler);
 
  Var VerboseMode: Boolean=True;
 
  Implementation
 Uses Procs, mOutput, mString, mMath, mTime, mInput, mVM;
-
-Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc =
-(
- @op_NOP,
- @op_STOP,
- @op_PUSH,
- @op_POP,
- @op_ADD,
- @op_SUB,
- @op_MUL,
- @op_DIV,
- @op_NEG,
- @op_MOV,
- @op_JMP,
- @op_TJMP,
- @op_FJMP,
- @op_CALL,
- @op_ICALL,
- @op_ACALL,
- @op_RET,
- @op_IF_E,
- @op_IF_NE,
- @op_IF_G,
- @op_IF_L,
- @op_IF_GE,
- @op_IF_LE,
- @op_STRJOIN,
- @op_NOT,
- @op_OR,
- @op_XOR,
- @op_AND,
- @op_SHL,
- @op_SHR,
- @op_MOD,
- @op_ARSET,
- @op_ARGET,
- @op_ARCRT,
- @op_ARLEN,
- @op_OBJFREE,
- @op_LOCATION,
- @op_LOCATION,
- @op_LOCATION
-);
+Var icall_list: Array of Record
+                          icall  : String;
+                          Handler: icall_handler;
+                         End;
 
 { Log }
 Procedure Log(Txt: String);
@@ -201,14 +154,13 @@ Begin
   Writeln(Txt);
 End;
 
-{ NewFunction }
-Procedure NewFunction(PackageName, FunctionName: String; fHandler: THandlerProc);
+{ Add_icall }
+Procedure Add_icall(const PackageName, FuncName: String; const fHandler: icall_handler);
 Begin
- SetLength(FunctionList, Length(FunctionList)+1);
- With FunctionList[High(FunctionList)] do
+ SetLength(icall_list, Length(icall_list)+1);
+ With icall_list[High(icall_list)] do
  Begin
-  Name    := FunctionName;
-  Package := PackageName;
+  icall   := PackageName+'.'+FuncName;
   Handler := fHandler;
  End;
 End;
@@ -710,18 +662,18 @@ Begin
   ParseOpcode;
 End;
 
-{ TMachine.RunFunction }
-Procedure TMachine.RunFunction(PackageName, FunctionName: String);
+{ TMachine.Run_icall }
+Procedure TMachine.Run_icall(const icall: String);
 Var I: Integer;
 Begin
- For I := Low(FunctionList) To High(FunctionList) Do
-  if (FunctionList[I].Package = PackageName) and (FunctionList[I].Name = FunctionName) Then
+ For I := Low(icall_list) To High(icall_list) Do
+  if (icall_list[I].icall = icall) Then
   Begin
-   FunctionList[I].Handler(self);
+   icall_list[I].Handler(self);
    Exit;
   End;
 
- raise eInvalidOpcode.Create('Invalid `icall`: '+PackageName+'.'+FunctionName);
+ raise eInvalidOpcode.Create('Unknown `icall`: '+icall);
 End;
 
 { TMachine.DumpExceptionInfo }

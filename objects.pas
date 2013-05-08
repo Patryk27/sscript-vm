@@ -15,7 +15,6 @@ Unit Objects;
  Type TMObject = Class
                   Private
                    SomeField: Integer;
-                   RefCount : Integer;
 
                   Public
                    Constructor Create;
@@ -99,7 +98,6 @@ End;
 { TMObject.Create }
 Constructor TMObject.Create;
 Begin
- RefCount := 0;
 End;
 
 { TMObject.Test }

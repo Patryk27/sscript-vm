@@ -17,5 +17,5 @@ Begin
 End;
 
 initialization
- NewFunction('time', 'get_milliseconds', @_get_milliseconds);
-End.
+ Add_icall('time', 'get_milliseconds', @_get_milliseconds);
+End.

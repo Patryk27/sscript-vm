@@ -47,10 +47,10 @@ Begin
 End;
 
 initialization
- NewFunction('math', 'sqrt', @_sqrt);
- NewFunction('math', 'sin', @_sin);
- NewFunction('math', 'cos', @_cos);
- NewFunction('math', 'log', @_log);
- NewFunction('math', 'ln', @_ln);
- NewFunction('math', 'exp', @_exp);
+ Add_icall('math', 'sqrt', @_sqrt);
+ Add_icall('math', 'sin', @_sin);
+ Add_icall('math', 'cos', @_cos);
+ Add_icall('math', 'log', @_log);
+ Add_icall('math', 'ln', @_ln);
+ Add_icall('math', 'exp', @_exp);
 End.

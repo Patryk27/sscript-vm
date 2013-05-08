@@ -6,50 +6,94 @@
 Unit Procs;
 
  Interface
- Uses SysUtils, Machine, Exceptions;
+ Uses SysUtils, Machine, Exceptions, Opcodes;
 
- Procedure op_(M: TMachine);
+ Procedure op_(const M: TMachine);
 
- Procedure op_NOP(M: TMachine);
- Procedure op_STOP(M: TMachine);
- Procedure op_PUSH(M: TMachine);
- Procedure op_POP(M: TMachine);
- Procedure op_ADD(M: TMachine);
- Procedure op_SUB(M: TMachine);
- Procedure op_MUL(M: TMachine);
- Procedure op_DIV(M: TMachine);
- Procedure op_NEG(M: TMachine);
- Procedure op_MOV(M: TMachine);
- Procedure op_JMP(M: TMachine);
- Procedure op_TJMP(M: TMachine);
- Procedure op_FJMP(M: TMachine);
- Procedure op_CALL(M: TMachine);
- Procedure op_ICALL(M: TMachine);
- Procedure op_ACALL(M: TMachine);
- Procedure op_RET(M: TMachine);
- Procedure op_IF_E(M: TMachine);
- Procedure op_IF_NE(M: TMachine);
- Procedure op_IF_G(M: TMachine);
- Procedure op_IF_L(M: TMachine);
- Procedure op_IF_GE(M: TMachine);
- Procedure op_IF_LE(M: TMachine);
- Procedure op_STRJOIN(M: TMachine);
- Procedure op_NOT(M: TMachine);
- Procedure op_OR(M: TMachine);
- Procedure op_XOR(M: TMachine);
- Procedure op_AND(M: TMachine);
- Procedure op_SHL(M: TMachine);
- Procedure op_SHR(M: TMachine);
- Procedure op_MOD(M: TMachine);
- Procedure op_ARSET(M: TMachine);
- Procedure op_ARGET(M: TMachine);
- Procedure op_ARCRT(M: TMachine);
- Procedure op_ARLEN(M: TMachine);
- Procedure op_OBJFREE(M: TMachine);
- Procedure op_LOCATION(M: TMachine);
+ Procedure op_NOP(const M: TMachine);
+ Procedure op_STOP(const M: TMachine);
+ Procedure op_PUSH(const M: TMachine);
+ Procedure op_POP(const M: TMachine);
+ Procedure op_ADD(const M: TMachine);
+ Procedure op_SUB(const M: TMachine);
+ Procedure op_MUL(const M: TMachine);
+ Procedure op_DIV(const M: TMachine);
+ Procedure op_NEG(const M: TMachine);
+ Procedure op_MOV(const M: TMachine);
+ Procedure op_JMP(const M: TMachine);
+ Procedure op_TJMP(const M: TMachine);
+ Procedure op_FJMP(const M: TMachine);
+ Procedure op_CALL(const M: TMachine);
+ Procedure op_ICALL(const M: TMachine);
+ Procedure op_ACALL(const M: TMachine);
+ Procedure op_RET(const M: TMachine);
+ Procedure op_IF_E(const M: TMachine);
+ Procedure op_IF_NE(const M: TMachine);
+ Procedure op_IF_G(const M: TMachine);
+ Procedure op_IF_L(const M: TMachine);
+ Procedure op_IF_GE(const M: TMachine);
+ Procedure op_IF_LE(const M: TMachine);
+ Procedure op_STRJOIN(const M: TMachine);
+ Procedure op_NOT(const M: TMachine);
+ Procedure op_OR(const M: TMachine);
+ Procedure op_XOR(const M: TMachine);
+ Procedure op_AND(const M: TMachine);
+ Procedure op_SHL(const M: TMachine);
+ Procedure op_SHR(const M: TMachine);
+ Procedure op_MOD(const M: TMachine);
+ Procedure op_ARSET(const M: TMachine);
+ Procedure op_ARGET(const M: TMachine);
+ Procedure op_ARCRT(const M: TMachine);
+ Procedure op_ARLEN(const M: TMachine);
+ Procedure op_OBJFREE(const M: TMachine);
+ Procedure op_LOCATION(const M: TMachine);
+
+ Type TOpcodeProc = Procedure(const M: TMachine);
+ Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc = // opcode list
+ (
+  @op_NOP,
+  @op_STOP,
+  @op_PUSH,
+  @op_POP,
+  @op_ADD,
+  @op_SUB,
+  @op_MUL,
+  @op_DIV,
+  @op_NEG,
+  @op_MOV,
+  @op_JMP,
+  @op_TJMP,
+  @op_FJMP,
+  @op_CALL,
+  @op_ICALL,
+  @op_ACALL,
+  @op_RET,
+  @op_IF_E,
+  @op_IF_NE,
+  @op_IF_G,
+  @op_IF_L,
+  @op_IF_GE,
+  @op_IF_LE,
+  @op_STRJOIN,
+  @op_NOT,
+  @op_OR,
+  @op_XOR,
+  @op_AND,
+  @op_SHL,
+  @op_SHR,
+  @op_MOD,
+  @op_ARSET,
+  @op_ARGET,
+  @op_ARCRT,
+  @op_ARLEN,
+  @op_OBJFREE,
+  @op_LOCATION,
+  @op_LOCATION,
+  @op_LOCATION
+ );
 
  Implementation
-Uses Opcodes, Objects;
+Uses Objects;
 
 Procedure CheckStringBounds(const Str: String; const Index: Integer);
 Begin
@@ -209,26 +253,24 @@ Begin
 End;
 
 { _ }
-Procedure op_(M: TMachine);
+Procedure op_(const M: TMachine);
 Begin
  raise eInvalidOpcode.Create('Opcode '''+getOpcodeName(PByte(LongWord(M.Position)-sizeof(Byte))^)+''' unimplemented');
 End;
 
 { NOP }
-Procedure op_NOP(M: TMachine);
+Procedure op_NOP(const M: TMachine);
 Begin
 End;
 
 { STOP }
-Procedure op_STOP(M: TMachine);
+Procedure op_STOP(const M: TMachine);
 Begin
- Log('');
- Log('-- STOP (reason: `stop` opcode) --');
  raise Exception.Create('');
 End;
 
 { PUSH }
-Procedure op_PUSH(M: TMachine);
+Procedure op_PUSH(const M: TMachine);
 Var P: TOpParam;
 Begin
 With M do
@@ -240,7 +282,7 @@ End;
 End;
 
 { POP }
-Procedure op_POP(M: TMachine);
+Procedure op_POP(const M: TMachine);
 Var reg, val: TOpParam;
 Begin
 With M do
@@ -261,7 +303,7 @@ End;
 End;
 
 { ADD }
-Procedure op_ADD(M: TMachine);
+Procedure op_ADD(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -292,7 +334,7 @@ End;
 End;
 
 { SUB }
-Procedure op_SUB(M: TMachine);
+Procedure op_SUB(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -323,7 +365,7 @@ End;
 End;
 
 { MUL }
-Procedure op_MUL(M: TMachine);
+Procedure op_MUL(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -354,7 +396,7 @@ End;
 End;
 
 { DIV }
-Procedure op_DIV(M: TMachine);
+Procedure op_DIV(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -388,7 +430,7 @@ End;
 End;
 
 { NEG }
-Procedure op_NEG(M: TMachine);
+Procedure op_NEG(const M: TMachine);
 Var reg: TOpParam;
 Label Fail;
 Begin
@@ -417,7 +459,7 @@ End;
 End;
 
 { MOV }
-Procedure op_MOV(M: TMachine);
+Procedure op_MOV(const M: TMachine);
 Var reg, val: TOpParam;
 Begin
 With M do
@@ -439,7 +481,7 @@ End;
 End;
 
 { JMP }
-Procedure op_JMP(M: TMachine);
+Procedure op_JMP(const M: TMachine);
 Var NewAddr: LongWord;
 Begin
 With M do
@@ -451,7 +493,7 @@ End;
 End;
 
 { TJMP }
-Procedure op_TJMP(M: TMachine);
+Procedure op_TJMP(const M: TMachine);
 Var NewAddr: LongWord;
 Begin
 With M do
@@ -464,7 +506,7 @@ End;
 End;
 
 { FJMP }
-Procedure op_FJMP(M: TMachine);
+Procedure op_FJMP(const M: TMachine);
 Var NewAddr: LongWord;
 Begin
 With M do
@@ -477,7 +519,7 @@ End;
 End;
 
 { CALL }
-Procedure op_CALL(M: TMachine);
+Procedure op_CALL(const M: TMachine);
 Var NewAddr: LongWord;
 Begin
 With M do
@@ -490,28 +532,14 @@ End;
 End;
 
 { ICALL }
-Procedure op_ICALL(M: TMachine);
-Var Str, PackageName, FunctionName: String;
+Procedure op_ICALL(const M: TMachine);
 Begin
-With M do
-Begin
- Str := read_param.getString;
-
- if (Str = 'breakpoint') Then
- Begin
-  DebugMode := True;
-  Exit;
- End;
-
- PackageName  := Copy(Str, 1, Pos('.', Str)-1);
- FunctionName := Copy(Str, Pos('.', Str)+1, Length(Str));
-
- RunFunction(PackageName, FunctionName);
-End;
+ With M do
+  Run_icall(read_param.getString);
 End;
 
 { ACALL }
-Procedure op_ACALL(M: TMachine);
+Procedure op_ACALL(const M: TMachine);
 Var NewAddr: LongWord;
 Begin
 With M do
@@ -523,14 +551,14 @@ End;
 End;
 
 { RET }
-Procedure op_RET(M: TMachine);
+Procedure op_RET(const M: TMachine);
 Begin
  With M do
   setPosition(CallstackPop);
 End;
 
 { IF_E }
-Procedure op_IF_E(M: TMachine);
+Procedure op_IF_E(const M: TMachine);
 Var P1, P2: TOpParam;
 Begin
 With M do
@@ -543,7 +571,7 @@ End;
 End;
 
 { IF_NE }
-Procedure op_IF_NE(M: TMachine);
+Procedure op_IF_NE(const M: TMachine);
 Var P1, P2: TOpParam;
 Begin
 With M do
@@ -556,7 +584,7 @@ End;
 End;
 
 { IF_G }
-Procedure op_IF_G(M: TMachine);
+Procedure op_IF_G(const M: TMachine);
 Var P1, P2: TOpParam;
 Begin
 With M do
@@ -569,7 +597,7 @@ End;
 End;
 
 { IF_L }
-Procedure op_IF_L(M: TMachine);
+Procedure op_IF_L(const M: TMachine);
 Var P1, P2: TOpParam;
 Begin
 With M do
@@ -582,7 +610,7 @@ End;
 End;
 
 { IF_GE }
-Procedure op_IF_GE(M: TMachine);
+Procedure op_IF_GE(const M: TMachine);
 Var P1, P2: TOpParam;
 Begin
 With M do
@@ -595,7 +623,7 @@ End;
 End;
 
 { IF_LE }
-Procedure op_IF_LE(M: TMachine);
+Procedure op_IF_LE(const M: TMachine);
 Var P1, P2: TOpParam;
 Begin
 With M do
@@ -608,7 +636,7 @@ End;
 End;
 
 { STRJOIN }
-Procedure op_STRJOIN(M: TMachine);
+Procedure op_STRJOIN(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -636,7 +664,7 @@ End;
 End;
 
 { NOT }
-Procedure op_NOT(M: TMachine);
+Procedure op_NOT(const M: TMachine);
 Var reg: TOpParam;
 Label Fail;
 Begin
@@ -665,7 +693,7 @@ End;
 End;
 
 { OR }
-Procedure op_OR(M: TMachine);
+Procedure op_OR(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -695,7 +723,7 @@ End;
 End;
 
 { XOR }
-Procedure op_XOR(M: TMachine);
+Procedure op_XOR(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -725,7 +753,7 @@ End;
 End;
 
 { AND }
-Procedure op_AND(M: TMachine);
+Procedure op_AND(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -755,7 +783,7 @@ End;
 End;
 
 { SHL }
-Procedure op_SHL(M: TMachine);
+Procedure op_SHL(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -783,7 +811,7 @@ End;
 End;
 
 { SHR }
-Procedure op_SHR(M: TMachine);
+Procedure op_SHR(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -811,7 +839,7 @@ End;
 End;
 
 { MOD }
-Procedure op_MOD(M: TMachine);
+Procedure op_MOD(const M: TMachine);
 Var reg, param: TOpParam;
 Label Fail;
 Begin
@@ -842,7 +870,7 @@ End;
 End;
 
 { ARSET }
-Procedure op_ARSET(M: TMachine);
+Procedure op_ARSET(const M: TMachine);
 Var refreg, index_count, value: TOpParam;
     PosArray                  : TLongWordArray;
     I                         : LongWord;
@@ -903,7 +931,7 @@ End;
 End;
 
 { ARGET }
-Procedure op_ARGET(M: TMachine);
+Procedure op_ARGET(const M: TMachine);
 Var refreg, index_count, out_reg: TOpParam;
     PosArray                    : TLongWordArray;
     I                           : LongWord;
@@ -980,7 +1008,7 @@ End;
 End;
 
 { ARCRT }
-Procedure op_ARCRT(M: TMachine);
+Procedure op_ARCRT(const M: TMachine);
 Var refreg, typ, dimcount: TOpParam;
     ArrayObj             : TMArray;
     Sizes                : TLongWordArray;
@@ -1007,7 +1035,7 @@ End;
 End;
 
 { ARLEN }
-Procedure op_ARLEN(M: TMachine);
+Procedure op_ARLEN(const M: TMachine);
 Var refreg, dimension, out_reg: TOpParam;
 Begin
 With M do
@@ -1025,14 +1053,14 @@ End;
 End;
 
 { OBJFREE }
-Procedure op_OBJFREE(M: TMachine);
+Procedure op_OBJFREE(const M: TMachine);
 Begin
  With M do
   getObject(read_param.getReference).Free;
 End;
 
 { LOCATION }
-Procedure op_LOCATION(M: TMachine);
+Procedure op_LOCATION(const M: TMachine);
 Begin
  M.read_param;
 End;

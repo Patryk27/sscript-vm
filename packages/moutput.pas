@@ -102,11 +102,11 @@ Begin
 End;
 
 initialization
- NewFunction('output', 'print', @_print);
- NewFunction('output', 'clear', @_clear);
- NewFunction('output', 'set_size', @_set_size);
- NewFunction('output', 'set_buffered', @_set_buffered);
- NewFunction('output', 'flush', @_flush);
- NewFunction('output', 'cursor.hide', @_cursor_hide);
- NewFunction('output', 'cursor.show', @_cursor_show);
+ Add_icall('output', 'print', @_print);
+ Add_icall('output', 'clear', @_clear);
+ Add_icall('output', 'set_size', @_set_size);
+ Add_icall('output', 'set_buffered', @_set_buffered);
+ Add_icall('output', 'flush', @_flush);
+ Add_icall('output', 'cursor.hide', @_cursor_hide);
+ Add_icall('output', 'cursor.show', @_cursor_show);
 End.

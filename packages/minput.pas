@@ -46,8 +46,8 @@ End;
 End;
 
 initialization
- NewFunction('input', 'keypressed', @_keypressed);
- NewFunction('input', 'getchar', @_getchar);
- NewFunction('input', 'readchar', @_readchar);
- NewFunction('input', 'read', @_read);
+ Add_icall('input', 'keypressed', @_keypressed);
+ Add_icall('input', 'getchar', @_getchar);
+ Add_icall('input', 'readchar', @_readchar);
+ Add_icall('input', 'read', @_read);
 End.

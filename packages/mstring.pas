@@ -20,5 +20,5 @@ End;
 End;
 
 initialization
- NewFunction('string', 'length', @_length);
+ Add_icall('string', 'length', @_length);
 End.

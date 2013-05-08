@@ -17,8 +17,6 @@ With M do
 Begin
  M.exitcode := StackPop.getInt;
 
- Log('');
- Log('-- STOP (reason: `vm.exit`) --');
  raise Exception.Create('');
 End;
 End;
@@ -78,11 +76,11 @@ Begin
 End;
 
 initialization
- NewFunction('vm', 'exit', @_exit);
- NewFunction('vm', 'save_exception_state', @_save_exception_state);
- NewFunction('vm', 'restore_exception_state', @_restore_exception_state);
- NewFunction('vm', 'set_exception_handler', @_set_exception_handler);
- NewFunction('vm', 'get_exception_handler', @_get_exception_handler);
- NewFunction('vm', 'throw', @_throw);
- NewFunction('vm', 'get_last_exception', @_get_last_exception);
+ Add_icall('vm', 'exit', @_exit);
+ Add_icall('vm', 'save_exception_state', @_save_exception_state);
+ Add_icall('vm', 'restore_exception_state', @_restore_exception_state);
+ Add_icall('vm', 'set_exception_handler', @_set_exception_handler);
+ Add_icall('vm', 'get_exception_handler', @_get_exception_handler);
+ Add_icall('vm', 'throw', @_throw);
+ Add_icall('vm', 'get_last_exception', @_get_last_exception);
 End.

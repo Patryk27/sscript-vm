@@ -6,81 +6,82 @@
 Unit mVM;
 
  Interface
+ Uses Machine;
+
+ Procedure Init(M: TMachine);
 
  Implementation
-Uses Machine, SysUtils;
+Uses SysUtils;
 
 { vm.exit }
-Procedure _exit(M: TMachine);
+Procedure _exit(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
-With M do
-Begin
- M.exitcode := StackPop.getInt;
+ M.ExitCode := Params[0].Value;
 
  raise Exception.Create('');
 End;
-End;
 
 { vm.save_exception_state }
-Procedure _save_exception_state(M: TMachine);
+Procedure _save_exception_state(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
-With M do
-Begin
- ExceptionStack^ := StackPos^; // save stack position
- Inc(ExceptionStack);
+ With M do
+ Begin
+  ExceptionStack^ := StackPos^; // save stack position
+  Inc(ExceptionStack);
 
- ExceptionStack^ := exception_handler; // save previous handler
- Inc(ExceptionStack);
-End;
+  ExceptionStack^ := ExceptionHandler; // save previous handler
+  Inc(ExceptionStack);
+ End;
 End;
 
 { vm.restore_exception_state }
-Procedure _restore_exception_state(M: TMachine);
+Procedure _restore_exception_state(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
-With M do
-Begin
- Dec(ExceptionStack);
- exception_handler := ExceptionStack^; // restore previous handler
+ With M do
+ Begin
+  Dec(ExceptionStack);
+  ExceptionHandler := ExceptionStack^; // restore previous handler
 
- Dec(ExceptionStack);
- StackPos^ := ExceptionStack^; // restore stack position
-End;
+  Dec(ExceptionStack);
+  StackPos^ := ExceptionStack^; // restore stack position
+ End;
 End;
 
 { vm.set_exception_handler }
-Procedure _set_exception_handler(M: TMachine);
+Procedure _set_exception_handler(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- With M do
-  exception_handler := StackPop.getReference;
+ M.ExceptionHandler := Params[0].Value;
 End;
 
 { vm.get_exception_handler }
-Procedure _get_exception_handler(M: TMachine);
+Procedure _get_exception_handler(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- With M do
-  StackPush(exception_handler);
+ Result.Typ   := cpInt;
+ Result.Value := M.ExceptionHandler;
 End;
 
 { vm.throw }
-Procedure _throw(M: TMachine);
+Procedure _throw(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- With M do
-  ThrowException(StackPop.getString);
+ M.ThrowException(Params[0].Value);
 End;
 
 { vm.get_last_exception }
-Procedure _get_last_exception(M: TMachine);
+Procedure _get_last_exception(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- With M do
-  StackPush(last_exception);
+ Result.Typ   := cpString;
+ Result.Value := M.LastException;
 End;
 
-initialization
- Add_icall('vm', 'exit', @_exit);
- Add_icall('vm', 'save_exception_state', @_save_exception_state);
- Add_icall('vm', 'restore_exception_state', @_restore_exception_state);
- Add_icall('vm', 'set_exception_handler', @_set_exception_handler);
- Add_icall('vm', 'get_exception_handler', @_get_exception_handler);
- Add_icall('vm', 'throw', @_throw);
- Add_icall('vm', 'get_last_exception', @_get_last_exception);
+// -------------------------------------------------------------------------- //
+Procedure Init(M: TMachine);
+Begin
+ M.AddInternalCall('vm', 'exit', 1, @_exit);
+ M.AddInternalCall('vm', 'save_exception_state', 0, @_save_exception_state);
+ M.AddInternalCall('vm', 'restore_exception_state', 0, @_restore_exception_state);
+ M.AddInternalCall('vm', 'set_exception_handler', 1, @_set_exception_handler);
+ M.AddInternalCall('vm', 'get_exception_handler', 0, @_get_exception_handler);
+ M.AddInternalCall('vm', 'throw', 1, @_throw);
+ M.AddInternalCall('vm', 'get_last_exception', 0, @_get_last_exception);
+End;
 End.

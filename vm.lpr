@@ -23,7 +23,10 @@
 
 {$R *.res}
 Program ssvm;
-Uses os_functions, CRT, SysUtils, Machine, Opcodes, mOutput;
+Uses CRT, SysUtils,
+     os_functions, Exceptions, Machine, Opcodes,
+     mInput, mOutput, mString, mMath, mTime, mVM;
+
 Const Version = '0.3.1 nightly';
 
 { getBoolOption }
@@ -51,6 +54,7 @@ Begin
   Writeln(BackTraceStrFunc(Frames[I]));
 End;
 
+// -------------------------------------------------------------------------- //
 Var VM  : TMachine;
     Time: Cardinal;
 Label Finish;
@@ -92,7 +96,14 @@ Begin
    Machine.VerboseMode := getBoolOption('v', False);
 
    VM := TMachine.Create(ParamStr(1));
-   VM.Prepare;
+
+   mInput.Init(VM);
+   mOutput.Init(VM);
+   mString.Init(VM);
+   mMath.Init(VM);
+   mTime.Init(VM);
+   mVM.Init(VM);
+
    Time := GetMilliseconds;
    VM.Run;
   Except
@@ -104,7 +115,7 @@ Begin
      if (Assigned(VM)) Then
      Begin
       Writeln;
-      VM.DumpExceptionInfo;
+      DumpExceptionInfo(VM);
      End;
     End;
   End;
@@ -130,11 +141,11 @@ Begin
 
   if (Assigned(VM)) Then
   Begin
-   Writeln('Opcodes: ', VM.OpcodeNo);
+   Writeln('Opcodes: ', VM.ParsedOpcodes);
 
    if (Time = 0) Then
-    Writeln('Opc/ms : ~', VM.OpcodeNo) Else
-    Writeln('Opc/ms : ', IntToStr(Round(VM.OpcodeNo/Time)));
+    Writeln('Opc/ms : ~', VM.ParsedOpcodes) Else
+    Writeln('Opc/ms : ', IntToStr(Round(VM.ParsedOpcodes/Time)));
   End Else
   Begin
    Writeln('Opcodes: <unknown>');

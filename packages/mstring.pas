@@ -6,19 +6,22 @@
 Unit mString;
 
  Interface
+ Uses Machine;
+
+ Procedure Init(M: TMachine);
 
  Implementation
-Uses Machine;
 
 { string.length }
-Procedure _length(M: TMachine);
+Procedure _length(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
-With M do
-Begin
- StackPush(Length(StackPop.getString));
-End;
+ With M do
+  StackPush(Length(Params[0].Value));
 End;
 
-initialization
- Add_icall('string', 'length', @_length);
+// -------------------------------------------------------------------------- //
+Procedure Init(M: TMachine);
+Begin
+ M.AddInternalCall('string', 'length', 1, @_length);
+End;
 End.

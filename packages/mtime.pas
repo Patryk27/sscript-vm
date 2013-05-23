@@ -6,16 +6,23 @@
 Unit mTime;
 
  Interface
+ Uses Machine;
+
+ Procedure Init(M: TMachine);
 
  Implementation
-Uses Machine, os_functions;
+Uses os_functions;
 
 { time.get_milliseconds }
-Procedure _get_milliseconds(M: TMachine);
+Procedure _get_milliseconds(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- M.StackPush(GetMilliseconds);
+ Result.Typ   := cpInt;
+ Result.Value := GetMilliseconds;
 End;
 
-initialization
- Add_icall('time', 'get_milliseconds', @_get_milliseconds);
+// -------------------------------------------------------------------------- //
+Procedure Init(M: TMachine);
+Begin
+ M.AddInternalCall('time', 'get_milliseconds', 0, @_get_milliseconds);
+End;
 End.

@@ -6,51 +6,63 @@
 Unit mMath;
 
  Interface
+ Uses Machine;
+
+ Procedure Init(M: TMachine);
 
  Implementation
-Uses Machine, Math;
+Uses Math;
 
 { math.sqrt }
-Procedure _sqrt(M: TMachine);
+Procedure _sqrt(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- M.StackPush(System.sqrt(M.StackPop.getFloat));
+ Result.Typ   := cpFloat;
+ Result.Value := sqrt(Params[0].Value);
 End;
 
 { math.sin }
-Procedure _sin(M: TMachine);
+Procedure _sin(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- M.StackPush(System.sin(M.StackPop.getFloat));
+ Result.Typ   := cpFloat;
+ Result.Value := sin(Params[0].Value);
 End;
 
 { math.cos }
-Procedure _cos(M: TMachine);
+Procedure _cos(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- M.StackPush(System.cos(M.StackPop.getFloat));
+ Result.Typ   := cpFloat;
+ Result.Value := cos(Params[0].Value);
 End;
 
 { math.log }
-Procedure _log(M: TMachine);
+Procedure _log(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- M.StackPush(Math.logn(M.StackPop.getFloat, M.StackPop.getFloat));
+ Result.Typ   := cpFloat;
+ Result.Value := logn(Params[0].Value, Params[1].Value);
 End;
 
 { math.ln }
-Procedure _ln(M: TMachine);
+Procedure _ln(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- M.StackPush(System.ln(M.StackPop.getFloat));
+ Result.Typ   := cpFloat;
+ Result.Value := ln(Params[0].Value);
 End;
 
 { math.exp }
-Procedure _exp(M: TMachine);
+Procedure _exp(M: TMachine; Params: TCallValues; var Result: TCallValue);
 Begin
- M.StackPush(System.exp(M.StackPop.getFloat));
+ Result.Typ   := cpFloat;
+ Result.Value := exp(Params[0].Value);
 End;
 
-initialization
- Add_icall('math', 'sqrt', @_sqrt);
- Add_icall('math', 'sin', @_sin);
- Add_icall('math', 'cos', @_cos);
- Add_icall('math', 'log', @_log);
- Add_icall('math', 'ln', @_ln);
- Add_icall('math', 'exp', @_exp);
+// -------------------------------------------------------------------------- //
+Procedure Init(M: TMachine);
+Begin
+ M.AddInternalCall('math', 'sqrt', 1, @_sqrt);
+ M.AddInternalCall('math', 'sin', 1, @_sin);
+ M.AddInternalCall('math', 'cos', 1, @_cos);
+ M.AddInternalCall('math', 'log', 2, @_log);
+ M.AddInternalCall('math', 'ln', 1, @_ln);
+ M.AddInternalCall('math', 'exp', 1, @_exp);
+End;
 End.

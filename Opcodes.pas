@@ -50,7 +50,7 @@ Unit Opcodes;
  Implementation
 Uses TypInfo;
 
-{ getOpcodeName }
+(* getOpcodeName (TOpcode_E) *)
 Function getOpcodeName(O: TOpcode_E): String;
 Begin
  Result := GetEnumName(TypeInfo(TOpcode_E), Integer(O));
@@ -58,7 +58,7 @@ Begin
  Delete(Result, 1, 2);
 End;
 
-{ getOpcodeName }
+(* getOpcodeName (Byte) *)
 Function getOpcodeName(O: Byte): String;
 Begin
  Result := getOpcodeName(TOpcode_E(O));

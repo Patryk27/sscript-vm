@@ -10,7 +10,8 @@
 Unit Machine;
 
  Interface
- Uses SysUtils, Math, Opcodes, Objects, Exceptions, Classes, Zipper;
+ Uses SysUtils, Math, Classes, Variants, FGL, Zipper,
+      Opcodes, Objects, Exceptions;
 
  Const EXCEPTIONSTACK_SIZE = 1*1024*1024; // 1 MB exception-stack; I guess it's enough
        STACK_SIZE          = 100000000; // this value is counted in elements count
@@ -28,16 +29,37 @@ Unit Machine;
 
  Type TMachine = class;
 
+ { icall-s }
+ Type TCallParamType = (cpNone, cpBool, cpChar, cpInt, cpFloat, cpString);
+ Type TCallValue = Record
+                    Typ  : TCallParamType;
+                    Value: Variant;
+                   End;
+ Type TCallValues = Array of TCallValue;
+
+ Type TCallHandler = Procedure (M: TMachine; Params: TCallValues; var Result: TCallValue);
+
+ Type PCall = ^TCall;
+      TCall = Record
+               Package, Func, Full: String;
+               ParamCount         : Byte;
+               Handler            : TCallHandler;
+              End;
+
+ Type TCallList = specialize TFPGList<PCall>;
+
  { opcode's parameters }
  Type POpParam = ^TOpParam;
       TOpParam = Record
                   Public
-                   M    : TMachine;
-                   Typ  : TPrimaryType;
-                   Val  : Int64;
-                   fVal : Extended;
-                   sVal : String;
-                   Index: Byte;
+                   M    : TMachine; // point to `TMachine`
+                   Typ  : TPrimaryType; // parameter type
+                   Index: Byte; // register index (if used)
+                   Value: Record // value of parameter
+                           Int  : Int64;
+                           Float: Extended;
+                           Str  : String;
+                          End;
 
                    Function getBool: Boolean; inline;
                    Function getChar: Char; inline;
@@ -68,14 +90,9 @@ Unit Machine;
 
                    Function getString(Pos: LongWord): String;
 
+                   Procedure Prepare;
+
                   Public
-                   // variables
-                   InputFile: String;
-
-                   CodeData      : PByte;
-                   ExceptionStack: PLongWord;
-                   Stack         : Array of TOpParam;
-
                    // registers
                    breg: Array[1..5] of Boolean;
                    creg: Array[1..4] of Char;
@@ -84,32 +101,39 @@ Unit Machine;
                    sreg: Array[1..4] of String;
                    rreg: Array[1..4] of LongWord;
 
-                   Position     : PByte; // pointer to current opcode in memory
-                   LastOpcodePos: LongWord;
+                   // fields
+                   InputFile: String;
+
+                   CodeData      : PByte; // bytecode data block
+                   ExceptionStack: PLongWord;
+                   Stack         : Array of TOpParam;
+
+                   icall: TCallList;
+
+                   Position     : PByte; // current position
+                   CurrentOpcode: PByte; // current opcode (pointer to its first byte)
                    StackPos     : PLongWord; // points at `ireg[5]` (the `stp` register)
-                   DebugMode    : Boolean;
-                   OpcodeNo     : QWord;
+                   ParsedOpcodes: QWord;
 
-                   is_runnable: Boolean;
+                   isRunnable: Boolean;
 
-                   exception_handler: LongWord;
-                   last_exception   : String;
-
-                   exitcode: Integer;
+                   ExceptionHandler: Int64; // must be a signed type!
+                   LastException   : String;
+                   ExitCode        : Int64;
 
                   Public
                   // methods
                    Function read_param: TOpParam; {inline (?)}
 
                    { stack operations }
-                   Procedure StackPush(Value: Integer);
+                   Procedure StackPush(Value: Boolean);
+                   Procedure StackPush(Value: Char);
+                   Procedure StackPush(Value: Int64);
                    Procedure StackPush(Value: Extended);
                    Procedure StackPush(Value: String);
-                   Procedure StackPush(Value: Char);
-                   Procedure StackPush(Value: Boolean);
                    Procedure StackPush(Value: TOpParam);
-                   Procedure CallstackPush(Value: LongWord);
                    Function StackPop: TOpParam;
+                   Procedure CallstackPush(Value: LongWord);
                    Function CallstackPop: LongWord;
 
                    { position-related }
@@ -122,148 +146,37 @@ Unit Machine;
 
                    Procedure ThrowException(const Msg: String);
 
-                   { some other stuff }
+                  Public
                    Constructor Create(const FileName: String);
-                   Procedure Prepare;
-                   Procedure Run;
-                   Procedure Run_icall(const icall: String);
 
-                   Procedure DumpExceptionInfo;
+                   Procedure Run(const EntryPoint: LongWord = 0);
+                   Procedure AddInternalCall(const Package, Func: String; ParamCount: Byte; Handler: TCallHandler);
 
-                   Function disasm(const Pos: LongWord): String;
+                   Function Disassembly(const Pos: LongWord): String;
                    Procedure FetchLocation(const Pos: LongWord; out eLine: Integer; out eFile, eFunc: String);
                   End;
 
- Type icall_handler = Procedure (M: TMachine);
-
- Procedure Add_icall(const PackageName, FuncName: String; const fHandler: icall_handler);
-
- Var VerboseMode: Boolean=True;
+ Var VerboseMode: Boolean=False;
 
  Implementation
-Uses Procs, mOutput, mString, mMath, mTime, mInput, mVM;
-Var icall_list: Array of Record
-                          icall  : String;
-                          Handler: icall_handler;
-                         End;
+Uses Procs;
 
-{ Log }
-Procedure Log(Txt: String);
+// Log
+Procedure Log(const Text: String);
 Begin
  if (VerboseMode) Then
-  Writeln(Txt);
+  Writeln(Text);
 End;
 
-{ Add_icall }
-Procedure Add_icall(const PackageName, FuncName: String; const fHandler: icall_handler);
-Begin
- SetLength(icall_list, Length(icall_list)+1);
- With icall_list[High(icall_list)] do
- Begin
-  icall   := PackageName+'.'+FuncName;
-  Handler := fHandler;
- End;
-End;
+{$I opparam.pas}
 
-{ TOpParam.getBool }
-Function TOpParam.getBool: Boolean;
-Begin
- if (Typ in [ptBool, ptBoolReg, ptInt, ptIntReg]) Then
- Begin
-  Case Val of
-   0: Exit(False);
-   else Exit(True);
-  End
- End Else
- if (Typ = ptStackVal) Then
-  Exit(M.Stack[M.StackPos^+Val].getBool) Else
-  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> bool');
-End;
-
-{ TOpParam.getChar }
-Function TOpParam.getChar: Char;
-Begin
- if (Typ in [ptChar, ptCharReg, ptInt, ptIntReg]) Then
-  Exit(chr(Val)) Else
- if (Typ in [ptString, ptStringReg]) Then
-  Exit(sVal[1]) Else
- if (Typ = ptStackVal) Then
-  Exit(M.Stack[M.StackPos^+Val].getChar) Else
-  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> char');
-End;
-
-{ TOpParam.getInt }
-Function TOpParam.getInt: Int64;
-Begin
- if (Typ in [ptInt, ptIntReg, ptBool, ptBoolReg, ptChar, ptCharReg, ptReferenceReg]) Then
-  Exit(Val) Else
- if (Typ in [ptFloat, ptFloatReg]) Then
-  Exit(Round(fVal)) Else
- if (Typ = ptStackVal) Then
-  Exit(M.Stack[M.StackPos^+Val].getInt) Else
-  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int');
-End;
-
-{ TOpParam.getLongword }
-Function TOpParam.getLongword: LongWord;
-Begin
- if (Typ in [ptInt, ptIntReg, ptReferenceReg]) Then
-  Exit(Val) Else
- if (Typ = ptStackVal) Then
-  Exit(M.Stack[M.StackPos^+Val].getInt) Else
-  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int (longword)');
-End;
-
-{ TOpParam.getFloat }
-Function TOpParam.getFloat: Extended;
-Begin
- if (Typ in [ptFloat, ptFloatReg]) Then
-  Exit(fVal) Else
- if (Typ in [ptInt, ptIntReg, ptBool, ptBoolReg]) Then
-  Exit(Val) Else
- if (Typ = ptStackVal) Then
-  Exit(M.Stack[M.StackPos^+Val].getFloat) Else
-  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> float');
-End;
-
-{ TOpParam.getString }
-Function TOpParam.getString: String;
-Begin
- if (Typ in [ptString, ptStringReg]) Then
-  Exit(sVal) Else
- if (Typ in [ptChar, ptCharReg]) Then
-  Exit(chr(Val)) Else
- if (Typ = ptStackVal) Then
-  Exit(M.Stack[M.StackPos^+Val].getString) Else
-  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> string');
-End;
-
-{ TOpParam.getReference }
-Function TOpParam.getReference: LongWord;
-Begin
- if (Typ in [ptInt, ptIntReg, ptReferenceReg, ptCallstackRef]) Then
-  Exit(Val) Else
- if (Typ = ptStackVal) Then
-  Exit(M.Stack[M.StackPos^+Val].getReference) Else
-  raise eInvalidCasting.Create('Invalid casting: '+PrimaryTypeNames[Typ]+' -> int');
-End;
-
-{ TOpParam.getTypeName }
-Function TOpParam.getTypeName: String;
-Begin
- Result := PrimaryTypeNames[Typ];
-
- if (Typ = ptStackVal) Then
-  Result += ' ('+M.Stack[M.StackPos^+Val].getTypeName+')';
-End;
-
-{ TMachine.OnCreateStream }
+(* TMachine.OnCreateStream *)
 Procedure TMachine.OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 Begin
  AStream := TMemoryStream.Create;
 End;
 
-{ TMachine.OnDoneStream }
+(* TMachine.OnDoneStream *)
 Procedure TMachine.OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 Begin
  Log('Parsing unzipped file: '+AItem.ArchiveFileName+' (size: '+IntToStr(AItem.Size)+' bytes)');
@@ -280,10 +193,10 @@ Begin
  AStream.Free;
 End;
 
-{ TMachine.ParseHeader }
+(* TMachine.ParseHeader *)
 Procedure TMachine.ParseHeader(const AStream: TStream);
-Var magic_number                : Longword;
-    version_major, version_minor: Byte;
+Var MagicNumber               : Longword;
+    VersionMajor, VersionMinor: Byte;
 
     // EndingZero
     Function EndingZero(const Text: String): String;
@@ -295,21 +208,21 @@ Var magic_number                : Longword;
 
 Begin
  Log('Parsing header...');
- magic_number  := BEtoN(AStream.ReadDWord);
- is_runnable   := Boolean(AStream.ReadByte);
- version_major := AStream.ReadByte;
- version_minor := AStream.ReadByte;
+ MagicNumber  := BEtoN(AStream.ReadDWord);
+ isRunnable   := Boolean(AStream.ReadByte);
+ VersionMajor := AStream.ReadByte;
+ VersionMinor := AStream.ReadByte;
 
- Log('Magic number: 0x'+IntToHex(magic_number, 8));
- if (magic_number <> $0DEFACED) Then
+ Log('Magic number: 0x'+IntToHex(MagicNumber, 8));
+ if (MagicNumber <> $0DEFACED) Then
   raise eInvalidFile.Create('Invalid magic number.');
 
- Log('Bytecode version: '+IntToStr(version_major)+'.'+EndingZero(IntToStr(version_minor)));
- if (version_major <> bytecode_version_major) or (version_minor <> bytecode_version_minor) Then
+ Log('Bytecode version: '+IntToStr(VersionMajor)+'.'+EndingZero(IntToStr(VersionMinor)));
+ if (VersionMajor <> bytecode_version_major) or (VersionMinor <> bytecode_version_minor) Then
   raise eInvalidFile.Create('Unsupported bytecode version.');
 End;
 
-{ TMachine.ParseBytecode }
+(* TMachine.ParseBytecode *)
 Procedure TMachine.ParseBytecode(const AStream: TStream);
 Var I: LongWord;
 Begin
@@ -322,47 +235,47 @@ Begin
    CodeData[I] := AStream.ReadByte;
 End;
 
-{ TMachine.c_read_byte }
+(* TMachine.c_read_byte *)
 Function TMachine.c_read_byte: Byte;
 Begin
  Result := Position^;
  Inc(Position, sizeof(Byte));
 End;
 
-{ TMachine.c_read_integer }
+(* TMachine.c_read_integer *)
 Function TMachine.c_read_integer: Integer;
 Begin
  Result := BEtoN(PInteger(Position)^);
  Inc(Position, sizeof(Integer));
 End;
 
-{ TMachine.c_read_longword }
+(* TMachine.c_read_longword *)
 Function TMachine.c_read_longword: LongWord;
 Begin
  Result := BEtoN(PLongWord(Position)^);
  Inc(Position, sizeof(LongWord));
 End;
 
-{ TMachine.c_read_int64 }
+(* TMachine.c_read_int64 *)
 Function TMachine.c_read_int64: Int64;
 Begin
  Result := BEtoN(PInt64(Position)^);
  Inc(Position, sizeof(Int64));
 End;
 
-{ TMachine.c_read_float }
+(* TMachine.c_read_float *)
 Function TMachine.c_read_float: Extended;
 Begin
  Result := PExtended(Position)^;
  Inc(Position, sizeof(Extended));
 End;
 
-{ TMachine.c_read_string }
+(* TMachine.c_read_string *)
 Function TMachine.c_read_string: String;
 Begin
  Result := '';
 
- While (Position^ <> 0) Do
+ While (Position^ <> 0) Do // read until terminator char (0x00)
  Begin
   Result += chr(Position^);
   Inc(Position);
@@ -371,7 +284,7 @@ Begin
  Inc(Position);
 End;
 
-{ TMachine.getString }
+(* TMachine.getString *)
 Function TMachine.getString(Pos: LongWord): String;
 Var Ch: PChar;
 Begin
@@ -386,7 +299,27 @@ Begin
  End;
 End;
 
-{ TMachine.read_param }
+{ TMachine.Prepare }
+Procedure TMachine.Prepare;
+Begin
+ if (CodeData = nil) Then // no file has been loaded
+  raise eInvalidFile.Create('Cannot execute program: no file has been loaded (or damaged ''code'' section).');
+
+ setPosition(0);
+
+ ExceptionHandler := -1;
+ LastException    := '';
+
+ ireg[5]  := 0;
+ StackPos := @ireg[5];
+
+ ParsedOpcodes := 0;
+ ExitCode      := 0;
+End;
+
+// -------------------------------------------------------------------------- //
+
+(* TMachine.read_param *)
 Function TMachine.read_param: TOpParam;
 Begin
  Result.M   := self;
@@ -396,197 +329,98 @@ Begin
   Result.Index := c_read_byte; // register ID
 
  Case Result.Typ of
-  ptBoolReg: Result.Val := Byte(breg[Result.Index]);
-  ptCharReg: Result.Val := ord(creg[Result.Index]);
-  ptIntReg: Result.Val := ireg[Result.Index];
-  ptFloatReg: Result.fVal := freg[Result.Index];
-  ptStringReg: Result.sVal := sreg[Result.Index];
-  ptReferenceReg: Result.Val := rreg[Result.Index];
+  { register value }
+  ptBoolReg     : Result.Value.Int   := Byte(breg[Result.Index]);
+  ptCharReg     : Result.Value.Int   := ord(creg[Result.Index]);
+  ptIntReg      : Result.Value.Int   := ireg[Result.Index];
+  ptFloatReg    : Result.Value.Float := freg[Result.Index];
+  ptStringReg   : Result.Value.Str   := sreg[Result.Index];
+  ptReferenceReg: Result.Value.Int   := rreg[Result.Index];
 
-  ptBool: Result.Val := c_read_byte;
-  ptChar: Result.Val := c_read_byte;
-  ptInt: Result.Val := c_read_int64;
-  ptFloat: Result.fVal := c_read_float;
-  ptString: Result.sVal := c_read_string;
+  { constant value }
+  ptBool  : Result.Value.Int   := c_read_byte;
+  ptChar  : Result.Value.Int   := c_read_byte;
+  ptInt   : Result.Value.Int   := c_read_int64;
+  ptFloat : Result.Value.Float := c_read_float;
+  ptString: Result.Value.Str   := c_read_string;
 
   else
-   Result.Val := c_read_integer;
+   Result.Value.Int := c_read_integer;
  End;
 End;
 
-{ TMachine.StackPush }
-Procedure TMachine.StackPush(Value: Integer);
-Begin
- if (StackPos^ >= STACK_SIZE) Then
-  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
+{$I stack.pas}
 
- Inc(StackPos^);
- Stack[StackPos^].Typ := ptInt;
- Stack[StackPos^].Val := Value;
-End;
-
-{ TMachine.StackPush }
-Procedure TMachine.StackPush(Value: Extended);
-Begin
- if (StackPos^ >= STACK_SIZE) Then
-  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
-
- Inc(StackPos^);
- Stack[StackPos^].Typ  := ptFloat;
- Stack[StackPos^].fVal := Value;
-End;
-
-{ TMachine.StackPush }
-Procedure TMachine.StackPush(Value: String);
-Begin
- if (StackPos^ >= STACK_SIZE) Then
-  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
-
- Inc(StackPos^);
- Stack[StackPos^].Typ  := ptString;
- Stack[StackPos^].sVal := Value;
-End;
-
-{ TMachine.StackPush }
-Procedure TMachine.StackPush(Value: Char);
-Begin
- if (StackPos^ >= STACK_SIZE) Then
-  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
-
- Inc(StackPos^);
- Stack[StackPos^].Typ := ptChar;
- Stack[StackPos^].Val := ord(Value);
-End;
-
-{ TMachine.StackPush }
-Procedure TMachine.StackPush(Value: Boolean);
-Begin
- if (StackPos^ >= STACK_SIZE) Then
-  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
-
- Inc(StackPos^);
- Stack[StackPos^].Typ := ptBool;
- Stack[StackPos^].Val := Integer(Value);
-End;
-
-{ TMachine.StackPush }
-Procedure TMachine.StackPush(Value: TOpParam);
-Begin
- if (StackPos^ >= STACK_SIZE) Then
-  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
-
- Inc(StackPos^);
- Stack[StackPos^] := Value;
-End;
-
-{ TMachine.CallstackPush }
-Procedure TMachine.CallstackPush(Value: LongWord);
-Begin
- if (StackPos^ >= STACK_SIZE) Then
-  raise eInternalError.Create('Cannot ''push'' - no space left on the stack.');
-
- Inc(StackPos^);
- Stack[StackPos^].Typ := ptCallstackRef;
- Stack[StackPos^].Val := Value;
-End;
-
-{ TMachine.StackPop }
-Function TMachine.StackPop: TOpParam;
-Begin
- if (StackPos^ = 0) Then
-  raise eInternalError.Create('Cannot ''pop'' - stack is empty.');
-
- if (StackPos^ >= STACK_SIZE) Then
-  raise eInternalError.Create('Cannot ''pop'' - pointer is outside of the stack.');
-
- Result := Stack[StackPos^];
- Dec(StackPos^);
-End;
-
-{ TMachine.CallstackPop }
-Function TMachine.CallstackPop: LongWord;
-Begin
- if (StackPos^ = 0) Then
-  raise eInternalError.Create('Cannot ''pop'' - stack is empty.');
-
- if (StackPos^ >= STACK_SIZE) Then
-  raise eInternalError.Create('Cannot ''pop'' - pointer is outside of the stack.');
-
- Result := Stack[StackPos^].getReference;
- Dec(StackPos^);
-End;
-
-{ TMachine.getPosition }
+(* TMachine.getPosition *)
 Function TMachine.getPosition: LongWord;
 Begin
  Result := LongWord(Position) - LongWord(CodeData);
 End;
 
-{ TMachine.setPosition }
+(* TMachine.setPosition *)
 Procedure TMachine.setPosition(NewPos: LongWord);
 Begin
  Position := PByte(NewPos) + LongWord(CodeData);
 End;
 
-{ TMachine.getObject }
+(* TMachine.getObject *)
 Function TMachine.getObject(Address: LongWord): TMObject;
 Var Obj: TMObject;
 Begin
  if (Address = 0) Then
-  raise eNullPointerReference.Create('Null pointer reference');
+  ThrowException('Null pointer reference');
 
  Try
   Obj := TMObject(Address);
   Obj.Test;
   Exit(Obj);
  Except
-  raise eInvalidReference.Create('Not a valid object reference: 0x'+IntToHex(Address, 2*sizeof(LongWord)));
+  ThrowException('Not a valid object reference: 0x'+IntToHex(Address, 2*sizeof(LongWord)));
  End;
 End;
 
-{ TMachine.getArray }
+(* TMachine.getArray *)
 Function TMachine.getArray(Address: LongWord): TMArray;
 Begin
  Result := TMArray(getObject(Address));
 End;
 
-{ TMachine.ThrowException }
+(* TMachine.ThrowException *)
 Procedure TMachine.ThrowException(const Msg: String);
 Begin
- if (exception_handler = 0) Then
+ if (ExceptionHandler = -1) { no exception handler set } Then
   raise eThrow.Create(msg) Else
   Begin
-   last_exception := Msg;
-   setPosition(exception_handler);
+   LastException := Msg;
+   setPosition(ExceptionHandler);
   End;
 End;
 
-{ TMachine.Create }
+(* TMachine.Create *)
 Constructor TMachine.Create(const FileName: String);
 Var Zip     : TUnzipper;
     FileList: TStringList;
 Begin
+ Log('TMachine.Create()');
  Log('Input file: '+FileName);
 
  if (not FileExists(FileName)) Then // file not found
- Begin
-  Writeln('Input file not found: ', FileName);
-  Exit;
- End;
+  raise eInvalidFile.CreateFmt('Input file not found: %s', [FileName]);
 
  FileList     := TStringList.Create;
  Zip          := TUnzipper.Create;
  Zip.FileName := FileName;
 
- CodeData  := nil;
- DebugMode := False;
+ CodeData := nil;
+
+ icall := TCallList.Create;
 
  Try
   Zip.Examine;
   Zip.OnCreateStream := @OnCreateStream;
   Zip.OnDoneStream   := @OnDoneStream;
 
-  { unzip files }
+  { unzip and parse files }
   FileList.Clear;
   FileList.Add('.header');
   Zip.UnzipFiles(FileList);
@@ -606,122 +440,42 @@ Begin
  Log('File has been loaded.');
 End;
 
-{ TMachine.Prepare }
-Procedure TMachine.Prepare;
+(* TMachine.Run *)
+Procedure TMachine.Run(const EntryPoint: LongWord=0);
 Begin
- if (CodeData = nil) Then // no file has been loaded
- Begin
-  raise eInvalidFile.Create('Cannot execute program: no file has been loaded (or damaged ''code'' section).');
-  Exit;
- End;
+ if (not isRunnable) Then
+  raise eInvalidFile.Create('Cannot directly run a library!');
 
- setPosition(0);
+ Prepare;
+ setPosition(EntryPoint);
 
- exception_handler := 0;
- last_exception    := '';
-
- ireg[5]  := 0;
- StackPos := @ireg[5];
-End;
-
-{ TMachine.Run }
-Procedure TMachine.Run;
-
-  // ParseOpcode
-  Procedure ParseOpcode; inline;
-  Begin
-   LastOpcodePos := getPosition;
-   Inc(OpcodeNo);
-
-  //{
-   Begin
-//    Writeln('CODE:0x', IntToHex(getPosition, 8), ' -> ', disasm(getPosition));
-//    Readln;
-   End;
-  //}
-
-   OpcodeTable[TOpcode_E(c_read_byte)](self);
-  End;
-
-
-// function body
-Begin
- Log('-- PROGRAM START --');
-
- if (not is_runnable) Then
- Begin
-  Log('Not a runnable program.');
-  Log('Stopping...');
-  Exit;
- End;
-
- OpcodeNo := 0;
- exitcode := 0;
+ Log('-- PROGRAM START (EP='+IntToHex(EntryPoint, 8)+') --');
 
  While (true) do
-  ParseOpcode;
-End;
-
-{ TMachine.Run_icall }
-Procedure TMachine.Run_icall(const icall: String);
-Var I: Integer;
-Begin
- For I := Low(icall_list) To High(icall_list) Do
-  if (icall_list[I].icall = icall) Then
-  Begin
-   icall_list[I].Handler(self);
-   Exit;
-  End;
-
- raise eInvalidOpcode.Create('Unknown `icall`: '+icall);
-End;
-
-{ TMachine.DumpExceptionInfo }
-Procedure TMachine.DumpExceptionInfo;
-
-  { -- stacktrace -- }
-  Procedure Stacktrace;
-  Var eLine       : Integer;
-      eFile, eFunc: String;
-  Begin
-   FetchLocation(LastOpcodePos, eLine, eFile, eFunc);
-
-   if (eLine = -1) Then
-    Writeln('   at ', eFile, ' (unknown source)') Else
-    Writeln('   in "', eFile, '", line ', eLine, ', inside "', eFunc, '"');
-
-   // @TODO: 10 references max
-   if (StackPos <> nil) Then
-    While (StackPos^ > 0) Do
-    Begin
-     if (Stack[StackPos^].Typ = ptCallstackRef) Then
-     Begin
-      FetchLocation(Stack[StackPos^].getReference, eLine, eFile, eFunc);
-
-      if (eLine = -1) Then
-       Writeln('   ... from ', eFile, ' (unknown source)') Else
-       Writeln('   ... from "', eFile, '", line ', eLine, ', inside "', eFunc, '"');
-     End;
-
-     Dec(StackPos^);
-    End;
-  End;
-
-Begin
- if (CodeData = nil) Then // no code has been loaded
  Begin
-  Writeln('No data available.');
-  Exit;
- End;
+  Inc(ParsedOpcodes);
+  CurrentOpcode := Position;
 
- { -- stacktrace -- }
- Writeln;
- Writeln('Stacktrace:');
- Stacktrace;
+  OpcodeTable[TOpcode_E(c_read_byte)](self);
+ End;
 End;
 
-{ TMachine.disasm }
-Function TMachine.disasm(const Pos: LongWord): String;
+(* TMachine.AddInternalCall *)
+Procedure TMachine.AddInternalCall(const Package, Func: String; ParamCount: Byte; Handler: TCallHandler);
+Var call: PCall;
+Begin
+ New(call);
+ call^.Package    := Package;
+ call^.Func       := Func;
+ call^.Full       := Package+'.'+Func;
+ call^.ParamCount := ParamCount;
+ call^.Handler    := Handler;
+
+ icall.Add(call);
+End;
+
+(* TMachine.Disassembly *)
+Function TMachine.Disassembly(const Pos: LongWord): String;
 Var TmpPos: LongWord;
     Opcode: Byte;
     I     : Integer;
@@ -757,13 +511,13 @@ Begin
      ptStringReg   : Result += 'es'+IntToStr(Index);
      ptReferenceReg: Result += 'er'+IntToStr(Index);
 
-     ptBool  : Result += BoolToStr(Val <> 0, 'true', 'false');
-     ptChar  : Result += '#'+IntToStr(Val);
-     ptInt   : Result += IntToStr(Val);
-     ptFloat : Result += FloatToStr(fVal);
-     ptString: Result += '"'+sVal+'"';
+     ptBool  : Result += BoolToStr(Value.Int <> 0, 'true', 'false');
+     ptChar  : Result += '#'+IntToStr(Value.Int);
+     ptInt   : Result += IntToStr(Value.Int);
+     ptFloat : Result += FloatToStr(Value.Float);
+     ptString: Result += '"'+Value.Str+'"';
 
-     ptStackVal: Result += '['+IntToStr(Val)+']';
+     ptStackVal: Result += '['+IntToStr(Value.Int)+']';
 
      else
       Result += '<invalid parameter>';
@@ -779,7 +533,7 @@ Begin
  End;
 End;
 
-{ TMachine.FetchLocation }
+(* TMachine.FetchLocation *)
 Procedure TMachine.FetchLocation(const Pos: LongWord; out eLine: Integer; out eFile, eFunc: String);
 Var Opcode, Param: Byte;
 Begin

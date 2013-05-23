@@ -3,7 +3,6 @@
  All rights reserved.
 *)
 {$H+}
-{$I switches.inc}
 Unit Objects;
 
  Interface
@@ -26,6 +25,7 @@ Unit Objects;
  { TMArray }
  Type TMArray = Class (TMObject)
                  Private
+                  VM      : Pointer;
                   Data    : Pointer; // array data
                   Typ     : Byte; // array internal type ID
                   TypeSize: Byte; // internal type size
@@ -35,7 +35,7 @@ Unit Objects;
                   Function getElementMemory(Position: TLongWordArray): LongWord;
 
                  Public
-                  Constructor Create(const fType: Byte; fSizes: TLongWordArray);
+                  Constructor Create(const fVM: Pointer; const fType: Byte; fSizes: TLongWordArray);
                   Destructor Destroy; override;
 
                   Procedure setValue(const Position: TLongWordArray; OpParam: Pointer); // set element's value
@@ -122,12 +122,12 @@ Begin
  Begin
   if (Typ = TYPE_STRING) and (Length(Position)-1 = Length(Sizes)) Then
    SetLength(Position, High(Position)) Else
-   raise eInvalidAccess.Create('Invalid array access.');
+   TMachine(VM).ThrowException('Invalid array access.');
  End;
 
  For I := Low(Position) To High(Position) Do
   if (Position[I] >= Sizes[I]) Then
-   raise eOutOfBounds.Create('Array out of bounds. Tried to access element #'+IntToStr(Position[I])+', while #'+IntToStr(Sizes[I]-1)+' is the last one.');
+   TMachine(VM).ThrowException('Array out of bounds. Tried to access element #'+IntToStr(Position[I])+', while #'+IntToStr(Sizes[I]-1)+' is the last one.');
 
  Result := Position[Low(Position)]*TypeSize;
 
@@ -138,10 +138,11 @@ Begin
 End;
 
 { TMArray.Create }
-Constructor TMArray.Create(const fType: Byte; fSizes: TLongWordArray);
+Constructor TMArray.Create(const fVM: Pointer; const fType: Byte; fSizes: TLongWordArray);
 Var I: LongWord;
 Begin
- { set variables }
+ { set class fields }
+ VM       := fVM;
  Typ      := fType;
  TypeSize := Machine.TypeSize[fType];
  Sizes    := fSizes;
@@ -191,15 +192,15 @@ Begin
   Begin
    Str                           := LoadString(DataPos);
    Str[Position[High(Position)]] := getChar;
-   sVal := Str;
+   Value.Str                     := Str;
   End;
 
   Case self.Typ of
-   TYPE_BOOL, TYPE_CHAR, TYPE_INT: PLongWord(DataPos)^ := Val;
+   TYPE_BOOL, TYPE_CHAR, TYPE_INT: PLongWord(DataPos)^ := Value.Int;
    TYPE_STRING                   : SaveString(DataPos, getString);
    TYPE_FLOAT                    : PExtended(DataPos)^ := getFloat; // @TODO: why `:= fVal` fails? :|
    else
-    raise eInvalidAccess.Create('Invalid type: '+IntToStr(ord(Typ)));
+    raise eInternalError.Create('Invalid type: '+IntToStr(ord(Typ)));
   End;
  End;
 End;
@@ -222,19 +223,19 @@ Begin
    TYPE_FLOAT : Typ := ptFloat;
    TYPE_STRING: Typ := ptString;
    else
-    raise eInvalidAccess.Create('Invalid self-type: '+IntToStr(ord(self.Typ))); // shouldn't happen
+    raise eInternalError.Create('Invalid self-type: '+IntToStr(ord(self.Typ))); // shouldn't happen
   End;
 
   Case Typ of
-   ptBool, ptChar, ptInt: Val := PLongWord(DataPos)^;
-   ptString             : sVal := LoadString(DataPos);
-   ptFloat              : fVal := PExtended(DataPos)^;
+   ptBool, ptChar, ptInt: Value.Int   := PLongWord(DataPos)^;
+   ptString             : Value.Str   := LoadString(DataPos);
+   ptFloat              : Value.Float := PExtended(DataPos)^;
   End;
 
   if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING) Then
   Begin
-   sVal := sVal[Position[High(Position)]];
-   Val  := ord(sVal[1]);
+   Value.Str := Value.Str[Position[High(Position)]];
+   Value.Int := ord(Value.Str[1]);
   End;
  End;
 
@@ -245,8 +246,8 @@ End;
 Function TMArray.getSize(const Dimension: Byte): LongWord;
 Begin
  if (Dimension = 0) or (Dimension > Length(Sizes)) Then
-  raise eOutOfBounds.Create('Array of of bounds. Tried to access dimension #'+IntToStr(Dimension)+', while #'+IntToStr(Length(Sizes))+' is the last one.');
+  TMachine(VM).ThrowException('Array of of bounds. Tried to access dimension #'+IntToStr(Dimension)+', while #'+IntToStr(Length(Sizes))+' is the last one.');
 
- Result := Sizes[Dimension-1]; // dimensions are from user-side numbered from `1`, but internally from `0`.
+ Result := Sizes[Dimension-1]; // dimensions from user-side are numbered starting by `1`, but internally from `0`.
 End;
 End.

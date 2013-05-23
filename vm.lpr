@@ -27,7 +27,7 @@ Uses CRT, SysUtils,
      os_functions, Exceptions, Machine, Opcodes,
      mInput, mOutput, mString, mMath, mTime, mVM;
 
-Const Version = '0.3.1 nightly';
+Const Version = '0.3.1';
 
 { getBoolOption }
 Function getBoolOption(O: String; Default: Boolean): Boolean;

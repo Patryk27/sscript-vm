@@ -6,23 +6,22 @@
 Unit mTime;
 
  Interface
- Uses Machine;
+ Uses vm_header;
 
- Procedure Init(M: TMachine);
+ Procedure Init(VM: Pointer);
 
  Implementation
 Uses os_functions;
 
 { time.get_milliseconds }
-Procedure _get_milliseconds(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _get_milliseconds(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- Result.Typ   := cpInt;
- Result.Value := GetMilliseconds;
+ Result^ := GetMilliseconds;
 End;
 
 // -------------------------------------------------------------------------- //
-Procedure Init(M: TMachine);
+Procedure Init(VM: Pointer);
 Begin
- M.AddInternalCall('time', 'get_milliseconds', 0, @_get_milliseconds);
+ AddInternalCall(VM, 'time', 'get_milliseconds', 0, @_get_milliseconds);
 End;
 End.

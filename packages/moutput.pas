@@ -6,13 +6,13 @@
 Unit mOutput;
 
  Interface
- Uses Machine, os_functions;
+ Uses vm_header, os_functions;
 
  Procedure strdisplay(const Str: String);
- Procedure Init(M: TMachine);
+ Procedure Init(VM: Pointer);
 
  Implementation
-Uses CRT, Variants, SysUtils, FileUtil, Opcodes;
+Uses CRT, Variants, SysUtils, FileUtil;
 
 Var isBuffered: Boolean = False;
     BufferData: String = '';
@@ -24,21 +24,27 @@ Begin
 End;
 
 { output.print }
-Procedure _print(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _print(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Var Str: String;
 Begin
- With M do
- Begin
-  Str := VarToStr(Params[0].Value);
-
-  if (isBuffered) Then
-   BufferData += Str Else
-   strdisplay(Str);
+ Case Params[0].Typ of
+  mvBool  : Str := BoolToStr(Params[0].Value.Bool, 'true', 'false');
+  mvChar  : Str := Params[0].Value.Char;
+  mvInt   : Str := IntToStr(Params[0].Value.Int);
+  mvFloat : Str := FloatToStr(Params[0].Value.Float);
+  mvString: Str := Params[0].Value.Str;
+  mvReference: Str := '<object: 0x'+IntToHex(Params[0].Value.Int, 8)+'>';
+  else
+   raise Exception.CreateFmt('Invalid "output.print" icall: unknown parameter type: %d', [ord(Params[0].Typ)]);
  End;
+
+ if (isBuffered) Then
+  BufferData += Str Else
+  strdisplay(Str);
 End;
 
 { output.clear }
-Procedure _clear(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _clear(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
  if (isBuffered) Then
   BufferData := '' Else
@@ -46,46 +52,49 @@ Begin
 End;
 
 { output.set_size }
-Procedure _set_size(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _set_size(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- With M do
-  SetConsoleSize(Params[0].Value, Params[1].Value, Params[2].Value, Params[3].Value);
+ Writeln(Params[0].Typ);
+ Writeln(Params[1].Typ);
+ Writeln(Params[2].Typ);
+ Writeln(Params[3].Typ);
+ SetConsoleSize(getInt(Params[0]), getInt(Params[1]), getInt(Params[2]), getInt(Params[3]));
 End;
 
 { output.set_buffered }
-Procedure _set_buffered(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _set_buffered(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- isBuffered := M.StackPop.getBool;
+ isBuffered := getBool(Params[0]);
 End;
 
 { output.flush }
-Procedure _flush(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _flush(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
  strdisplay(BufferData);
  BufferData := '';
 End;
 
 { output.cursor.hide }
-Procedure _cursor_hide(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _cursor_hide(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
  CRT.CursorOff;
 End;
 
 { output.cursor.show }
-Procedure _cursor_show(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _cursor_show(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
  CRT.CursorOn;
 End;
 
 // -------------------------------------------------------------------------- //
-Procedure Init(M: TMachine);
+Procedure Init(VM: Pointer);
 Begin
- M.AddInternalCall('output', 'print', 1, @_print);
- M.AddInternalCall('output', 'clear', 0, @_clear);
- M.AddInternalCall('output', 'set_size', 4, @_set_size);
- M.AddInternalCall('output', 'set_buffered', 1, @_set_buffered);
- M.AddInternalCall('output', 'flush', 0, @_flush);
- M.AddInternalCall('output', 'cursor_hide', 0, @_cursor_hide);
- M.AddInternalCall('output', 'cursor_show', 0, @_cursor_show);
+ AddInternalCall(VM, 'output', 'print', 1, @_print);
+ AddInternalCall(VM, 'output', 'clear', 0, @_clear);
+ AddInternalCall(VM, 'output', 'set_size', 4, @_set_size);
+ AddInternalCall(VM, 'output', 'set_buffered', 1, @_set_buffered);
+ AddInternalCall(VM, 'output', 'flush', 0, @_flush);
+ AddInternalCall(VM, 'output', 'cursor_hide', 0, @_cursor_hide);
+ AddInternalCall(VM, 'output', 'cursor_show', 0, @_cursor_show);
 End;
 End.

@@ -10,7 +10,7 @@
       </Flags>
       <SessionStorage Value="InProjectDir"/>
       <MainUnit Value="0"/>
-      <Title Value="vm"/>
+      <Title Value="vm_lib"/>
       <UseAppBundle Value="False"/>
       <ResourceType Value="res"/>
     </General>
@@ -31,40 +31,62 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <CommandLineParams Value="hello_world.ssc -wait"/>
       </local>
     </RunParams>
-    <RequiredPackages Count="1">
-      <Item1>
-        <PackageName Value="LazUtils"/>
-      </Item1>
-    </RequiredPackages>
-    <Units Count="1">
+    <Units Count="5">
       <Unit0>
-        <Filename Value="vm.lpr"/>
+        <Filename Value="ssvm.lpr"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="vm"/>
+        <UnitName Value="ssvm"/>
       </Unit0>
+      <Unit1>
+        <Filename Value="vm.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="VM"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="vmhandlers.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="VMHandlers"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="stack.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Stack"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="loader.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="Loader"/>
+      </Unit4>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="vm"/>
+      <Filename Value="ssvm"/>
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="packages"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
+    <Parsing>
+      <Style Value="1"/>
+    </Parsing>
     <CodeGeneration>
+      <RelocatableUnit Value="True"/>
       <Optimizations>
         <VariablesInRegisters Value="True"/>
         <UncertainOptimizations Value="True"/>
         <OptimizationLevel Value="3"/>
       </Optimizations>
     </CodeGeneration>
+    <Linking>
+      <Options>
+        <ExecutableType Value="Library"/>
+      </Options>
+    </Linking>
     <Other>
       <CompilerMessages>
         <MsgFileName Value=""/>
@@ -73,7 +95,7 @@
     </Other>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="4">
+    <Exceptions Count="3">
       <Item1>
         <Name Value="EAbort"/>
       </Item1>
@@ -83,9 +105,6 @@
       <Item3>
         <Name Value="EFOpenError"/>
       </Item3>
-      <Item4>
-        <Name Value="Exception"/>
-      </Item4>
     </Exceptions>
   </Debugging>
 </CONFIG>

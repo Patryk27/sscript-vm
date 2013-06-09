@@ -6,63 +6,63 @@
 Unit mMath;
 
  Interface
- Uses Machine;
+ Uses vm_header;
 
- Procedure Init(M: TMachine);
+ Procedure Init(VM: Pointer);
 
  Implementation
 Uses Math;
 
 { math.sqrt }
-Procedure _sqrt(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _sqrt(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- Result.Typ   := cpFloat;
- Result.Value := sqrt(Params[0].Value);
+ Result^.Typ         := mvFloat;
+ Result^.Value.Float := sqrt(getFloat(Params[0]));
 End;
 
 { math.sin }
-Procedure _sin(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _sin(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- Result.Typ   := cpFloat;
- Result.Value := sin(Params[0].Value);
+ Result^.Typ         := mvFloat;
+ Result^.Value.Float := sin(getFloat(Params[0]));
 End;
 
 { math.cos }
-Procedure _cos(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _cos(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- Result.Typ   := cpFloat;
- Result.Value := cos(Params[0].Value);
+ Result^.Typ         := mvFloat;
+ Result^.Value.Float := cos(getFloat(Params[0]));
 End;
 
 { math.log }
-Procedure _log(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _log(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- Result.Typ   := cpFloat;
- Result.Value := logn(Params[0].Value, Params[1].Value);
+ Result^.Typ         := mvFloat;
+ Result^.Value.Float := logn(getFloat(Params[0]), getFloat(Params[1]));
 End;
 
 { math.ln }
-Procedure _ln(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _ln(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- Result.Typ   := cpFloat;
- Result.Value := ln(Params[0].Value);
+ Result^.Typ         := mvFloat;
+ Result^.Value.Float := ln(getFloat(Params[0]));
 End;
 
 { math.exp }
-Procedure _exp(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _exp(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- Result.Typ   := cpFloat;
- Result.Value := exp(Params[0].Value);
+ Result^.Typ         := mvFloat;
+ Result^.Value.Float := exp(getFloat(Params[0]));
 End;
 
 // -------------------------------------------------------------------------- //
-Procedure Init(M: TMachine);
+Procedure Init(VM: Pointer);
 Begin
- M.AddInternalCall('math', 'sqrt', 1, @_sqrt);
- M.AddInternalCall('math', 'sin', 1, @_sin);
- M.AddInternalCall('math', 'cos', 1, @_cos);
- M.AddInternalCall('math', 'log', 2, @_log);
- M.AddInternalCall('math', 'ln', 1, @_ln);
- M.AddInternalCall('math', 'exp', 1, @_exp);
+ AddInternalCall(VM, 'math', 'sqrt', 1, @_sqrt);
+ AddInternalCall(VM, 'math', 'sin', 1, @_sin);
+ AddInternalCall(VM, 'math', 'cos', 1, @_cos);
+ AddInternalCall(VM, 'math', 'log', 2, @_log);
+ AddInternalCall(VM, 'math', 'ln', 1, @_ln);
+ AddInternalCall(VM, 'math', 'exp', 1, @_exp);
 End;
 End.

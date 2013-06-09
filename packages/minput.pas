@@ -6,54 +6,48 @@
 Unit mInput;
 
  Interface
- Uses Machine;
+ Uses vm_header;
 
- Procedure Init(M: TMachine);
+ Procedure Init(VM: Pointer);
 
  Implementation
 Uses CRT, mOutput;
 
 { input.keypressed }
-Procedure _keypressed(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _keypressed(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- M.StackPush(KeyPressed);
+ StackPush(VM, KeyPressed);
 End;
 
 { input.getchar }
-Procedure _getchar(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _getchar(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- M.StackPush(ReadKey);
+ StackPush(VM, ReadKey);
 End;
 
 { input.readchar }
-Procedure _readchar(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _readchar(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Var Ch: Char;
 Begin
- With M do
- Begin
-  Ch := ReadKey;
-  StackPush(Ch);
-  mOutput.strdisplay(Ch);
- End;
+ Ch      := ReadKey;
+ Result^ := Ch;
+ strdisplay(Ch);
 End;
 
 { input.read }
-Procedure _read(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _read(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Var Str: String;
 Begin
- With M do
- Begin
-  Readln(Str);
-  StackPush(Str);
- End;
+ Readln(Str);
+ Result^ := Str;
 End;
 
 // -------------------------------------------------------------------------- //
-Procedure Init(M: TMachine);
+Procedure Init(VM: Pointer);
 Begin
- M.AddInternalCall('input', 'keypressed', 0, @_keypressed);
- M.AddInternalCall('input', 'getchar', 0, @_getchar);
- M.AddInternalCall('input', 'readchar', 0, @_readchar);
- M.AddInternalCall('input', 'read', 0, @_read);
+ AddInternalCall(VM, 'input', 'keypressed', 0, @_keypressed);
+ AddInternalCall(VM, 'input', 'getchar', 0, @_getchar);
+ AddInternalCall(VM, 'input', 'readchar', 0, @_readchar);
+ AddInternalCall(VM, 'input', 'read', 0, @_read);
 End;
 End.

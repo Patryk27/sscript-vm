@@ -6,22 +6,21 @@
 Unit mString;
 
  Interface
- Uses Machine;
 
- Procedure Init(M: TMachine);
+ Procedure Init(VM: Pointer);
 
  Implementation
+Uses vm_header;
 
 { string.length }
-Procedure _length(M: TMachine; Params: TCallValues; var Result: TCallValue);
+Procedure _length(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- With M do
-  StackPush(Length(Params[0].Value));
+ Result^ := Length(getString(Params[0]));
 End;
 
 // -------------------------------------------------------------------------- //
-Procedure Init(M: TMachine);
+Procedure Init(VM: Pointer);
 Begin
- M.AddInternalCall('string', 'length', 1, @_length);
+ AddInternalCall(VM, 'string', 'length', 1, @_length);
 End;
 End.

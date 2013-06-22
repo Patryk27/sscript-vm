@@ -16,7 +16,7 @@ Unit VM;
                           End = (Major: 0; Minor: 41); // current bytecode version: 0.41
 
  Const ExceptionStackSize = 2*1024; // 2 KB
-       StackElementCount  = 1000000; // maximum elements count on the stack; now it's about ~65 MB
+       StackElementCount  = 1000000; // maximum elements count on the stack; now it's about ~65 MB; @TODO: stack dynamic grow!
 
  Type Puint8  = ^uint8; // for some reason FPC doesn't have them declared
       Pint8   = ^int8;
@@ -47,6 +47,9 @@ Unit VM;
 
  Type TCallList = specialize TFPGList<PCall>;
 
+ // -- stop -- //
+ Type TStopReason = (srNormal, srException);
+
  // -- exceptions -- //
  Type TExceptionType = (etNone=-1, etByObject, etByMessage);
  Type PExceptionBlock = ^TExceptionBlock;
@@ -71,7 +74,7 @@ Unit VM;
                     r: Array[1..4] of Pointer;  // er1, er2, er3, er4
                    End;
 
-             Loader: Record // set by TLoader
+             Loader: Record // filled by TLoader
                       MagicNumber               : uint32;
                       isRunnable                : Boolean;
                       VersionMajor, VersionMinor: uint8;
@@ -87,7 +90,8 @@ Unit VM;
              LastException   : TExceptionBlock; // last exception block
              StackPos        : PInt64; // pointer at `Regs.i[5]` - current stack position
 
-             Stop: Boolean; // used by the `stop()` opcode
+             Stop      : Boolean; // used by the `stop()` opcode
+             StopReason: TStopReason;
 
           (* -- procedures and functions for internal use -- *)
              Procedure SetPosition(const Pos: uint32);
@@ -129,6 +133,8 @@ Unit VM;
  Procedure VM_StackPush(VM: Pointer; Element: TMixedValue); stdcall;
  Function VM_StackPop(VM: Pointer): TMixedValue; stdcall;
  Procedure VM_ThrowException(VM: Pointer; Exception: TExceptionBlock); stdcall;
+ Function VM_GetException(VM: Pointer): TExceptionBlock; stdcall;
+ Function VM_GetStopReason(VM: Pointer): TStopReason; stdcall;
 
  Implementation
 Uses SysUtils, Loader, Opcodes, Objects;
@@ -165,7 +171,7 @@ Begin
   End;
 
   if (CodeData = nil) Then
-   raise Exception.Create('Couldn''t load specified bytecode file!');
+   raise Exception.Create('Couldn''t load the specified bytecode file!');
 
   SetLength(Stack, StackElementCount);
   ExceptionStack := GetMem(ExceptionStackSize);
@@ -190,6 +196,8 @@ Begin
   LastException.Typ := etNone;
 
   SetPosition(EntryPoint);
+
+  StopReason := srNormal;
 
   StackPos  := @Regs.i[5];
   StackPos^ := 0;
@@ -260,6 +268,26 @@ Procedure VM_ThrowException(VM: Pointer; Exception: TExceptionBlock); stdcall;
 Begin
  With PVM(VM)^ do
   ThrowException(Exception);
+End;
+
+(* VM_GetException *)
+{
+ Returns the latest user code exception.
+}
+Function VM_GetException(VM: Pointer): TExceptionBlock; stdcall;
+Begin
+ With PVM(VM)^ do
+  Exit(LastException);
+End;
+
+(* VM_GetStopReason *)
+{
+ Returns VM stop reason.
+}
+Function VM_GetStopReason(VM: Pointer): TStopReason; stdcall;
+Begin
+ With PVM(VM)^ do
+  Exit(StopReason);
 End;
 
 // ========================================================================== //
@@ -474,15 +502,16 @@ Begin
   etByMessage:
   Begin
    if (ExceptionHandler = -1) Then // no exception handler set
-    raise SysUtils.Exception.Create(PChar(Exception.Data));
+   Begin
+    LastException := Exception;
+    StopReason    := srException;
+    Stop          := True;
+    Exit;
+   End;
 
    LastException := Exception;
    SetPosition(ExceptionHandler);
   End;
-
-  { invalid }
-  else
-   raise SysUtils.Exception.CreateFmt('TVM.ThrowException() -> invalid exception type: %d', [ord(Exception.Typ)]);
  End;
 End;
 

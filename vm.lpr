@@ -60,7 +60,6 @@ Begin
   Writeln('Available options:');
   Writeln;
 
- // Writeln('-v     enable verbose mode');
  // Writeln('-err   detailed error log');
   Writeln('-wait  wait for `enter` when finished');
   Writeln('-time  display program''s execution time');
@@ -90,21 +89,28 @@ Begin
    Run(VM);
   Except
    On E: Exception Do
-    Writeln('Exception! ', E.Message);
+    Writeln('VM Exception! ', E.Message);
   End;
  Finally
+  if (getStopReason(VM) = srException) Then
+  Begin
+   Writeln('Exception has been thrown:');
+   Writeln;
+   Writeln(PChar(getException(VM).Data));
+  End;
+
   FreeVM(VM);
   Time := GetMilliseconds-Time;
-
-  Writeln;
-  Writeln('-- END --');
-
-  { -time }
-  if (_time) Then
-   Writeln('Execution time: ', Time, 'ms');
-
-  { -wait }
-  if (_wait) Then
-   Readln;
  End;
+
+ Writeln;
+ Writeln('-- END --');
+
+ { -time }
+ if (_time) Then
+  Writeln('Execution time: ', Time, 'ms');
+
+ { -wait }
+ if (_wait) Then
+  Readln;
 End.

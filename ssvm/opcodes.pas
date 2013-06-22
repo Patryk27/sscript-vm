@@ -657,7 +657,7 @@ Begin
     StackPush(Param);
    End Else
 
-    raise Exception.CreateFmt('Invalid VM-icall: %s', [Name]);
+    VM^.ThrowExceptionByMessage(PChar('Invalid VM-icall: '+Name));
 
    Exit;
   End;
@@ -684,7 +684,8 @@ Begin
     Exit;
    End;
 
-  raise Exception.Create('Undefined internal call: '+Name);
+  VM^.ThrowExceptionByMessage(PChar('Undefined internal call: '+Name));
+ // raise Exception.Create('Undefined internal call: '+Name);
  End;
 End;
 

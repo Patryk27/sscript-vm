@@ -59,6 +59,9 @@ Unit vm_header;
  // TCallHandler
  Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 
+ // TStopReason
+ Type TStopReason = (srNormal, srException);
+
  (* ========== constants ========== *)
  Const MixedValueTypeNames: Array[TMixedValueType] of String = ('none', 'bool', 'char', 'int', 'float', 'string', 'reference');
 
@@ -72,7 +75,9 @@ Unit vm_header;
  Function StackPop(VM: Pointer): TMixedValue;                                                                        stdcall external 'ssvm.dll';
  Procedure ThrowException(VM: Pointer; Exception: TExceptionBlock);                                                  stdcall external 'ssvm.dll';
  Procedure FreeVM(VM: Pointer);                                                                                      stdcall external 'ssvm.dll';
- Function getVersion: PChar;                                                                                         stdcall external 'ssvm.dll';
+ Function GetStopReason(VM: Pointer): TStopReason;                                                                   stdcall external 'ssvm.dll';
+ Function GetException(VM: Pointer): TExceptionBlock;                                                                stdcall external 'ssvm.dll';
+ Function GetVersion: PChar;                                                                                         stdcall external 'ssvm.dll';
 
  (* ========== auxiliary functions ========== *)
  Operator := (Value: Boolean): TMixedValue;

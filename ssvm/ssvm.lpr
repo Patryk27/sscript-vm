@@ -19,7 +19,7 @@
 *)
 
 {$IFDEF CPU64}
- {$FATAL 64-bit architectures are not supported!}
+ {$FATAL 64-bit architecture is not supported!}
 {$ENDIF}
 
 {$H+}
@@ -83,8 +83,8 @@ Begin
   FreeMem(PVM(VM));
 End;
 
-{ getVersion }
-Function getVersion: PChar; stdcall;
+{ GetVersion }
+Function GetVersion: PChar; stdcall;
 Begin
  Result := VM.VMVersion;
 End;
@@ -95,11 +95,14 @@ Exports
  GetErrorMsg,
  LoadProgram,
  FreeVM,
- getVersion,
+ GetVersion,
  VM_Run name 'Run',
  VM_AddInternalCall name 'AddInternalCall',
  VM_StackPush name 'StackPush',
- VM_StackPop name 'StackPop';
+ VM_StackPop name 'StackPop',
+ VM_ThrowException name 'ThrowException',
+ VM_GetException name 'GetException',
+ VM_GetStopReason name 'GetStopReason';
 
 Begin
 End.

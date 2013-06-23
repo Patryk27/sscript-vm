@@ -45,7 +45,7 @@ Unit vm_header;
       TMixedValueArray = Array of TMixedValue;
 
  {$IF sizeof(TMixedValue) <> 64}
-  {$FATAL Size of TMixedValue structure must have exactly 64 bytes!}
+  {$FATAL Size of TMixedValue structure must be exactly 64 bytes!}
  {$ENDIF}
 
  // TExceptionBlock

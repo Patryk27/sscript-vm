@@ -9,7 +9,7 @@ Unit VM;
  Interface
  Uses FGL, Stack;
 
- Const VMVersion = '0.3.2 nightly';
+ Const VMVersion = '0.3.2';
 
  Const SupportedBytecode: Record
                            Major, Minor: uint8;

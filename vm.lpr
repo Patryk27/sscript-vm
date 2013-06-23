@@ -92,7 +92,7 @@ Begin
     Writeln('VM Exception! ', E.Message);
   End;
  Finally
-  if (getStopReason(VM) = srException) Then
+  if (VM <> nil) and (getStopReason(VM) = srException) Then
   Begin
    Writeln('Exception has been thrown:');
    Writeln;

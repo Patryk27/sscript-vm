@@ -12,20 +12,18 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="37"/>
-        <CursorPos X="57" Y="61"/>
+        <TopLine Value="70"/>
+        <CursorPos X="22" Y="95"/>
         <UsageCount Value="39"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="vm_header.pas"/>
         <UnitName Value="vm_header"/>
-        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="209"/>
-        <CursorPos X="5" Y="241"/>
+        <TopLine Value="19"/>
+        <CursorPos X="48" Y="48"/>
         <UsageCount Value="18"/>
-        <Loaded Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\packages\xforms\examples\minput.pp"/>
@@ -109,8 +107,8 @@
         <Filename Value="ssvm\vm.pas"/>
         <UnitName Value="VM"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="140"/>
-        <CursorPos X="21" Y="152"/>
+        <TopLine Value="273"/>
+        <CursorPos X="1" Y="290"/>
         <UsageCount Value="10"/>
       </Unit12>
       <Unit13>
@@ -148,7 +146,7 @@
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="25" HistoryIndex="24">
+    <JumpHistory Count="23" HistoryIndex="22">
       <Position1>
         <Filename Value="vm.lpr"/>
         <Caret Line="79" Column="17" TopLine="62"/>
@@ -190,65 +188,57 @@
         <Caret Line="81" Column="1" TopLine="56"/>
       </Position10>
       <Position11>
-        <Filename Value="vm_header.pas"/>
-        <Caret Line="83" Column="44" TopLine="73"/>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="64" Column="119" TopLine="56"/>
       </Position11>
       <Position12>
-        <Filename Value="vm_header.pas"/>
-        <Caret Line="143" Column="19" TopLine="111"/>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="22" Column="71" TopLine="1"/>
       </Position12>
       <Position13>
-        <Filename Value="vm_header.pas"/>
-        <Caret Line="133" Column="29" TopLine="116"/>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="85" Column="16" TopLine="1"/>
       </Position13>
       <Position14>
         <Filename Value="vm.lpr"/>
-        <Caret Line="64" Column="119" TopLine="56"/>
+        <Caret Line="85" Column="16" TopLine="1"/>
       </Position14>
       <Position15>
         <Filename Value="vm.lpr"/>
-        <Caret Line="22" Column="71" TopLine="1"/>
+        <Caret Line="22" Column="66" TopLine="5"/>
       </Position15>
       <Position16>
         <Filename Value="vm.lpr"/>
-        <Caret Line="85" Column="16" TopLine="1"/>
+        <Caret Line="108" Column="13" TopLine="76"/>
       </Position16>
       <Position17>
-        <Filename Value="vm_header.pas"/>
-        <Caret Line="139" Column="57" TopLine="126"/>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="109" Column="9" TopLine="64"/>
       </Position17>
       <Position18>
         <Filename Value="vm.lpr"/>
-        <Caret Line="85" Column="16" TopLine="1"/>
+        <Caret Line="89" Column="38" TopLine="78"/>
       </Position18>
       <Position19>
         <Filename Value="vm.lpr"/>
-        <Caret Line="22" Column="66" TopLine="5"/>
+        <Caret Line="99" Column="68" TopLine="78"/>
       </Position19>
       <Position20>
         <Filename Value="vm.lpr"/>
-        <Caret Line="108" Column="13" TopLine="76"/>
+        <Caret Line="105" Column="20" TopLine="78"/>
       </Position20>
       <Position21>
         <Filename Value="vm.lpr"/>
-        <Caret Line="109" Column="9" TopLine="64"/>
+        <Caret Line="54" Column="53" TopLine="41"/>
       </Position21>
       <Position22>
         <Filename Value="vm.lpr"/>
-        <Caret Line="89" Column="38" TopLine="78"/>
+        <Caret Line="99" Column="21" TopLine="75"/>
       </Position22>
       <Position23>
         <Filename Value="vm.lpr"/>
-        <Caret Line="99" Column="68" TopLine="78"/>
+        <Caret Line="95" Column="85" TopLine="70"/>
       </Position23>
-      <Position24>
-        <Filename Value="vm.lpr"/>
-        <Caret Line="105" Column="20" TopLine="78"/>
-      </Position24>
-      <Position25>
-        <Filename Value="vm.lpr"/>
-        <Caret Line="54" Column="53" TopLine="41"/>
-      </Position25>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>

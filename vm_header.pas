@@ -20,6 +20,7 @@
 Unit vm_header;
 
  Interface
+ Uses SysUtils;
 
  (* ========== constants ========== *)
  Const NO_ERROR            = 0;
@@ -73,11 +74,26 @@ Unit vm_header;
  Procedure AddInternalCall(VM: Pointer; PackageName, FunctionName: PChar; ParamCount: uint8; Handler: TCallHandler); stdcall external 'ssvm.dll';
  Procedure StackPush(VM: Pointer; Element: TMixedValue);                                                             stdcall external 'ssvm.dll';
  Function StackPop(VM: Pointer): TMixedValue;                                                                        stdcall external 'ssvm.dll';
+ Procedure VM_SetEB(VM: Pointer; RegNum: Byte; RegValue: Boolean);                                                   stdcall external 'ssvm.dll';
+ Procedure VM_SetEC(VM: Pointer; RegNum: Byte; RegValue: Char);                                                      stdcall external 'ssvm.dll';
+ Procedure VM_SetEI(VM: Pointer; RegNum: Byte; RegValue: Int64);                                                     stdcall external 'ssvm.dll';
+ Procedure VM_SetEF(VM: Pointer; RegNum: Byte; RegValue: Extended);                                                  stdcall external 'ssvm.dll';
+ Procedure VM_SetES(VM: Pointer; RegNum: Byte; RegValue: PChar);                                                     stdcall external 'ssvm.dll';
+ Procedure VM_SetER(VM: Pointer; RegNum: Byte; RegValue: Pointer);                                                   stdcall external 'ssvm.dll';
+ Function VM_GetEB(VM: Pointer; RegNum: Byte): Boolean;                                                              stdcall external 'ssvm.dll';
+ Function VM_GetEC(VM: Pointer; RegNum: Byte): Char;                                                                 stdcall external 'ssvm.dll';
+ Function VM_GetEI(VM: Pointer; RegNum: Byte): Int64;                                                                stdcall external 'ssvm.dll';
+ Function VM_GetEF(VM: Pointer; RegNum: Byte): Extended;                                                             stdcall external 'ssvm.dll';
+ Function VM_GetES(VM: Pointer; RegNum: Byte): PChar;                                                                stdcall external 'ssvm.dll';
+ Function VM_GetER(VM: Pointer; RegNum: Byte): Pointer;                                                              stdcall external 'ssvm.dll';
  Procedure ThrowException(VM: Pointer; Exception: TExceptionBlock);                                                  stdcall external 'ssvm.dll';
  Procedure FreeVM(VM: Pointer);                                                                                      stdcall external 'ssvm.dll';
  Function GetStopReason(VM: Pointer): TStopReason;                                                                   stdcall external 'ssvm.dll';
  Function GetException(VM: Pointer): TExceptionBlock;                                                                stdcall external 'ssvm.dll';
  Function GetVersion: PChar;                                                                                         stdcall external 'ssvm.dll';
+
+ (* ========== auxiliary types ========== *)
+ Type EScriptError = Class(Exception);
 
  (* ========== auxiliary functions ========== *)
  Operator := (Value: Boolean): TMixedValue;
@@ -99,7 +115,6 @@ Unit vm_header;
  Function getString(MV: TMixedValue): String;
 
  Implementation
-Uses SysUtils;
 
 // CopyStringToPChar
 Function CopyStringToPChar(const S: String): PChar;
@@ -201,7 +216,7 @@ End;
 Function getBool(MV: TMixedValue): Boolean;
 Begin
  if (MV.Typ <> mvBool) Then
-  raise Exception.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'bool']);
+  raise EScriptError.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'bool']);
 
  Result := MV.Value.Bool;
 End;
@@ -210,7 +225,7 @@ End;
 Function getChar(MV: TMixedValue): Char;
 Begin
  if (MV.Typ <> mvChar) Then
-  raise Exception.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'char']);
+  raise EScriptError.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'char']);
 
  Result := MV.Value.Char;
 End;
@@ -219,7 +234,7 @@ End;
 Function getInt(MV: TMixedValue): Int64;
 Begin
  if (MV.Typ <> mvInt) Then
-  raise Exception.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'int']);
+  raise EScriptError.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'int']);
 
  Result := MV.Value.Int;
 End;
@@ -232,7 +247,7 @@ Begin
   mvFloat: Result := MV.Value.Float;
 
   else
-   raise Exception.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'float']);
+   raise EScriptError.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'float']);
  End;
 End;
 
@@ -240,7 +255,7 @@ End;
 Function getString(MV: TMixedValue): String;
 Begin
  if (MV.Typ <> mvString) Then
-  raise Exception.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'string']);
+  raise EScriptError.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'string']);
 
  Result := MV.Value.Str;
 End;

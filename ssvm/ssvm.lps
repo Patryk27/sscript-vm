@@ -12,8 +12,8 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
+        <TopLine Value="89"/>
+        <CursorPos X="37" Y="114"/>
         <UsageCount Value="46"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -22,8 +22,8 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="VM"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="34" Y="12"/>
+        <TopLine Value="413"/>
+        <CursorPos X="36" Y="432"/>
         <UsageCount Value="46"/>
       </Unit1>
       <Unit2>
@@ -40,8 +40,8 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="Stack"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="5"/>
-        <CursorPos X="30" Y="22"/>
+        <TopLine Value="41"/>
+        <CursorPos X="49" Y="154"/>
         <UsageCount Value="46"/>
       </Unit3>
       <Unit4>
@@ -95,8 +95,8 @@
         <Filename Value="opcodes.pas"/>
         <UnitName Value="Opcodes"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="639"/>
-        <CursorPos X="56" Y="659"/>
+        <TopLine Value="8"/>
+        <CursorPos X="19" Y="26"/>
         <UsageCount Value="24"/>
       </Unit10>
       <Unit11>
@@ -111,15 +111,15 @@
         <Filename Value="objects.pas"/>
         <UnitName Value="Objects"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="115"/>
-        <CursorPos X="47" Y="88"/>
+        <TopLine Value="1"/>
+        <CursorPos X="39" Y="16"/>
         <UsageCount Value="20"/>
       </Unit12>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="5" HistoryIndex="4">
+    <JumpHistory Count="6" HistoryIndex="5">
       <Position1>
         <Filename Value="ssvm.lpr"/>
         <Caret Line="84" Column="5" TopLine="66"/>
@@ -140,6 +140,10 @@
         <Filename Value="ssvm.lpr"/>
         <Caret Line="28" Column="29" TopLine="1"/>
       </Position5>
+      <Position6>
+        <Filename Value="ssvm.lpr"/>
+        <Caret Line="6" Column="63" TopLine="16"/>
+      </Position6>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>

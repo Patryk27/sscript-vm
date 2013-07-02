@@ -9,7 +9,7 @@ Unit VM;
  Interface
  Uses FGL, Stack;
 
- Const VMVersion = '0.3.2';
+ Const VMVersion = '0.3.3 nightly';
 
  Const SupportedBytecode: Record
                            Major, Minor: uint8;
@@ -130,8 +130,23 @@ Unit VM;
  Procedure VM_Create(VM: Pointer; FileName: PChar); stdcall;
  Procedure VM_Run(VM: Pointer; EntryPoint: uint32); stdcall;
  Procedure VM_AddInternalCall(VM: Pointer; PackageName, FunctionName: PChar; ParamCount: uint8; Handler: TCallHandler); stdcall;
+
  Procedure VM_StackPush(VM: Pointer; Element: TMixedValue); stdcall;
  Function VM_StackPop(VM: Pointer): TMixedValue; stdcall;
+
+ Procedure VM_SetEB(VM: Pointer; RegNum: Byte; RegValue: Boolean); stdcall;
+ Procedure VM_SetEC(VM: Pointer; RegNum: Byte; RegValue: Char); stdcall;
+ Procedure VM_SetEI(VM: Pointer; RegNum: Byte; RegValue: Int64); stdcall;
+ Procedure VM_SetEF(VM: Pointer; RegNum: Byte; RegValue: Extended); stdcall;
+ Procedure VM_SetES(VM: Pointer; RegNum: Byte; RegValue: PChar); stdcall;
+ Procedure VM_SetER(VM: Pointer; RegNum: Byte; RegValue: Pointer); stdcall;
+ Function VM_GetEB(VM: Pointer; RegNum: Byte): Boolean; stdcall;
+ Function VM_GetEC(VM: Pointer; RegNum: Byte): Char; stdcall;
+ Function VM_GetEI(VM: Pointer; RegNum: Byte): Int64; stdcall;
+ Function VM_GetEF(VM: Pointer; RegNum: Byte): Extended; stdcall;
+ Function VM_GetES(VM: Pointer; RegNum: Byte): PChar; stdcall;
+ Function VM_GetER(VM: Pointer; RegNum: Byte): Pointer; stdcall;
+
  Procedure VM_ThrowException(VM: Pointer; Exception: TExceptionBlock); stdcall;
  Function VM_GetException(VM: Pointer): TExceptionBlock; stdcall;
  Function VM_GetStopReason(VM: Pointer): TStopReason; stdcall;
@@ -258,6 +273,114 @@ Begin
   Dec(StackPos^);
   Result := Stack[StackPos^];
  End;
+End;
+
+(* VM_SetEB *)
+{
+ Sets `eb#` or `if` register value.
+}
+Procedure VM_SetEB(VM: Pointer; RegNum: Byte; RegValue: Boolean); stdcall;
+Begin
+ PVM(VM)^.Regs.b[RegNum] := RegValue;
+End;
+
+(* VM_SetEC *)
+{
+ Sets `ec#` register value.
+}
+Procedure VM_SetEC(VM: Pointer; RegNum: Byte; RegValue: Char); stdcall;
+Begin
+ PVM(VM)^.Regs.c[RegNum] := RegValue;
+End;
+
+(* VM_SetEI *)
+{
+ Sets `ei#` or `stp` register value.
+}
+Procedure VM_SetEI(VM: Pointer; RegNum: Byte; RegValue: Int64); stdcall;
+Begin
+ PVM(VM)^.Regs.i[RegNum] := RegValue;
+End;
+
+(* VM_SetEF *)
+{
+ Sets `ef#` register value.
+}
+Procedure VM_SetEF(VM: Pointer; RegNum: Byte; RegValue: Extended); stdcall;
+Begin
+ PVM(VM)^.Regs.f[RegNum] := RegValue;
+End;
+
+(* VM_SetES *)
+{
+ Sets `es#` register value.
+}
+Procedure VM_SetES(VM: Pointer; RegNum: Byte; RegValue: PChar); stdcall;
+Begin
+ PVM(VM)^.Regs.s[RegNum] := CopyStringToPChar(RegValue);
+End;
+
+(* VM_SetER *)
+{
+ Sets `er#` register value.
+}
+Procedure VM_SetER(VM: Pointer; RegNum: Byte; RegValue: Pointer); stdcall;
+Begin
+ PVM(VM)^.Regs.r[RegNum] := RegValue;
+End;
+
+(* VM_GetEB *)
+{
+ Returns `eb#` or `if` register value.
+}
+Function VM_GetEB(VM: Pointer; RegNum: Byte): Boolean; stdcall;
+Begin
+ Result := PVM(VM)^.Regs.b[RegNum];
+End;
+
+(* VM_GetEC *)
+{
+ Returns `ec#` register value.
+}
+Function VM_GetEC(VM: Pointer; RegNum: Byte): Char; stdcall;
+Begin
+ Result := PVM(VM)^.Regs.c[RegNum];
+End;
+
+(* VM_GetEI *)
+{
+ Returns `ei#` or `stp` register value.
+}
+Function VM_GetEI(VM: Pointer; RegNum: Byte): Int64; stdcall;
+Begin
+ Result := PVM(VM)^.Regs.i[RegNum];
+End;
+
+(* VM_GetEF *)
+{
+ Returns `ef#` register value.
+}
+Function VM_GetEF(VM: Pointer; RegNum: Byte): Extended; stdcall;
+Begin
+ Result := PVM(VM)^.Regs.f[RegNum];
+End;
+
+(* VM_GetES *)
+{
+ Returns `es#` register value.
+}
+Function VM_GetES(VM: Pointer; RegNum: Byte): PChar; stdcall;
+Begin
+ Result := CopyStringToPChar(PVM(VM)^.Regs.s[RegNum]);
+End;
+
+(* VM_GetER *)
+{
+ Returns `er#` register value.
+}
+Function VM_GetER(VM: Pointer; RegNum: Byte): Pointer; stdcall;
+Begin
+ Result := PVM(VM)^.Regs.r[RegNum];
 End;
 
 (* VM_ThrowException *)

@@ -28,11 +28,11 @@ Procedure _print(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Var Str: String;
 Begin
  Case Params[0].Typ of
-  mvBool  : Str := BoolToStr(Params[0].Value.Bool, 'true', 'false');
-  mvChar  : Str := Params[0].Value.Char;
-  mvInt   : Str := IntToStr(Params[0].Value.Int);
-  mvFloat : Str := FloatToStr(Params[0].Value.Float);
-  mvString: Str := Params[0].Value.Str;
+  mvBool     : Str := BoolToStr(Params[0].Value.Bool, 'true', 'false');
+  mvChar     : Str := Params[0].Value.Char;
+  mvInt      : Str := IntToStr(Params[0].Value.Int);
+  mvFloat    : Str := FloatToStr(Params[0].Value.Float);
+  mvString   : Str := Params[0].Value.Str;
   mvReference: Str := '<object: 0x'+IntToHex(Params[0].Value.Int, 8)+'>';
   else
    raise Exception.CreateFmt('Invalid "output.print" icall: unknown parameter type: %d', [ord(Params[0].Typ)]);
@@ -54,10 +54,6 @@ End;
 { output.set_size }
 Procedure _set_size(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
 Begin
- Writeln(Params[0].Typ);
- Writeln(Params[1].Typ);
- Writeln(Params[2].Typ);
- Writeln(Params[3].Typ);
  SetConsoleSize(getInt(Params[0]), getInt(Params[1]), getInt(Params[2]), getInt(Params[3]));
 End;
 

@@ -13,7 +13,7 @@ Unit Objects;
  { TMObject }
  Type TMObject = Class
                   Private
-                   SomeField: Integer;
+                   SomeField: LongWord;
 
                   Public
                    Constructor Create;

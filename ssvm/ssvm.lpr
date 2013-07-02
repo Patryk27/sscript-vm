@@ -96,10 +96,27 @@ Exports
  LoadProgram,
  FreeVM,
  GetVersion,
+
  VM_Run name 'Run',
  VM_AddInternalCall name 'AddInternalCall',
+
  VM_StackPush name 'StackPush',
  VM_StackPop name 'StackPop',
+
+ VM_SetEB name 'SetEB',
+ VM_SetEC name 'SetEC',
+ VM_SetEI name 'SetEI',
+ VM_SetEF name 'SetEF',
+ VM_SetES name 'SetES',
+ VM_SetER name 'SetER',
+
+ VM_GetEB name 'GetEB',
+ VM_GetEC name 'GetEC',
+ VM_GetEI name 'GetEI',
+ VM_GetEF name 'GetEF',
+ VM_GetES name 'GetES',
+ VM_GetER name 'GetER',
+
  VM_ThrowException name 'ThrowException',
  VM_GetException name 'GetException',
  VM_GetStopReason name 'GetStopReason';

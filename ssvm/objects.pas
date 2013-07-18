@@ -13,19 +13,19 @@ Unit Objects;
  { TMObject }
  Type TMObject = Class
                   Private
-                   SomeField: LongWord;
+                   VM: PVM;
 
                   Public
-                   Constructor Create;
+                   isMarked: Boolean; // used in garbage collector
 
-                   Procedure Test;
-                   Function getAddress: Pointer;
+                   Constructor Create(const fVM: PVM);
+
+                   Procedure GC_Mark; virtual;
                   End;
 
  { TMArray }
  Type TMArray = Class (TMObject)
                  Private
-                  VM       : PVM;
                   Data     : Pointer; // array data
                   Typ      : Byte; // array internal type ID
                   CTypeSize: Byte; // internal type size
@@ -38,12 +38,17 @@ Unit Objects;
                   Constructor Create(const fVM: Pointer; const fType: Byte; fSizes: uint32Array);
                   Destructor Destroy; override;
 
+                  Procedure GC_Mark; override;
+
                   Procedure setValue(const Position: uint32Array; NewValue: TMixedValue); // set element's value
                   Function getValue(const Position: uint32Array): TMixedValue; // get element's value
                   Function getSize(const Dimension: Byte): uint32; // get dimension's size
                  End;
 
  Implementation
+Uses GC;
+
+// @TODO: separate procedures below into another file
 
 { FreeString }
 Procedure FreeString(const MemPos: Pointer); inline;
@@ -90,32 +95,26 @@ Begin
 
  Inc(Mem, sizeof(uint32));
  Result := PChar(Mem);
-// For I := 0 To Len-1 Do
-// Result += PChar(Mem+I)^;
 End;
 
 (* ========== TMObject ========== *)
 
-{ TMObject.Create }
-Constructor TMObject.Create;
+(* TMObject.Create *)
+Constructor TMObject.Create(const fVM: PVM);
 Begin
+ VM := fVM;
+ TGarbageCollector(VM^.GarbageCollector).PutObject(self);
 End;
 
-{ TMObject.Test }
-Procedure TMObject.Test;
+(* TMObject.GC_Mark *)
+Procedure TMObject.GC_Mark;
 Begin
- SomeField := $CAFEBABE;
-End;
-
-{ TMObject.getAddress }
-Function TMObject.getAddress: Pointer;
-Begin
- Result := self;
+ isMarked := True;
 End;
 
 (* ========== TMArray =========== *)
 
-{ TMArray.getElementMemory }
+(* TMArray.getElementMemory *)
 Function TMArray.getElementMemory(Position: uint32Array): Pointer;
 Var I: Integer;
 Begin
@@ -138,12 +137,13 @@ Begin
  Result += uint32(Data);
 End;
 
-{ TMArray.Create }
+(* TMArray.Create *)
 Constructor TMArray.Create(const fVM: Pointer; const fType: Byte; fSizes: uint32Array);
 Var I: uint32;
 Begin
+ inherited Create(fVM);
+
  { set class fields }
- VM        := fVM;
  Typ       := fType;
  CTypeSize := TypeSize[fType];
  Sizes     := fSizes;
@@ -161,11 +161,11 @@ Begin
   PByte(Data+I)^ := 0;
 End;
 
-{ TMArray.Destroy }
+(* TMArray.Destroy *)
 Destructor TMArray.Destroy;
 Var Mem, MemEnd: Pointer;
 Begin
- if (Typ = TYPE_STRING) Then // strings need a special destroying
+ if (Typ = TYPE_STRING) Then // strings need a special freeing
  Begin
   Mem    := Data;
   MemEnd := Mem+MemSize;
@@ -180,7 +180,30 @@ Begin
  FreeMem(Data);
 End;
 
-{ TMArray.setValue }
+(* TMArray.GC_Mark *)
+Procedure TMArray.GC_Mark;
+Var Mem, MemEnd: Pointer;
+    Obj        : TMObject;
+Begin
+ inherited;
+
+ if (Typ = TYPE_INT) Then
+ Begin
+  Mem    := Data;
+  MemEnd := Mem+MemSize;
+
+  While (Mem < MemEnd) Do
+  Begin
+   Obj := TMObject(Pointer(Pint64(Mem)^));
+   if (VM^.isValidObject(Obj)) Then
+    Obj.GC_Mark;
+
+   Inc(Mem, sizeof(int64));
+  End;
+ End;
+End;
+
+(* TMArray.setValue *)
 Procedure TMArray.setValue(const Position: uint32Array; NewValue: TMixedValue);
 Var DataPos: Pointer;
     Str    : String;
@@ -197,9 +220,11 @@ Begin
   End;
 
   Case self.Typ of
-   TYPE_BOOL, TYPE_CHAR, TYPE_INT: Puint32(DataPos)^ := Value.Int;
-   TYPE_STRING                   : SaveString(DataPos, getString(NewValue));
-   TYPE_FLOAT                    : PExtended(DataPos)^ := getFloat(NewValue);
+   TYPE_BOOL  : PBoolean(DataPos)^ := Value.Bool;
+   TYPE_CHAR  : PChar(DataPos)^ := Value.Char;
+   TYPE_INT   : Pint64(DataPos)^ := Value.Int;
+   TYPE_FLOAT : PExtended(DataPos)^ := getFloat(NewValue);
+   TYPE_STRING: SaveString(DataPos, getString(NewValue));
 
    else
     raise Exception.CreateFmt('Invalid internal array type: %d', [ord(Typ)]);
@@ -207,7 +232,7 @@ Begin
  End;
 End;
 
-{ TMArray.getValue }
+(* TMArray.getValue *)
 Function TMArray.getValue(const Position: uint32Array): TMixedValue;
 Var DataPos: Pointer;
 Begin
@@ -227,9 +252,11 @@ Begin
   End;
 
   Case Typ of
-   mvBool, mvChar, mvInt: Value.Int   := Puint32(DataPos)^;
-   mvString             : Value.Str   := LoadString(DataPos);
-   mvFloat              : Value.Float := PExtended(DataPos)^;
+   mvBool  : Value.Bool  := PBoolean(DataPos)^;
+   mvChar  : Value.Char  := PChar(DataPos)^;
+   mvInt   : Value.Int   := Pint64(DataPos)^;
+   mvFloat : Value.Float := PExtended(DataPos)^;
+   mvString: Value.Str   := LoadString(DataPos);
   End;
 
   if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING) Then
@@ -240,7 +267,7 @@ Begin
  End;
 End;
 
-{ TMArray.getSize }
+(* TMArray.getSize *)
 Function TMArray.getSize(const Dimension: Byte): uint32;
 Begin
  if (Dimension = 0) or (Dimension > Length(Sizes)) Then

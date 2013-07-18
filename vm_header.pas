@@ -69,28 +69,34 @@ Unit vm_header;
  (* ========== functions imported from DLL ========== *)
  Function GetErrorID: uint8;                                                                                         stdcall external 'ssvm.dll';
  Function GetErrorMsg: PChar;                                                                                        stdcall external 'ssvm.dll';
- Function LoadProgram(FileName: PChar): Pointer;                                                                     stdcall external 'ssvm.dll';
+ Function GetVersion: PChar;                                                                                         stdcall external 'ssvm.dll';
+
+ Function LoadProgram(FileName: PChar; GCMemoryLimit: uint32): Pointer;                                              stdcall external 'ssvm.dll';
+
  Procedure Run(VM: Pointer; EntryPoint: uint32=0);                                                                   stdcall external 'ssvm.dll';
+ Procedure Free(VM: Pointer);                                                                                        stdcall external 'ssvm.dll';
+
  Procedure AddInternalCall(VM: Pointer; PackageName, FunctionName: PChar; ParamCount: uint8; Handler: TCallHandler); stdcall external 'ssvm.dll';
+
  Procedure StackPush(VM: Pointer; Element: TMixedValue);                                                             stdcall external 'ssvm.dll';
  Function StackPop(VM: Pointer): TMixedValue;                                                                        stdcall external 'ssvm.dll';
- Procedure VM_SetEB(VM: Pointer; RegNum: Byte; RegValue: Boolean);                                                   stdcall external 'ssvm.dll';
- Procedure VM_SetEC(VM: Pointer; RegNum: Byte; RegValue: Char);                                                      stdcall external 'ssvm.dll';
- Procedure VM_SetEI(VM: Pointer; RegNum: Byte; RegValue: Int64);                                                     stdcall external 'ssvm.dll';
- Procedure VM_SetEF(VM: Pointer; RegNum: Byte; RegValue: Extended);                                                  stdcall external 'ssvm.dll';
- Procedure VM_SetES(VM: Pointer; RegNum: Byte; RegValue: PChar);                                                     stdcall external 'ssvm.dll';
- Procedure VM_SetER(VM: Pointer; RegNum: Byte; RegValue: Pointer);                                                   stdcall external 'ssvm.dll';
- Function VM_GetEB(VM: Pointer; RegNum: Byte): Boolean;                                                              stdcall external 'ssvm.dll';
- Function VM_GetEC(VM: Pointer; RegNum: Byte): Char;                                                                 stdcall external 'ssvm.dll';
- Function VM_GetEI(VM: Pointer; RegNum: Byte): Int64;                                                                stdcall external 'ssvm.dll';
- Function VM_GetEF(VM: Pointer; RegNum: Byte): Extended;                                                             stdcall external 'ssvm.dll';
- Function VM_GetES(VM: Pointer; RegNum: Byte): PChar;                                                                stdcall external 'ssvm.dll';
- Function VM_GetER(VM: Pointer; RegNum: Byte): Pointer;                                                              stdcall external 'ssvm.dll';
+
+ Procedure SetEB(VM: Pointer; RegNum: Byte; RegValue: Boolean);                                                      stdcall external 'ssvm.dll';
+ Procedure SetEC(VM: Pointer; RegNum: Byte; RegValue: Char);                                                         stdcall external 'ssvm.dll';
+ Procedure SetEI(VM: Pointer; RegNum: Byte; RegValue: Int64);                                                        stdcall external 'ssvm.dll';
+ Procedure SetEF(VM: Pointer; RegNum: Byte; RegValue: Extended);                                                     stdcall external 'ssvm.dll';
+ Procedure SetES(VM: Pointer; RegNum: Byte; RegValue: PChar);                                                        stdcall external 'ssvm.dll';
+ Procedure SetER(VM: Pointer; RegNum: Byte; RegValue: Pointer);                                                      stdcall external 'ssvm.dll';
+ Function GetEB(VM: Pointer; RegNum: Byte): Boolean;                                                                 stdcall external 'ssvm.dll';
+ Function GetEC(VM: Pointer; RegNum: Byte): Char;                                                                    stdcall external 'ssvm.dll';
+ Function GetEI(VM: Pointer; RegNum: Byte): Int64;                                                                   stdcall external 'ssvm.dll';
+ Function GetEF(VM: Pointer; RegNum: Byte): Extended;                                                                stdcall external 'ssvm.dll';
+ Function GetES(VM: Pointer; RegNum: Byte): PChar;                                                                   stdcall external 'ssvm.dll';
+ Function GetER(VM: Pointer; RegNum: Byte): Pointer;                                                                 stdcall external 'ssvm.dll';
+
  Procedure ThrowException(VM: Pointer; Exception: TExceptionBlock);                                                  stdcall external 'ssvm.dll';
- Procedure FreeVM(VM: Pointer);                                                                                      stdcall external 'ssvm.dll';
  Function GetStopReason(VM: Pointer): TStopReason;                                                                   stdcall external 'ssvm.dll';
  Function GetException(VM: Pointer): TExceptionBlock;                                                                stdcall external 'ssvm.dll';
- Function GetVersion: PChar;                                                                                         stdcall external 'ssvm.dll';
 
  (* ========== auxiliary types ========== *)
  Type EScriptError = Class(Exception);

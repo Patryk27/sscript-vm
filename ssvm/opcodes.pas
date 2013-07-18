@@ -18,7 +18,6 @@ Unit Opcodes;
                    o_not, o_or, o_xor, o_and, o_shl, o_shr,
                    o_mod,
                    o_arset, o_arget, o_arcrt, o_arlen,
-                   o_objfree,
                    o_loc_file, o_loc_func, o_loc_line);
 
  Procedure op_(VM: PVM);
@@ -58,7 +57,6 @@ Unit Opcodes;
  Procedure op_ARGET(VM: PVM);
  Procedure op_ARCRT(VM: PVM);
  Procedure op_ARLEN(VM: PVM);
- Procedure op_OBJFREE(VM: PVM);
  Procedure op_LOCATION(VM: PVM);
 
  Type TOpcodeProc = Procedure(VM: PVM);
@@ -99,7 +97,6 @@ Unit Opcodes;
   @op_ARGET,
   @op_ARCRT,
   @op_ARLEN,
-  @op_OBJFREE,
   @op_LOCATION,
   @op_LOCATION,
   @op_LOCATION
@@ -1266,8 +1263,8 @@ Begin
   ArrayObj := TMArray.Create(VM, getInt(typ), Sizes);
 
   Case refreg.Typ of
-   mvInt      : Regs.i[refreg.RegIndex] := uint64(ArrayObj.getAddress);
-   mvReference: Regs.r[refreg.RegIndex] := ArrayObj.getAddress;
+   mvInt      : Regs.i[refreg.RegIndex] := uint64(Pointer(ArrayObj));
+   mvReference: Regs.r[refreg.RegIndex] := ArrayObj;
 
    else
     raise eInvalidOpcode.Create('''arcrt'' called with arguments: '+getTypeName(refreg)+', '+getTypeName(typ)+', '+getTypeName(dimcount));
@@ -1295,16 +1292,9 @@ Begin
  End;
 End;
 
-{ OBJFREE }
-Procedure op_OBJFREE(VM: PVM);
-Begin
- With VM^ do
-  TMObject(CheckObject(getReference(read_param))).Free;
-End;
-
 { LOCATION }
 Procedure op_LOCATION(VM: PVM);
 Begin
- VM^.read_param; // do nothing, just skip param
+ VM^.read_param; // do nothing, just skip the parameter
 End;
 End.

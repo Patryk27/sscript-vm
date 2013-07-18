@@ -60,7 +60,7 @@ Unit VM;
 
  // -- virtual machine -- //
  Type PVM = ^TVM;
-      TVM = Packed Record
+      TVM = Record
              InternalCallList: TCallList; // list of registered icall-s
 
              CodeData: PByte; // pointer to the bytecode block
@@ -90,8 +90,10 @@ Unit VM;
              LastException   : TExceptionBlock; // last exception block
              StackPos        : PInt64; // pointer at `Regs.i[5]` - current stack position
 
-             Stop      : Boolean; // used by the `stop()` opcode
+             Stop      : Boolean; // used by the `stop()` opcode, if equal `true` - VM stops executing bytecode
              StopReason: TStopReason;
+
+             GarbageCollector: Pointer;
 
           (* -- procedures and functions for internal use -- *)
              Procedure SetPosition(const Pos: uint32);
@@ -113,22 +115,25 @@ Unit VM;
              Function read_param: TMixedValue; inline;
 
              // -- stack operations -- //
-             Procedure StackPush(E: TStackElement);
-             Function StackPop: TStackElement;
+             Procedure StackPush(E: TStackElement); inline;
+             Function StackPop: TStackElement; inline;
 
              // -- exception handling -- //
-             Procedure ThrowException(Exception: TExceptionBlock);
-             Procedure ThrowExceptionByMessage(Msg: PChar);
+             Procedure ThrowException(Exception: TExceptionBlock); inline;
+             Procedure ThrowExceptionByMessage(Msg: PChar); inline;
 
              // -- object handling -- //
              Function CheckObject(const Address: Pointer): Pointer; inline;
+             Function isValidObject(const Obj: Pointer): Boolean; inline;
             End;
 
  Function CopyStringToPChar(const S: String): PChar;
 
  // -------------------- //
- Procedure VM_Create(VM: Pointer; FileName: PChar); stdcall;
+ Procedure VM_Create(VM: Pointer; FileName: PChar; GCMemoryLimit: uint32); stdcall;
  Procedure VM_Run(VM: Pointer; EntryPoint: uint32); stdcall;
+ Procedure VM_Free(VM: Pointer); stdcall;
+
  Procedure VM_AddInternalCall(VM: Pointer; PackageName, FunctionName: PChar; ParamCount: uint8; Handler: TCallHandler); stdcall;
 
  Procedure VM_StackPush(VM: Pointer; Element: TMixedValue); stdcall;
@@ -152,9 +157,10 @@ Unit VM;
  Function VM_GetStopReason(VM: Pointer): TStopReason; stdcall;
 
  Implementation
-Uses SysUtils, Loader, Opcodes, Objects;
+Uses SysUtils, Loader, Opcodes, Objects, GC;
 
-// CopyStringToPChar
+(* CopyStringToPChar *)
+// @TODO: separate it into another procedure
 Function CopyStringToPChar(const S: String): PChar;
 Var I: uint32;
 Begin
@@ -170,7 +176,7 @@ End;
  Sets fields to their default values, allocates memory etc. and loads the specified bytecode file.
  `VM` must points at already allocated memory area!
 }
-Procedure VM_Create(VM: Pointer; FileName: PChar); stdcall;
+Procedure VM_Create(VM: Pointer; FileName: PChar; GCMemoryLimit: uint32); stdcall;
 Var LoaderClass: TLoader;
 Begin
  With PVM(VM)^ do
@@ -190,6 +196,8 @@ Begin
 
   SetLength(Stack, StackElementCount);
   ExceptionStack := GetMem(ExceptionStackSize);
+
+  GarbageCollector := TGarbageCollector.Create(VM, GCMemoryLimit);
  End;
 End;
 
@@ -204,8 +212,8 @@ Begin
   if (CodeData = nil) Then
    raise Exception.Create('Couldn''t run program: no code has been loaded!');
 
- // if (not Loader.isRunnable) Then
- //  raise Exception.Create('Cannot directly run a library!');
+  if (not Loader.isRunnable) Then
+   raise Exception.Create('Cannot run a library!');
 
   ExceptionHandler  := -1;
   LastException.Typ := etNone;
@@ -222,13 +230,32 @@ Begin
   While (not Stop) Do
   Begin
    CurrentOpcode := Position;
-
-  // Writeln('0x', IntToHex(Int64(CurrentOpcode), 2*sizeof(int64)), ' -> ', IntToHex(CurrentOpcode^, 2), ' -> ', TOpcode_E(CurrentOpcode^));
    OpcodeTable[TOpcode_E(read_uint8)](VM);
-  // Case read_uint8 of
-  // End;
   End;
  End;
+End;
+
+(* VM_Free *)
+{
+ Releases memory allocated to the VM instance, and the VM instance itself.
+}
+Procedure VM_Free(VM: Pointer); stdcall;
+Var Call: PCall;
+Begin
+ With PVM(VM)^ do
+ Begin
+  TGarbageCollector(GarbageCollector).Free;
+
+  For Call in InternalCallList Do
+   Dispose(Call);
+  InternalCallList.Free;
+
+  Dispose(CodeData);
+  Dispose(ExceptionStack);
+  SetLength(Stack, 0);
+ End;
+
+ Dispose(PVM(VM));
 End;
 
 (* VM_AddInternalCall *)
@@ -652,7 +679,8 @@ End;
 
 (* TVM.CheckObject *)
 {
- Checks if passed reference is a valid object.
+ Checks if passed reference is a valid object and throws exception if it's not.
+ Returns passed object.
 }
 Function TVM.CheckObject(const Address: Pointer): Pointer;
 Begin
@@ -661,10 +689,16 @@ Begin
  if (Address = nil) Then
   ThrowExceptionByMessage('Null pointer reference');
 
- Try
-  TMObject(Address).Test;
- Except
+ if (not TGarbageCollector(GarbageCollector).findObject(TMObject(Address))) Then
   ThrowExceptionByMessage(PChar('Not a valid object reference: 0x'+IntToHex(uint32(Address), 2*sizeof(uint32))));
- End;
+End;
+
+(* TVM.isValidObject *)
+{
+ Similar to @TVM.CheckObject, but doesn't throw any exception, just returns true/false.
+}
+Function TVM.isValidObject(const Obj: Pointer): Boolean;
+Begin
+ Result := TGarbageCollector(GarbageCollector).findObject(TMObject(Obj));
 End;
 End.

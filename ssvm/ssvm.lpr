@@ -54,7 +54,7 @@ Begin
 End;
 
 { LoadProgram }
-Function LoadProgram(FileName: PChar): Pointer; stdcall;
+Function LoadProgram(FileName: PChar; GCMemoryLimit: uint32): Pointer; stdcall;
 Begin
  SetError(NO_ERROR);
 
@@ -66,7 +66,7 @@ Begin
 
  Try
   Result := AllocMem(sizeof(TVM));
-  VM_Create(Result, FileName);
+  VM_Create(Result, FileName, GCMemoryLimit);
  Except
   On E: Exception Do // exception raised during program load
   Begin
@@ -74,13 +74,6 @@ Begin
    Exit(nil);
   End;
  End;
-End;
-
-{ FreeVM }
-Procedure FreeVM(VM: Pointer); stdcall;
-Begin
- if (VM <> nil) Then
-  FreeMem(PVM(VM));
 End;
 
 { GetVersion }
@@ -93,11 +86,13 @@ End;
 Exports
  GetErrorID,
  GetErrorMsg,
- LoadProgram,
- FreeVM,
  GetVersion,
 
+ LoadProgram,
+
  VM_Run name 'Run',
+ VM_Free name 'Free',
+
  VM_AddInternalCall name 'AddInternalCall',
 
  VM_StackPush name 'StackPush',

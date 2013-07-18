@@ -12,18 +12,20 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="1" Y="1"/>
-        <UsageCount Value="40"/>
+        <TopLine Value="116"/>
+        <CursorPos X="4" Y="131"/>
+        <UsageCount Value="44"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="vm_header.pas"/>
         <UnitName Value="vm_header"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="226"/>
-        <CursorPos X="21" Y="258"/>
-        <UsageCount Value="18"/>
+        <TopLine Value="59"/>
+        <CursorPos X="118" Y="74"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\packages\xforms\examples\minput.pp"/>
@@ -106,10 +108,12 @@
       <Unit12>
         <Filename Value="ssvm\vm.pas"/>
         <UnitName Value="VM"/>
+        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="273"/>
-        <CursorPos X="1" Y="290"/>
+        <TopLine Value="231"/>
+        <CursorPos X="1" Y="246"/>
         <UsageCount Value="10"/>
+        <Loaded Value="True"/>
       </Unit12>
       <Unit13>
         <Filename Value="os_functions.pas"/>
@@ -154,7 +158,7 @@
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="12" HistoryIndex="11">
+    <JumpHistory Count="13" HistoryIndex="12">
       <Position1>
         <Filename Value="vm.lpr"/>
         <Caret Line="85" Column="16" TopLine="1"/>
@@ -201,8 +205,12 @@
       </Position11>
       <Position12>
         <Filename Value="vm.lpr"/>
-        <Caret Line="1" Column="1" TopLine="16"/>
+        <Caret Line="71" Column="33" TopLine="59"/>
       </Position12>
+      <Position13>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="100" Column="96" TopLine="101"/>
+      </Position13>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>

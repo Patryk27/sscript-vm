@@ -37,12 +37,14 @@ Procedure TLoader.OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFu
 Begin
  AStream.Position := 0;
 
- Case AItem.ArchiveFileName of
-  '.header': ParseHeader(AStream);
-  '.bytecode': ParseBytecode(AStream);
+ Try
+  Case AItem.ArchiveFileName of
+   '.header'  : ParseHeader(AStream);
+   '.bytecode': ParseBytecode(AStream);
+  End;
+ Finally
+  AStream.Free;
  End;
-
- AStream.Free;
 End;
 
 (* TLoader.ParseHeader *)

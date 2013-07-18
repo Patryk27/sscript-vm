@@ -103,7 +103,7 @@ Unit Opcodes;
  );
 
  Implementation
-Uses Objects, Stack;
+Uses Objects, Stack, mStrings;
 
 Type eInvalidOpcode = Class(Exception);
 

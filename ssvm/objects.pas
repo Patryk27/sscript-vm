@@ -46,56 +46,7 @@ Unit Objects;
                  End;
 
  Implementation
-Uses GC;
-
-// @TODO: separate procedures below into another file
-
-{ FreeString }
-Procedure FreeString(const MemPos: Pointer); inline;
-Var Mem: Pointer;
-Begin
- Mem := Pointer(Puint32(MemPos)^);
-
- if (Mem <> nil) Then
-  FreeMem(Mem);
-
- Puint32(MemPos)^ := 0;
-End;
-
-{ SaveString }
-Procedure SaveString(const MemPos: Pointer; Str: String); inline;
-Var Mem: Pointer;
-    I  : uint32;
-Begin
- FreeString(MemPos); // free string (if possible)
-
- Mem := Pointer(AllocMem(sizeof(uint32)+Length(Str))); // allocate memory
-
- Puint32(MemPos)^ := uint32(Mem); // at array element, save pointer to allocated memory (there our final string will be hold)
- Puint32(Mem)^    := Length(Str); // save string length
-
- Inc(Mem, sizeof(uint32));
- For I := 1 To Length(Str) Do
-  PChar(Mem+I-1)^ := Str[I];
-End;
-
-{ LoadString }
-Function LoadString(const MemPos: Pointer): PChar; inline;
-Var Mem, Len: uint32;
-Begin
- Result := '';
-
- Mem := Puint32(MemPos)^; // get string's content pointer
- if (Mem = 0) Then // no string associated
-  Exit;
-
- Len := Puint32(Mem)^; // get string's length
- if (Len = 0) Then // no data to be read
-  Exit;
-
- Inc(Mem, sizeof(uint32));
- Result := PChar(Mem);
-End;
+Uses GC, mStrings;
 
 (* ========== TMObject ========== *)
 
@@ -172,7 +123,7 @@ Begin
 
   While (Mem < MemEnd) Do
   Begin
-   FreeString(Mem);
+   ReleaseStringData(Mem);
    Inc(Mem, sizeof(uint32));
   End;
  End;
@@ -256,7 +207,7 @@ Begin
    mvChar  : Value.Char  := PChar(DataPos)^;
    mvInt   : Value.Int   := Pint64(DataPos)^;
    mvFloat : Value.Float := PExtended(DataPos)^;
-   mvString: Value.Str   := LoadString(DataPos);
+   mvString: Value.Str   := CopyStringToPChar(LoadString(DataPos));
   End;
 
   if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING) Then

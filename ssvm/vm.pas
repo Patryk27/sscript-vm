@@ -127,9 +127,6 @@ Unit VM;
              Function isValidObject(const Obj: Pointer): Boolean; inline;
             End;
 
- Function CopyStringToPChar(const S: String): PChar;
-
- // -------------------- //
  Procedure VM_Create(VM: Pointer; FileName: PChar; GCMemoryLimit: uint32); stdcall;
  Procedure VM_Run(VM: Pointer; EntryPoint: uint32); stdcall;
  Procedure VM_Free(VM: Pointer); stdcall;
@@ -157,20 +154,8 @@ Unit VM;
  Function VM_GetStopReason(VM: Pointer): TStopReason; stdcall;
 
  Implementation
-Uses SysUtils, Loader, Opcodes, Objects, GC;
+Uses SysUtils, Loader, Opcodes, Objects, GC, mStrings;
 
-(* CopyStringToPChar *)
-// @TODO: separate it into another procedure
-Function CopyStringToPChar(const S: String): PChar;
-Var I: uint32;
-Begin
- Result := AllocMem(Length(S)+1);
-
- For I := 1 To Length(S) Do
-  Result[I-1] := S[I];
-End;
-
-// -------------------------------------------------------------------------- //
 (* VM_Create *)
 {
  Sets fields to their default values, allocates memory etc. and loads the specified bytecode file.

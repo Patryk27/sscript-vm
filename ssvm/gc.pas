@@ -36,6 +36,16 @@ Uses Stack;
 
 (* TGarbageCollector.Mark *)
 Procedure TGarbageCollector.Mark;
+
+  // TryToMark
+  Procedure TryToMark(const Address: Pointer);
+  Var Obj: TMObject;
+  Begin
+   Obj := TMObject(Address);
+   if (ObjectList.IndexOf(Obj) > -1) and (not Obj.isMarked) Then
+    Obj.GC_Mark;
+  End;
+
 Var Obj: TMObject;
     I  : Integer;
 Begin
@@ -44,11 +54,10 @@ Begin
 
  For I := VM^.Regs.i[5] Downto 0 Do // traverse the stack
   if (VM^.Stack[I].Typ = mvReference) Then
-  Begin
-   Obj := TMObject(Pointer(VM^.Stack[I].Value.Int));
-   if (ObjectList.IndexOf(Obj) > -1) and (not Obj.isMarked) Then
-    Obj.GC_Mark;
-  End;
+   TryToMark(Pointer(VM^.Stack[I].Value.Int));
+
+ For I := Low(VM^.Regs.r) To High(VM^.Regs.r) Do
+  TryToMark(VM^.Regs.r[i]);
 End;
 
 (* TGarbageCollector.Sweep *)

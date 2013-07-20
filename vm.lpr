@@ -85,7 +85,7 @@ Begin
 
   Writeln('-wait        wait for `enter` when finished');
   Writeln('-time        display program''s execution time');
-  Writeln('-gc <value>  change garbage collector''s memory limit, eg.`-gc 512M` will set it to 512 megabytes. Switches: G (GB), M (MB), otherwise bytes. Default: 256 MB. Don''t set it below 64 MB.');
+  Writeln('-gc <value>  change garbage collector''s memory limit, eg.`-gc 512M` will set it to 512 megabytes. Switches: G (GB), M (MB), otherwise bytes are used. Default: 256 MB. Don''t set it below 64 MB.');
 
   Exit;
  End;
@@ -95,41 +95,47 @@ Begin
  if (GCMemoryLimit = 0) Then
   GCMemoryLimit := 256*1024*1024;
 
- VM := LoadProgram(PChar(ParamStr(1)), GCMemoryLimit); // load program
-
- Try
-  if (VM = nil) Then
-  Begin
-   Writeln('LoadProgam() falied!');
-   Writeln('#', GetErrorID, ': ', GetErrorMsg);
-   Exit;
-  End;
-
-  mInput.Init(VM);
-  mOutput.Init(VM);
-  mMath.Init(VM);
-  mString.Init(VM);
-  mTime.Init(VM);
+ if (ParamStr(1) = '-logo') Then
+ Begin
+  WRiteln('SScript Virtual Machine ', getVersion);
+ End Else
+ Begin
+  VM := LoadProgram(PChar(ParamStr(1)), GCMemoryLimit); // load program
 
   Try
-   Time := GetMilliseconds;
-   Run(VM);
-  Except
-   On E: Exception Do
-    Writeln('VM Exception! ', E.Message);
-  End;
- Finally
-  if (VM <> nil) and (getStopReason(VM) = srException) Then
-  Begin
-   Writeln('Exception has been thrown:');
-   Writeln;
-   Writeln(PChar(getException(VM).Data));
-  End;
+   if (VM = nil) Then
+   Begin
+    Writeln('LoadProgam() falied!');
+    Writeln('#', GetErrorID, ': ', GetErrorMsg);
+    Exit;
+   End;
 
-  if (VM <> nil) Then
-   Free(VM);
+   mInput.Init(VM);
+   mOutput.Init(VM);
+   mMath.Init(VM);
+   mString.Init(VM);
+   mTime.Init(VM);
 
-  Time := GetMilliseconds-Time;
+   Try
+    Time := GetMilliseconds;
+    Run(VM);
+   Except
+    On E: Exception Do
+     Writeln('VM Exception! ', E.Message);
+   End;
+  Finally
+   if (VM <> nil) and (getStopReason(VM) = srException) Then
+   Begin
+    Writeln('Exception has been thrown:');
+    Writeln;
+    Writeln(PChar(getException(VM).Data));
+   End;
+
+   if (VM <> nil) Then
+    Free(VM);
+
+   Time := GetMilliseconds-Time;
+  End;
  End;
 
  { -time }

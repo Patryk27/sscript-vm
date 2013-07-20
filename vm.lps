@@ -12,20 +12,18 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="116"/>
-        <CursorPos X="4" Y="131"/>
+        <TopLine Value="76"/>
+        <CursorPos X="51" Y="100"/>
         <UsageCount Value="44"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="vm_header.pas"/>
         <UnitName Value="vm_header"/>
-        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="59"/>
-        <CursorPos X="118" Y="74"/>
+        <TopLine Value="23"/>
+        <CursorPos X="10" Y="29"/>
         <UsageCount Value="20"/>
-        <Loaded Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\packages\xforms\examples\minput.pp"/>
@@ -108,12 +106,10 @@
       <Unit12>
         <Filename Value="ssvm\vm.pas"/>
         <UnitName Value="VM"/>
-        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
         <TopLine Value="231"/>
         <CursorPos X="1" Y="246"/>
         <UsageCount Value="10"/>
-        <Loaded Value="True"/>
       </Unit12>
       <Unit13>
         <Filename Value="os_functions.pas"/>
@@ -158,7 +154,7 @@
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="13" HistoryIndex="12">
+    <JumpHistory Count="12" HistoryIndex="11">
       <Position1>
         <Filename Value="vm.lpr"/>
         <Caret Line="85" Column="16" TopLine="1"/>
@@ -207,10 +203,6 @@
         <Filename Value="vm.lpr"/>
         <Caret Line="71" Column="33" TopLine="59"/>
       </Position12>
-      <Position13>
-        <Filename Value="vm.lpr"/>
-        <Caret Line="100" Column="96" TopLine="101"/>
-      </Position13>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>

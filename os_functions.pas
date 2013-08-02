@@ -29,13 +29,13 @@ Unit os_functions;
  {$FATAL Unknown target operating system!}
 {$ENDIF};
 
- Function GetMilliseconds: LongWord;
+ Function GetMilliseconds: uint32;
  Procedure SetConsoleSize(const Width, Height, WinWidth, WinHeight: Integer);
 
  Implementation
 
 { GetMilliseconds }
-Function GetMilliseconds: LongWord;
+Function GetMilliseconds: uint32;
 {$IF OS_LINUX}
  Var T: timespec;
 {$ENDIF}

@@ -91,6 +91,10 @@ Exports
  LoadProgram,
 
  VM_Run name 'Run',
+ VM_JITCompile name 'JITCompile',
+ VM_GetLastJITError name 'GetLastJITError',
+ VM_GetJITCode name 'GetJITCode',
+ VM_GetJITCodeSize name 'GetJITCodeSize',
  VM_Free name 'Free',
 
  VM_AddInternalCall name 'AddInternalCall',

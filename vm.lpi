@@ -31,7 +31,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <CommandLineParams Value="-logo -wait"/>
+        <CommandLineParams Value="hello_world.ssc -wait"/>
       </local>
     </RunParams>
     <RequiredPackages Count="1">

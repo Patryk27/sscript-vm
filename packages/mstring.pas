@@ -13,7 +13,7 @@ Unit mString;
 Uses vm_header;
 
 { string.length }
-Procedure _length(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _length(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := Length(getString(Params[0]));
 End;

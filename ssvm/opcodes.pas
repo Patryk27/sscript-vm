@@ -20,6 +20,17 @@ Unit Opcodes;
                    o_arset, o_arget, o_arcrt, o_arlen,
                    o_loc_file, o_loc_func, o_loc_line);
 
+ Const OpcodeArgCount: Array[TOpcode_E] of uint8 = (0, 0,
+                                                    1, 1,
+                                                    2, 2, 2, 2, 1, 2,
+                                                    1, 1, 1, 1, 1, 1, 0,
+                                                    2, 2, 2, 2, 2, 2,
+                                                    2,
+                                                    1, 2, 2, 2, 2, 2,
+                                                    2,
+                                                    3, 3, 3, 3,
+                                                    1, 1, 1);
+
  Procedure op_(VM: PVM);
 
  Procedure op_NOP(VM: PVM);
@@ -115,127 +126,6 @@ Begin
 
  if (Index > Length(Str)) Then
   VM^.ThrowExceptionByMessage(PChar('String out of bounds. Tried to access char #'+IntToStr(Index)+', while '+IntToStr(Length(Str))+' is the last one.'));
-End;
-
-{ = }
-Operator = (P1, P2: TMixedValue): Boolean;
-Begin
- Result := False;
-
- if (P1.Typ = mvFloat) and (P2.Typ = mvInt) { float = int } Then
-  Exit(P1.Value.Float = P2.Value.Int);
-
- if (P1.Typ = mvInt) and (P2.Typ = mvFloat) { int = float } Then
-  Exit(P1.Value.Int = P2.Value.Float);
-
- if (P1.Typ <> P2.Typ) Then
-  Exit(False);
-
- Case P1.Typ of
-  mvBool  : Exit(P1.Value.Bool = P2.Value.Bool);
-  mvChar  : Exit(P1.Value.Char = P2.Value.Char);
-  mvInt   : Exit(P1.Value.Int = P2.Value.Int);
-  mvFloat : Exit(P1.Value.Float = P2.Value.Float);
-  mvString: Exit(P1.Value.Str = P2.Value.Str);
- End;
-End;
-
-{ <> }
-Operator <> (P1, P2: TMixedValue): Boolean;
-Begin
- Result := not (P1 = P2);
-End;
-
-{ > }
-Operator > (P1, P2: TMixedValue): Boolean;
-Begin
- Result := False;
-
- if (P1.Typ = mvFloat) and (P2.Typ = mvInt) { float > int } Then
-  Exit(P1.Value.Float > P2.Value.Int);
-
- if (P1.Typ = mvInt) and (P2.Typ = mvFloat) { int > float } Then
-  Exit(P1.Value.Int > P2.Value.Float);
-
- if (P1.Typ <> P2.Typ) Then
-  Exit(False);
-
- Case P1.Typ of
-  mvBool  : Exit(P1.Value.Bool > P2.Value.Bool);
-  mvChar  : Exit(P1.Value.Char > P2.Value.Char);
-  mvInt   : Exit(P1.Value.Int > P2.Value.Int);
-  mvFloat : Exit(P1.Value.Float > P2.Value.Float);
-  mvString: Exit(P1.Value.Str > P2.Value.Str);
- End;
-End;
-
-{ < }
-Operator < (P1, P2: TMixedValue): Boolean;
-Begin
- Result := False;
-
- if (P1.Typ = mvFloat) and (P2.Typ = mvInt) { float < int } Then
-  Exit(P1.Value.Float < P2.Value.Int);
-
- if (P1.Typ = mvInt) and (P2.Typ = mvFloat) { int < float } Then
-  Exit(P1.Value.Int < P2.Value.Float);
-
- if (P1.Typ <> P2.Typ) Then
-  Exit(False);
-
- Case P1.Typ of
-  mvBool  : Exit(P1.Value.Bool < P2.Value.Bool);
-  mvChar  : Exit(P1.Value.Char < P2.Value.Char);
-  mvInt   : Exit(P1.Value.Int < P2.Value.Int);
-  mvFloat : Exit(P1.Value.Float < P2.Value.Float);
-  mvString: Exit(P1.Value.Str < P2.Value.Str);
- End;
-End;
-
-{ >= }
-Operator >= (P1, P2: TMixedValue): Boolean;
-Begin
- Result := False;
-
- if (P1.Typ = mvFloat) and (P2.Typ = mvInt) { float >= int } Then
-  Exit(P1.Value.Float >= P2.Value.Int);
-
- if (P1.Typ = mvInt) and (P2.Typ = mvFloat) { int >= float } Then
-  Exit(P1.Value.Int >= P2.Value.Float);
-
- if (P1.Typ <> P2.Typ) Then
-  Exit(False);
-
- Case P1.Typ of
-  mvBool  : Exit(P1.Value.Bool >= P2.Value.Bool);
-  mvChar  : Exit(P1.Value.Char >= P2.Value.Char);
-  mvInt   : Exit(P1.Value.Int >= P2.Value.Int);
-  mvFloat : Exit(P1.Value.Float >= P2.Value.Float);
-  mvString: Exit(P1.Value.Str >= P2.Value.Str);
- End;
-End;
-
-{ <= }
-Operator <= (P1, P2: TMixedValue): Boolean;
-Begin
- Result := False;
-
- if (P1.Typ = mvFloat) and (P2.Typ = mvInt) { float <= int } Then
-  Exit(P1.Value.Float <= P2.Value.Int);
-
- if (P1.Typ = mvInt) and (P2.Typ = mvFloat) { int <= float } Then
-  Exit(P1.Value.Int <= P2.Value.Float);
-
- if (P1.Typ <> P2.Typ) Then
-  Exit(False);
-
- Case P1.Typ of
-  mvBool  : Exit(P1.Value.Bool <= P2.Value.Bool);
-  mvChar  : Exit(P1.Value.Char <= P2.Value.Char);
-  mvInt   : Exit(P1.Value.Int <= P2.Value.Int);
-  mvFloat : Exit(P1.Value.Float <= P2.Value.Float);
-  mvString: Exit(P1.Value.Str <= P2.Value.Str);
- End;
 End;
 
 { _ }

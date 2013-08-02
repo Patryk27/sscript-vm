@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="18">
+    <Units Count="25">
       <Unit0>
         <Filename Value="vm.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -12,18 +12,18 @@
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="76"/>
-        <CursorPos X="51" Y="100"/>
-        <UsageCount Value="44"/>
+        <TopLine Value="180"/>
+        <CursorPos X="54" Y="191"/>
+        <UsageCount Value="110"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
         <Filename Value="vm_header.pas"/>
         <UnitName Value="vm_header"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="23"/>
-        <CursorPos X="10" Y="29"/>
-        <UsageCount Value="20"/>
+        <TopLine Value="74"/>
+        <CursorPos X="19" Y="74"/>
+        <UsageCount Value="41"/>
       </Unit1>
       <Unit2>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\packages\xforms\examples\minput.pp"/>
@@ -31,7 +31,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="24" Y="14"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="3"/>
       </Unit2>
       <Unit3>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\packages\xforms\src\xforms.pp"/>
@@ -39,23 +39,23 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1689"/>
         <CursorPos X="10" Y="2306"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="3"/>
       </Unit3>
       <Unit4>
         <Filename Value="packages\minput.pas"/>
         <UnitName Value="mInput"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="2"/>
-        <CursorPos X="76" Y="17"/>
-        <UsageCount Value="19"/>
+        <TopLine Value="13"/>
+        <CursorPos X="37" Y="16"/>
+        <UsageCount Value="44"/>
       </Unit4>
       <Unit5>
         <Filename Value="packages\moutput.pas"/>
         <UnitName Value="mOutput"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="48"/>
-        <CursorPos X="6" Y="56"/>
-        <UsageCount Value="18"/>
+        <TopLine Value="66"/>
+        <CursorPos X="78" Y="92"/>
+        <UsageCount Value="44"/>
       </Unit5>
       <Unit6>
         <Filename Value="C:\lazarus\components\lazutils\lazutils.pas"/>
@@ -63,69 +63,69 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="3" Y="18"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="3"/>
       </Unit6>
       <Unit7>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\sysutils\sysstrh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="196"/>
         <CursorPos X="10" Y="213"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="3"/>
       </Unit7>
       <Unit8>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\mathh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="63"/>
         <CursorPos X="14" Y="80"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="3"/>
       </Unit8>
       <Unit9>
         <Filename Value="packages\mmath.pas"/>
         <UnitName Value="mMath"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="36" Y="7"/>
-        <UsageCount Value="17"/>
+        <TopLine Value="76"/>
+        <CursorPos X="74" Y="104"/>
+        <UsageCount Value="50"/>
       </Unit9>
       <Unit10>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\math.pp"/>
         <UnitName Value="math"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="294"/>
-        <CursorPos X="10" Y="311"/>
-        <UsageCount Value="9"/>
+        <TopLine Value="273"/>
+        <CursorPos X="10" Y="288"/>
+        <UsageCount Value="4"/>
       </Unit10>
       <Unit11>
         <Filename Value="packages\mstring.pas"/>
         <UnitName Value="mString"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="29" Y="18"/>
-        <UsageCount Value="12"/>
+        <CursorPos X="66" Y="21"/>
+        <UsageCount Value="33"/>
       </Unit11>
       <Unit12>
         <Filename Value="ssvm\vm.pas"/>
         <UnitName Value="VM"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="231"/>
-        <CursorPos X="1" Y="246"/>
-        <UsageCount Value="10"/>
+        <TopLine Value="228"/>
+        <CursorPos X="23" Y="230"/>
+        <UsageCount Value="8"/>
       </Unit12>
       <Unit13>
         <Filename Value="os_functions.pas"/>
         <UnitName Value="os_functions"/>
         <WindowIndex Value="0"/>
         <TopLine Value="23"/>
-        <CursorPos X="36" Y="17"/>
-        <UsageCount Value="11"/>
+        <CursorPos X="34" Y="38"/>
+        <UsageCount Value="10"/>
       </Unit13>
       <Unit14>
         <Filename Value="packages\mtime.pas"/>
         <UnitName Value="mTime"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
-        <CursorPos X="32" Y="1"/>
-        <UsageCount Value="11"/>
+        <CursorPos X="76" Y="27"/>
+        <UsageCount Value="36"/>
       </Unit14>
       <Unit15>
         <Filename Value="packages\mvm.pas"/>
@@ -133,14 +133,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="9"/>
         <CursorPos X="16" Y="27"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="5"/>
       </Unit15>
       <Unit16>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\heaph.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="61"/>
         <CursorPos X="10" Y="92"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="4"/>
       </Unit16>
       <Unit17>
         <Filename Value="..\SScript-Compiler\Compile2.pas"/>
@@ -148,61 +148,154 @@
         <WindowIndex Value="0"/>
         <TopLine Value="16"/>
         <CursorPos X="101" Y="8"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="4"/>
       </Unit17>
+      <Unit18>
+        <Filename Value="ssvm\jit\jit_base.pas"/>
+        <UnitName Value="JIT_Base"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="25"/>
+        <CursorPos X="1" Y="40"/>
+        <UsageCount Value="4"/>
+      </Unit18>
+      <Unit19>
+        <Filename Value="ssvm\jit\i386\routines.pas"/>
+        <UnitName Value="routines"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="6"/>
+        <CursorPos X="59" Y="15"/>
+        <UsageCount Value="6"/>
+      </Unit19>
+      <Unit20>
+        <Filename Value="ssvm\jit\x86\routines.pas"/>
+        <UnitName Value="routines"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="33" Y="8"/>
+        <UsageCount Value="10"/>
+      </Unit20>
+      <Unit21>
+        <Filename Value="ssvm\jit\x86\jit.pas"/>
+        <UnitName Value="JIT"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="904"/>
+        <CursorPos X="16" Y="906"/>
+        <UsageCount Value="10"/>
+      </Unit21>
+      <Unit22>
+        <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\win\wininc\func.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="243"/>
+        <CursorPos X="10" Y="258"/>
+        <UsageCount Value="10"/>
+      </Unit22>
+      <Unit23>
+        <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\win\wininc\base.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="56"/>
+        <CursorPos X="6" Y="71"/>
+        <UsageCount Value="10"/>
+      </Unit23>
+      <Unit24>
+        <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\systemh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="76"/>
+        <CursorPos X="3" Y="91"/>
+        <UsageCount Value="10"/>
+      </Unit24>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="12" HistoryIndex="11">
+    <JumpHistory Count="22" HistoryIndex="21">
       <Position1>
         <Filename Value="vm.lpr"/>
-        <Caret Line="85" Column="16" TopLine="1"/>
+        <Caret Line="125" Column="65" TopLine="112"/>
       </Position1>
       <Position2>
         <Filename Value="vm.lpr"/>
-        <Caret Line="22" Column="66" TopLine="5"/>
+        <Caret Line="120" Column="10" TopLine="105"/>
       </Position2>
       <Position3>
         <Filename Value="vm.lpr"/>
-        <Caret Line="108" Column="13" TopLine="76"/>
+        <Caret Line="131" Column="17" TopLine="121"/>
       </Position3>
       <Position4>
         <Filename Value="vm.lpr"/>
-        <Caret Line="109" Column="9" TopLine="64"/>
+        <Caret Line="155" Column="59" TopLine="130"/>
       </Position4>
       <Position5>
         <Filename Value="vm.lpr"/>
-        <Caret Line="89" Column="38" TopLine="78"/>
+        <Caret Line="155" Column="59" TopLine="109"/>
       </Position5>
       <Position6>
         <Filename Value="vm.lpr"/>
-        <Caret Line="99" Column="68" TopLine="78"/>
+        <Caret Line="114" Column="1" TopLine="108"/>
       </Position6>
       <Position7>
         <Filename Value="vm.lpr"/>
-        <Caret Line="105" Column="20" TopLine="78"/>
+        <Caret Line="116" Column="1" TopLine="108"/>
       </Position7>
       <Position8>
         <Filename Value="vm.lpr"/>
-        <Caret Line="54" Column="53" TopLine="41"/>
+        <Caret Line="123" Column="1" TopLine="108"/>
       </Position8>
       <Position9>
         <Filename Value="vm.lpr"/>
-        <Caret Line="99" Column="21" TopLine="75"/>
+        <Caret Line="125" Column="1" TopLine="108"/>
       </Position9>
       <Position10>
         <Filename Value="vm.lpr"/>
-        <Caret Line="95" Column="85" TopLine="70"/>
+        <Caret Line="152" Column="6" TopLine="132"/>
       </Position10>
       <Position11>
         <Filename Value="vm.lpr"/>
-        <Caret Line="24" Column="47" TopLine="1"/>
+        <Caret Line="28" Column="36" TopLine="6"/>
       </Position11>
       <Position12>
         <Filename Value="vm.lpr"/>
-        <Caret Line="71" Column="33" TopLine="59"/>
+        <Caret Line="154" Column="28" TopLine="137"/>
       </Position12>
+      <Position13>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="155" Column="34" TopLine="139"/>
+      </Position13>
+      <Position14>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="158" Column="51" TopLine="146"/>
+      </Position14>
+      <Position15>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="184" Column="2" TopLine="167"/>
+      </Position15>
+      <Position16>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="127" Column="11" TopLine="106"/>
+      </Position16>
+      <Position17>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="31" Column="35" TopLine="14"/>
+      </Position17>
+      <Position18>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="97" Column="56" TopLine="80"/>
+      </Position18>
+      <Position19>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="119" Column="39" TopLine="104"/>
+      </Position19>
+      <Position20>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="125" Column="10" TopLine="104"/>
+      </Position20>
+      <Position21>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="128" Column="1" TopLine="104"/>
+      </Position21>
+      <Position22>
+        <Filename Value="vm.lpr"/>
+        <Caret Line="129" Column="11" TopLine="104"/>
+      </Position22>
     </JumpHistory>
   </ProjectSession>
 </CONFIG>

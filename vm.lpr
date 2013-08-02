@@ -19,9 +19,10 @@
 *)
 {$H+}
 Program VM_;
-Uses vm_header, SysUtils, mInput, mOutput, mMath, mString, mTime, os_functions;
-Var opt_wait, opt_time: Boolean;
-    GCMemoryLimit     : uint32;
+Uses vm_header, SysUtils, Classes, mInput, mOutput, mMath, mString, mTime, os_functions;
+Var opt_wait, opt_time, opt_jit, opt_verbose: Boolean;
+    GCMemoryLimit                           : uint32;
+    JITSaveTo                               : String;
 
 (* ParseCommandLine *)
 Procedure ParseCommandLine;
@@ -34,8 +35,16 @@ Begin
   Param := ParamStr(Pos);
 
   Case Param of
+   '-v'   : opt_verbose := True;
    '-wait': opt_wait := True;
    '-time': opt_time := True;
+   '-jit' : opt_jit  := True;
+
+   '-jit_save':
+   Begin
+    Inc(Pos);
+    JITSaveTo := ParamStr(Pos);
+   End;
 
    '-gc':
    Begin
@@ -67,9 +76,16 @@ Begin
 End;
 
 // main program block
-Var VM  : Pointer;
-    Time: int64;
+Label VMEnd;
+Var VM       : Pointer;
+    Time     : int64;
+    JITState : TJITCompiledState;
+    JITStream: TMemoryStream;
+    JITCode  : Pointer;
+    I        : Integer;
 Begin
+ Time := GetMilliseconds;
+
  DecimalSeparator := '.';
  if (ParamCount < 1) Then
  Begin
@@ -83,9 +99,12 @@ Begin
   Writeln('Available options:');
   Writeln;
 
-  Writeln('-wait        wait for `enter` when finished');
-  Writeln('-time        display program''s execution time');
-  Writeln('-gc <value>  change garbage collector''s memory limit, eg.`-gc 512M` will set it to 512 megabytes. Switches: G (GB), M (MB), otherwise bytes are used. Default: 256 MB. Don''t set it below 64 MB.');
+  Writeln('-v                enable verbose mode');
+  Writeln('-wait             wait for `enter` when finished');
+  Writeln('-time             display program''s execution time');
+  Writeln('-jit              enable just-in-time compilation (**very** experimental!)');
+  Writeln('-jit_save <file>  save compiled JIT code to the specified file');
+  Writeln('-gc <value>       change garbage collector''s memory limit, eg.`-gc 512M` will set it to 512 megabytes. Switches: G (GB), M (MB), otherwise bytes are used. Default: 256 MB. Don''t set it below 64 MB.');
 
   Exit;
  End;
@@ -97,46 +116,87 @@ Begin
 
  if (ParamStr(1) = '-logo') Then
  Begin
-  WRiteln('SScript Virtual Machine ', getVersion);
+  Writeln('SScript Virtual Machine ', getVersion);
  End Else
  Begin
+  if (opt_verbose) Then
+   Writeln('-> Loading bytecode from ''', ParamStr(1), '''');
+
   VM := LoadProgram(PChar(ParamStr(1)), GCMemoryLimit); // load program
 
-  Try
-   if (VM = nil) Then
-   Begin
-    Writeln('LoadProgam() falied!');
-    Writeln('#', GetErrorID, ': ', GetErrorMsg);
-    Exit;
-   End;
-
-   mInput.Init(VM);
-   mOutput.Init(VM);
-   mMath.Init(VM);
-   mString.Init(VM);
-   mTime.Init(VM);
-
-   Try
-    Time := GetMilliseconds;
-    Run(VM);
-   Except
-    On E: Exception Do
-     Writeln('VM Exception! ', E.Message);
-   End;
-  Finally
-   if (VM <> nil) and (getStopReason(VM) = srException) Then
-   Begin
-    Writeln('Exception has been thrown:');
-    Writeln;
-    Writeln(PChar(getException(VM).Data));
-   End;
-
-   if (VM <> nil) Then
-    Free(VM);
-
-   Time := GetMilliseconds-Time;
+  if (VM = nil) Then
+  Begin
+   Writeln('LoadProgam() falied!');
+   Writeln('#', GetErrorID, ': ', GetErrorMsg);
+   goto VMEnd;
   End;
+
+  if (opt_verbose) Then
+   Writeln('-> Setting internal calls');
+
+  mInput.Init(VM);
+  mOutput.Init(VM);
+  mMath.Init(VM);
+  mString.Init(VM);
+  mTime.Init(VM);
+
+  // run JIT compiler?
+  if (opt_jit) Then
+  Begin
+   if (opt_verbose) Then
+    Writeln('-> Running JIT compiler...');
+
+   JITState := JITCompile(VM);
+
+   if (JITState <> csDone) Then
+   Begin
+    Writeln('JITCompile() failed!');
+    Writeln(JITState, ' -> ', GetLastJITError(VM));
+    goto VMEnd;
+   End;
+
+   if (opt_verbose) Then
+    Writeln('-> Bytecode has been compiled! JIT compiled size: ', GetJITCodeSize(VM), ' bytes');
+  End;
+
+  // save JIT output?
+  if (opt_jit) and (Length(JITSaveTo) > 0) Then
+  Begin
+   if (opt_verbose) Then
+    Writeln('-> Saving JIT code to ''', JITSaveTo, '''');
+
+   JITStream := TMemoryStream.Create;
+   Try
+    JITCode := GetJITCode(VM);
+    For I := 0 To GetJITCodeSize(VM)-1 Do
+     JITStream.WriteByte(PByte(JITCode+I)^);
+    JITStream.SaveToFile(JITSaveTo);
+   Finally
+    JITStream.Free;
+   End;
+  End;
+
+  if (opt_verbose) Then
+   Writeln('-> Running program...');
+
+  Run(VM);
+
+  if (opt_verbose) Then
+   Writeln('-> Program stopped/finished executing!');
+
+  if (VM <> nil) and (getStopReason(VM) = srException) Then
+  Begin
+   Writeln('Virtual machine exception has been thrown:');
+   Writeln;
+   Writeln(PChar(getException(VM).Data));
+  End;
+
+  if (VM <> nil) Then
+   Free(VM);
  End;
+
+VMEnd:
+ Time := GetMilliseconds-Time;
 
  { -time }
  if (opt_time) Then

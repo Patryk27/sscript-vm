@@ -2,8 +2,11 @@
  Copyright © by Patryk Wychowaniec, 2013
  All rights reserved.
 *)
+{$DEFINE ENABLE_JIT} // when uncommenting, change also the compiler's unit path to point to "jit;jit/<selected architecture>"
+
 {$MODESWITCH ADVANCEDRECORDS}
 {$H+}
+
 Unit VM;
 
  Interface
@@ -17,6 +20,8 @@ Unit VM;
 
  Const ExceptionStackSize = 2*1024; // 2 KB
        StackElementCount  = 1000000; // maximum elements count on the stack; now it's about ~65 MB; @TODO: stack dynamic grow!
+
+ Type TJITCompiledState = (csInvalidBytecode, csJITFailed, csJITUnsupported, csDisabled, csDone);
 
  Type Puint8  = ^uint8; // for some reason FPC doesn't have them declared
       Pint8   = ^int8;
@@ -36,7 +41,7 @@ Unit VM;
        TypeSize: Array[TYPE_BOOL..TYPE_STRING] of Byte = (1, 1, 8, 10, 4);
 
  // -- internal calls -- //
- Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue); // single icall handler
+ Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall; // single icall handler
 
  Type PCall = ^TCall;
       TCall = Record
@@ -95,9 +100,15 @@ Unit VM;
 
              GarbageCollector: Pointer;
 
+             JITCode     : Pointer;
+             JITCodeSize : uint32;
+             LastJITError: PChar;
+
           (* -- procedures and functions for internal use -- *)
              Procedure SetPosition(const Pos: uint32);
              Function GetPosition: uint32;
+
+             Function FindInternalCall(const Name: String): PCall;
 
              // -- read_* -- //
              Function read_uint8: uint8; inline;
@@ -129,6 +140,10 @@ Unit VM;
 
  Procedure VM_Create(VM: Pointer; FileName: PChar; GCMemoryLimit: uint32); stdcall;
  Procedure VM_Run(VM: Pointer; EntryPoint: uint32); stdcall;
+ Function VM_JITCompile(VM: Pointer; EntryPoint: uint32): TJITCompiledState; stdcall;
+ Function VM_GetLastJITError(VM: Pointer): PChar; stdcall;
+ Function VM_GetJITCode(VM: Pointer): Pointer; stdcall;
+ Function VM_GetJITCodeSize(VM: Pointer): uint32; stdcall;
  Procedure VM_Free(VM: Pointer); stdcall;
 
  Procedure VM_AddInternalCall(VM: Pointer; PackageName, FunctionName: PChar; ParamCount: uint8; Handler: TCallHandler); stdcall;
@@ -154,7 +169,8 @@ Unit VM;
  Function VM_GetStopReason(VM: Pointer): TStopReason; stdcall;
 
  Implementation
-Uses SysUtils, Loader, Opcodes, Objects, GC, mStrings;
+Uses SysUtils, Loader, Opcodes, Objects, GC, mStrings
+{$IFDEF ENABLE_JIT}, JIT {$ENDIF};
 
 (* VM_Create *)
 {
@@ -168,7 +184,7 @@ Begin
  Begin
   InternalCallList := TCallList.Create;
 
-  // try to load and parse file
+  // try to load and parse the input file
   LoaderClass := TLoader.Create(VM, FileName);
   Try
    LoaderClass.Load;
@@ -179,10 +195,15 @@ Begin
   if (CodeData = nil) Then
    raise Exception.Create('Couldn''t load the specified bytecode file!');
 
+  // allocate memory
   SetLength(Stack, StackElementCount);
   ExceptionStack := GetMem(ExceptionStackSize);
 
+  // create garbage collector
   GarbageCollector := TGarbageCollector.Create(VM, GCMemoryLimit);
+
+  // reset variables
+  LastJITError := #0;
  End;
 End;
 
@@ -191,11 +212,12 @@ End;
  Runs the program from specified point ('EntryPoint').
 }
 Procedure VM_Run(VM: Pointer; EntryPoint: uint32); stdcall;
+Type TProcedure = Procedure;
 Begin
  With PVM(VM)^ do
  Begin
   if (CodeData = nil) Then
-   raise Exception.Create('Couldn''t run program: no code has been loaded!');
+   raise Exception.Create('Couldn''t run program: no bytecode has been loaded!');
 
   if (not Loader.isRunnable) Then
    raise Exception.Create('Cannot run a library!');
@@ -210,14 +232,73 @@ Begin
   StackPos  := @Regs.i[5];
   StackPos^ := 0;
 
-  Stop := False;
+  if (JITCode <> nil) Then // if possible, execute the JIT compiled code
+  Begin
+   TProcedure(JITCode)();
+   Exit;
+  End;
 
+  Stop := False;
   While (not Stop) Do
   Begin
    CurrentOpcode := Position;
    OpcodeTable[TOpcode_E(read_uint8)](VM);
   End;
  End;
+End;
+
+(* VM_JITCompile *)
+Function VM_JITCompile(VM: Pointer; EntryPoint: uint32): TJITCompiledState; stdcall;
+{$IFDEF ENABLE_JIT}
+Var Compiler: TJITCompiler;
+{$ENDIF}
+Begin
+ {$IFDEF ENABLE_JIT}
+  With PVM(VM)^ do
+  Begin
+   LastJITError := #0;
+   Compiler     := TJITCompiler.Create(VM);
+
+   Try
+    Compiler.LoadBytecode(CodeData); // load bytecode
+    Compiler.Compile; // and compile! :)
+   Except
+    On E: Exception Do
+    Begin
+     LastJITError := CopyStringToPChar(E.Message);
+     Compiler.Free;
+     Exit(csJITFailed);
+    End;
+   End;
+
+   JITCode     := Compiler.getCompiledData.Memory;
+   JITCodeSize := Compiler.getCompiledData.Size;
+   Result      := Compiler.getCompiledState;
+
+   Compiler.Free;
+  End;
+ {$ELSE}
+  PVM(VM)^.LastJITError := CopyStringToPChar('This library has been compiled without a JIT support.');
+  Exit(csJITDisabled);
+ {$ENDIF}
+End;
+
+(* VM_GetLastJITError *)
+Function VM_GetLastJITError(VM: Pointer): PChar; stdcall;
+Begin
+ Result := PVM(VM)^.LastJITError;
+End;
+
+(* VM_GetJITCode *)
+Function VM_GetJITCode(VM: Pointer): Pointer; stdcall;
+Begin
+ Result := PVM(VM)^.JITCode;
+End;
+
+(* VM_GetJITCodeSize *)
+Function VM_GetJITCodeSize(VM: Pointer): uint32; stdcall;
+Begin
+ Result := PVM(VM)^.JITCodeSize;
 End;
 
 (* VM_Free *)
@@ -442,6 +523,19 @@ End;
 Function TVM.GetPosition: uint32;
 Begin
  Result := uint32(uint64(Position)-uint64(CodeData));
+End;
+
+(* TVM.FindInternalCall *)
+{
+ Searches for internal call with specified full name and returns it (or "nil" if not found).
+}
+Function TVM.FindInternalCall(const Name: String): PCall;
+Begin
+ For Result in InternalCallList Do
+  if (Result^.FullName = Name) Then
+   Exit;
+
+ Exit(nil);
 End;
 
 (* TVM.StackPush *)

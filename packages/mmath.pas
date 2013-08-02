@@ -14,103 +14,103 @@ Unit mMath;
 Uses Math;
 
 { math.cos }
-Procedure _cos(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _cos(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := cos(getFloat(Params[0]));
 End;
 
 { math.sin }
-Procedure _sin(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _sin(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := sin(getFloat(Params[0]));
 End;
 
 { math.tan }
-Procedure _tan(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _tan(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := tan(getFloat(Params[0]));
 End;
 
 { math.acos }
-Procedure _acos(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _acos(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := arccos(getFloat(Params[0]));
 End;
 
 { math.asin }
-Procedure _asin(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _asin(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := arcsin(getFloat(Params[0]));
 End;
 
 { math.atan }
-Procedure _atan(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _atan(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := arctan(getFloat(Params[0]));
 End;
 
 { math.atan2 }
-Procedure _atan2(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _atan2(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := arctan2(getFloat(Params[0]), getFloat(Params[1]));
 End;
 
 { math.cosh }
-Procedure _cosh(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _cosh(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := cosh(getFloat(Params[0]));
 End;
 
 { math.sinh }
-Procedure _sinh(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _sinh(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := sinh(getFloat(Params[0]));
 End;
 
 { math.tanh }
-Procedure _tanh(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _tanh(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := tanh(getFloat(Params[0]));
 End;
 
 { math.acosh }
-Procedure _acosh(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _acosh(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := arccosh(getFloat(Params[0]));
 End;
 
 { math.asinh }
-Procedure _asinh(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _asinh(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := arcsinh(getFloat(Params[0]));
 End;
 
 { math.atanh }
-Procedure _atanh(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _atanh(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := arctanh(getFloat(Params[0]));
 End;
 
 { math.exp }
-Procedure _exp(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _exp(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := exp(getFloat(Params[0]));
 End;
 
 { math.log }
-Procedure _log(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _log(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := logn(getFloat(Params[0]), getFloat(Params[1]));
 End;
 
 { math.ln }
-Procedure _ln(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _ln(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := ln(getFloat(Params[0]));
 End;
 
 { math.sqrt }
-Procedure _sqrt(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _sqrt(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  Result^ := sqrt(getFloat(Params[0]));
 End;

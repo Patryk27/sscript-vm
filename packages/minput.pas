@@ -14,19 +14,19 @@ Unit mInput;
 Uses CRT, mOutput;
 
 { input.keypressed }
-Procedure _keypressed(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _keypressed(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  StackPush(VM, KeyPressed);
 End;
 
 { input.getchar }
-Procedure _getchar(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _getchar(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  StackPush(VM, ReadKey);
 End;
 
 { input.readchar }
-Procedure _readchar(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _readchar(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Var Ch: Char;
 Begin
  Ch      := ReadKey;
@@ -35,7 +35,7 @@ Begin
 End;
 
 { input.read }
-Procedure _read(VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+Procedure _read(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Var Str: String;
 Begin
  Readln(Str);

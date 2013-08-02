@@ -58,15 +58,18 @@ Unit vm_header;
                         End;
 
  // TCallHandler
- Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue);
+ Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 
  // TStopReason
  Type TStopReason = (srNormal, srException);
 
+ // TJITCompiledState
+ Type TJITCompiledState = (csInvalidBytecode, csJITFailed, csJITUnsupported, csDisabled, csDone);
+
  (* ========== constants ========== *)
  Const MixedValueTypeNames: Array[TMixedValueType] of String = ('none', 'bool', 'char', 'int', 'float', 'string', 'reference');
 
- (* ========== functions imported from DLL ========== *)
+ (* ========== functions imported from the DLL ========== *)
  Function GetErrorID: uint8;                                                                                         stdcall external 'ssvm.dll';
  Function GetErrorMsg: PChar;                                                                                        stdcall external 'ssvm.dll';
  Function GetVersion: PChar;                                                                                         stdcall external 'ssvm.dll';
@@ -74,6 +77,10 @@ Unit vm_header;
  Function LoadProgram(FileName: PChar; GCMemoryLimit: uint32): Pointer;                                              stdcall external 'ssvm.dll';
 
  Procedure Run(VM: Pointer; EntryPoint: uint32=0);                                                                   stdcall external 'ssvm.dll';
+ Function JITCompile(VM: Pointer; EntryPoint: uint32=0): TJITCompiledState;                                          stdcall external 'ssvm.dll';
+ Function GetLastJITError(VM: Pointer): PChar;                                                                       stdcall external 'ssvm.dll';
+ Function GetJITCode(VM: Pointer): Pointer;                                                                          stdcall external 'ssvm.dll';
+ Function GetJITCodeSize(VM: Pointer): uint32;                                                                       stdcall external 'ssvm.dll';
  Procedure Free(VM: Pointer);                                                                                        stdcall external 'ssvm.dll';
 
  Procedure AddInternalCall(VM: Pointer; PackageName, FunctionName: PChar; ParamCount: uint8; Handler: TCallHandler); stdcall external 'ssvm.dll';

@@ -7,27 +7,9 @@
 *)
 {$ASMMODE INTEL}
 
-{ FetchExtended }
-Function FetchExtended(const Stack: Pointer): Extended;
-Var StackExtended: Packed Array[0..9] of uint8;
-    I            : uint8;
-Begin
- For I := 0 To 9 Do
-  StackExtended[I] := puint8(Stack+36-4*I)^;
-
- Result := PExtended(@StackExtended[0])^;
-End;
-
-{ SaveExtended }
-Procedure SaveExtended(const Stack: Pointer; const Value: Extended);
-Var I: Integer;
-Begin
- For I := 0 To 9 Do
-  puint8(Stack+36-4*I)^ := puint8(uint32(@Value)+I)^;
-End;
-
 { ConstructMixedValue }
 Function ConstructMixedValue(const Typ: TJITOpcodeArgType; const DataPointer: Pointer): TMixedValue;
+Var Float: Extended;
 Begin
  Case Typ of
   ptBool:
@@ -50,8 +32,12 @@ Begin
 
   ptFloat:
   Begin
+   asm
+    fstp Float
+   end;
+
    Result.Typ         := mvFloat;
-   Result.Value.Float := FetchExtended(DataPointer);
+   Result.Value.Float := Float;
   End;
 
   ptString:
@@ -91,11 +77,16 @@ Begin
 End;
 
 (* __stack_push_float *)
-Procedure __stack_push_float(const StackPnt: PStack; const reg_stp: pint32; const Value: Pointer); stdcall;
+Procedure __stack_push_float(const StackPnt: PStack; const reg_stp: pint32); stdcall;
+Var Value: Extended;
 Begin
+ asm
+  fstp Value
+ end;
+
  Inc(reg_stp^);
  StackPnt^[reg_stp^].Typ         := mvFloat;
- StackPnt^[reg_stp^].Value.Float := FetchExtended(@Value);
+ StackPnt^[reg_stp^].Value.Float := Value;
 End;
 
 (* __stack_push_string *)
@@ -221,10 +212,15 @@ Begin
 End;
 
 (* __stackval_floatval_assign *)
-Procedure __stackval_floatval_assign(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32; const Value: Pointer); stdcall;
+Procedure __stackval_floatval_assign(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32); stdcall;
+Var Value: Extended;
 Begin
+ asm
+  fstp Value
+ end;
+
  Stack^[reg_stp^+StackvalPos].Typ         := mvFloat;
- Stack^[reg_stp^+StackvalPos].Value.Float := FetchExtended(@Value);
+ Stack^[reg_stp^+StackvalPos].Value.Float := Value;
 End;
 
 (* __stackval_stringval_assign *)
@@ -316,6 +312,144 @@ Begin
   mvFloat: SVal^.Value.Float += Value;
   else
    raise Exception.CreateFmt('Cannot execute ''__stackval_add_int'' on type `%d`', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_sub_int *)
+Procedure __stackval_sub_int(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32; const Value: int64); stdcall;
+Var SVal: PStackElement;
+Begin
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt  : SVal^.Value.Int -= Value;
+  mvFloat: SVal^.Value.Float -= Value;
+  else
+   raise Exception.CreateFmt('Cannot execute ''__stackval_sub_int'' on type `%d`', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_mul_int *)
+Procedure __stackval_mul_int(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32; const Value: int64); stdcall;
+Var SVal: PStackElement;
+Begin
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt  : SVal^.Value.Int *= Value;
+  mvFloat: SVal^.Value.Float *= Value;
+  else
+   raise Exception.CreateFmt('Cannot execute ''__stackval_mul_int'' on type `%d`', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_div_int *)
+Procedure __stackval_div_int(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32; const Value: int64); stdcall;
+Var SVal: PStackElement;
+Begin
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt  : SVal^.Value.Int := SVal^.Value.Int div Value;
+  mvFloat: SVal^.Value.Float /= Value;
+  else
+   raise Exception.CreateFmt('Cannot execute ''__stackval_div_int'' on type `%d`', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_add_float *)
+Procedure __stackval_add_float(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32); stdcall;
+Var SVal : PStackElement;
+    Value: Extended;
+Begin
+ asm
+  fstp Extended Value
+ end;
+
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt:
+  Begin
+   SVal^.Typ         := mvFloat;
+   SVal^.Value.Float := SVal^.Value.Int+Value;
+  End;
+
+  mvFloat: SVal^.Value.Float += Value;
+  else
+   raise Exception.CreateFmt('Cannot execute ''__stackval_add_float'' on type `%d`', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_sub_float *)
+Procedure __stackval_sub_float(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32); stdcall;
+Var SVal : PStackElement;
+    Value: Extended;
+Begin
+ asm
+  fstp Extended Value
+ end;
+
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt:
+  Begin
+   SVal^.Typ         := mvFloat;
+   SVal^.Value.Float := SVal^.Value.Int-Value;
+  End;
+
+  mvFloat: SVal^.Value.Float -= Value;
+  else
+   raise Exception.CreateFmt('Cannot execute ''__stackval_sub_float'' on type `%d`', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_mul_float *)
+Procedure __stackval_mul_float(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32); stdcall;
+Var SVal : PStackElement;
+    Value: Extended;
+Begin
+ asm
+  fstp Extended Value
+ end;
+
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt:
+  Begin
+   SVal^.Typ         := mvFloat;
+   SVal^.Value.Float := SVal^.Value.Int*Value;
+  End;
+
+  mvFloat: SVal^.Value.Float *= Value;
+  else
+   raise Exception.CreateFmt('Cannot execute ''__stackval_mul_float'' on type `%d`', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_div_float *)
+Procedure __stackval_div_float(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32); stdcall;
+Var SVal : PStackElement;
+    Value: Extended;
+Begin
+ asm
+  fstp Extended Value
+ end;
+
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt:
+  Begin
+   SVal^.Typ         := mvFloat;
+   SVal^.Value.Float := SVal^.Value.Int/Value;
+  End;
+
+  mvFloat: SVal^.Value.Float /= Value;
+  else
+   raise Exception.CreateFmt('Cannot execute ''__stackval_div_float'' on type `%d`', [ord(SVal^.Typ)]);
  End;
 End;
 

@@ -57,7 +57,6 @@ Unit JIT;
                        Procedure asm_push_mem16(const Mem: uint32);
                        Procedure asm_push_mem32(const Mem: uint32);
                        Procedure asm_push_mem64(const Mem: uint32);
-                       Procedure asm_push_memfloat(const Mem: uint32);
                        Procedure asm_push_reg32(const Reg: TRegister32);
 
                        Procedure asm_mov_mem8_imm8(const Mem: uint32; const Value: int8);
@@ -269,26 +268,6 @@ Procedure TJITCompiler.asm_push_mem64(const Mem: uint32);
 Begin
  asm_push_mem32(Mem+4);
  asm_push_mem32(Mem);
-End;
-
-(* TJITCompiler.asm_push_memfloat *)
-{
- push dword [mem+0]
- push dword [mem+1]
- push dword [mem+2]
- push dword [mem+3]
- push dword [mem+4]
- push dword [mem+5]
- push dword [mem+6]
- push dword [mem+7]
- push dword [mem+8]
- push dword [mem+9]
-}
-Procedure TJITCompiler.asm_push_memfloat(const Mem: uint32);
-Var I: uint8;
-Begin
- For I := 0 To 9 Do
-  asm_push_mem32(Mem+I);
 End;
 
 (* TJITCompiler.asm_push_reg32 *)
@@ -769,7 +748,7 @@ End;
 (* TJITCompiler.Compile *)
 Procedure TJITCompiler.Compile;
 Const SpecialMarker64: uint64 = $C0A0F0E0B0A0B0E;
-      StackSizes     : Array[TJITOpcodeArgType] of uint8 = (0, 0, 0, 0, 0, 0, 4, 4, 8, 40, 4, 0);
+      StackSizes     : Array[TJITOpcodeArgType] of uint8 = (0, 0, 0, 0, 0, 0, 4, 4, 8, 0, 4, 0);
 Var Opcode: TOpcode_E;
     Args  : TJITOpcodeArgArray;
 
@@ -893,8 +872,8 @@ Var Opcode: TOpcode_E;
       ptCharReg     : asm_push_mem32(getRegMemAddr(Arg));
       ptInt         : asm_push_imm64(Arg.ImmInt);
       ptIntReg      : asm_push_mem64(getRegMemAddr(Arg));
-      ptFloat       : asm_push_immfloat(Arg.ImmFloat);
-      ptFloatReg    : asm_push_memfloat(getRegMemAddr(Arg));
+      ptFloat       : asm_fld_memfloat(AllocateFloat(Arg.ImmFloat));
+      ptFloatReg    : asm_fld_memfloat(getRegMemAddr(Arg));
       ptString      : asm_push_imm32(AllocateString(Arg.ImmString));
       ptStringReg   : asm_push_mem32(getRegMemAddr(Arg));
       ptReferenceReg: asm_push_mem32(getRegMemAddr(Arg));
@@ -1008,16 +987,19 @@ Begin
 
       if (isFloatOpcode) Then
       Begin
-       // @TODO
-       CompiledState := csJITUnsupported;
+       Case Opcode of
+        o_add: asm_absolute_call(uint32(@__stackval_add_float));
+        o_sub: asm_absolute_call(uint32(@__stackval_sub_float));
+        o_mul: asm_absolute_call(uint32(@__stackval_mul_float));
+        o_div: asm_absolute_call(uint32(@__stackval_div_float));
+       End;
       End Else
       Begin
-       // @TODO
        Case Opcode of
         o_add: asm_absolute_call(uint32(@__stackval_add_int));
-
-        else
-         raise Exception.Create('unimplemented -> sub/mul/div on stackval');
+        o_sub: asm_absolute_call(uint32(@__stackval_sub_int));
+        o_mul: asm_absolute_call(uint32(@__stackval_mul_int));
+        o_div: asm_absolute_call(uint32(@__stackval_div_int));
        End;
       End;
      End Else
@@ -1095,6 +1077,20 @@ Begin
       asm_mov_mem32_reg32(getRegMemAddr(Args[0])+4, reg_ebx);
      End Else
 
+     // mov(reg int, imm char)
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType = ptChar) Then
+     Begin
+      asm_mov_mem32_imm64(getRegMemAddr(Args[0]), ord(Args[1].ImmChar));
+     End Else
+
+     // mov(reg int, reg char)
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType = ptCharReg) Then
+     Begin
+      asm_mov_mem32_imm64(getRegMemAddr(Args[0]), 0); // we need to clear the `ei*` register, because assigning char-> int, we only set first one byte, not entire eight
+      asm_mov_reg32_mem32(reg_eax, getRegMemAddr(Args[1]));
+      asm_mov_mem32_reg32(getRegMemAddr(Args[0]), reg_eax);
+     End Else
+
      // mov(reg float, imm int)
      if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType = ptInt) Then
      Begin
@@ -1158,7 +1154,7 @@ Begin
      // mov(stackval, value)
      if (Args[0].ArgType = ptStackval) Then
      Begin
-      ElemSize := PushParamOnStack(Args[1]);
+      PushParamOnStack(Args[1]);
       asm_push_imm32(Args[0].StackvalPos);
       asm_push_imm32(getSTPRegMemAddr);
       asm_push_imm32(uint32(@VM^.Stack));
@@ -1174,9 +1170,6 @@ Begin
        else
         raise Exception.CreateFmt('invalid instruction: mov(stackval, type(%d))', [ord(Args[1].ArgType)]);
       End;
-
-      if (Args[1].ArgType in [ptFloat, ptFloatReg]) Then // we need to clean-up stack for floats only (see declaration of '__stackval_floatval_assign')
-       asm_add_reg32_imm32(reg_esp, -4 + ElemSize);
      End Else
 
       raise Exception.CreateFmt('invalid instruction: mov(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
@@ -1225,13 +1218,12 @@ Begin
      if (Args[0].ArgType in [ptFloat, ptFloatReg]) Then
      Begin
       if (Args[0].ArgType = ptFloat) Then
-       asm_push_immfloat(Args[0].ImmFloat) Else
-       asm_push_memfloat(getRegMemAddr(Args[0]));
+       asm_fld_memfloat(AllocateFloat(Args[0].ImmFloat)) Else
+       asm_fld_memfloat(getRegMemAddr(Args[0]));
 
       asm_push_imm32(getSTPRegMemAddr);
       asm_push_imm32(uint32(@VM^.Stack));
       asm_absolute_call(uint32(@__stack_push_float));
-      asm_add_reg32_imm32(reg_esp, -4 + StackSizes[ptFloat]); // we need to clean-up stack after pushing a float number
      End Else
 
      // push(imm/reg string)
@@ -1416,7 +1408,8 @@ Begin
       asm_push_imm32(uint32(@VM^.Stack));
 
       asm_absolute_call(uint32(@__compare_stackval_value));
-      asm_add_reg32_imm32(reg_esp, -4 + ElemSize); // we need to do a small stack clean-up, because the last argument of '__compare_stackval_value' has pointer type (not the real argument's type, because it's unknown at this time), so compiler wouldn't free the stack entirely, and we don't want any garbage laying on the stack
+      if (not (Args[1].ArgType in [ptFloat, ptFloatReg])) Then // FPU has it own stack
+       asm_add_reg32_imm32(reg_esp, -4 + ElemSize); // we need to do a small stack clean-up, because the last argument of '__compare_stackval_value' has pointer type (not the real argument's type, because it's unknown at this time), so compiler wouldn't free the stack entirely, and we don't want any garbage laying on the stack
      End Else
 
      // opcode(value, stackval)
@@ -1433,7 +1426,8 @@ Begin
       asm_push_imm32(uint32(@VM^.Stack));
 
       asm_absolute_call(uint32(@__compare_value_stackval));
-      asm_add_reg32_imm32(reg_esp, -4 + ElemSize); // we need to do a small stack clean-up, because the last argument of '__compare_stackval_value' has pointer type (not the real argument's type, because it's unknown at this time), so compiler wouldn't free the stack entirely, and we don't want any garbage laying on the stack
+      if (not (Args[1].ArgType in [ptFloat, ptFloatReg])) Then // FPU has it own stack
+       asm_add_reg32_imm32(reg_esp, -4 + ElemSize); // we need to do a small stack clean-up, because the last argument of '__compare_stackval_value' has pointer type (not the real argument's type, because it's unknown at this time), so compiler wouldn't free the stack entirely, and we don't want any garbage laying on the stack
      End Else
 
       raise Exception.CreateFmt('invalid instruction: if_*(%d, %d)', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
@@ -1635,7 +1629,8 @@ Begin
   JumpTable.Free;
  End;
  Except
-  CompiledState := csInvalidBytecode;
+  if (CompiledState = csDone) Then
+   CompiledState := csInvalidBytecode;
   raise;
  End;
 End;

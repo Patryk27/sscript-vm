@@ -102,6 +102,7 @@ Unit VM;
 
              JITCode     : Pointer;
              JITCodeSize : uint32;
+             JITCompiler : Pointer;
              LastJITError: PChar;
 
           (* -- procedures and functions for internal use -- *)
@@ -203,6 +204,7 @@ Begin
   GarbageCollector := TGarbageCollector.Create(VM, GCMemoryLimit);
 
   // reset variables
+  JITCompiler  := nil;
   LastJITError := #0;
  End;
 End;
@@ -256,6 +258,10 @@ Begin
  {$IFDEF ENABLE_JIT}
   With PVM(VM)^ do
   Begin
+   if (JITCompiler <> nil) Then
+    TJITCompiler(JITCompiler).Free;
+
+   JITCompiler  := nil;
    LastJITError := #0;
    Compiler     := TJITCompiler.Create(VM);
 
@@ -273,9 +279,8 @@ Begin
 
    JITCode     := Compiler.getCompiledData.Memory;
    JITCodeSize := Compiler.getCompiledData.Size;
+   JITCompiler := Compiler;
    Result      := Compiler.getCompiledState;
-
-   Compiler.Free;
   End;
  {$ELSE}
   PVM(VM)^.LastJITError := CopyStringToPChar('This library has been compiled without a JIT support.');
@@ -319,6 +324,9 @@ Begin
   Dispose(CodeData);
   Dispose(ExceptionStack);
   SetLength(Stack, 0);
+
+  if (JITCompiler <> nil) Then
+   TJITCompiler(JITCompiler).Free;
  End;
 
  Dispose(PVM(VM));

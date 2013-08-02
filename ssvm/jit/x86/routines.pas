@@ -591,3 +591,9 @@ Begin
   o_if_ge: reg_if^ := (S1 >= S2);
  End;
 End;
+
+(* __release_memory *)
+Procedure __release_memory(const Pnt: Pointer); stdcall;
+Begin
+ FreeMem(Pnt);
+End;

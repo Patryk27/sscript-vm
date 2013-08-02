@@ -6,7 +6,9 @@
 Unit JIT_Base;
 
  Interface
- Uses VM, Opcodes, Stream;
+ Uses VM, Opcodes, Stream, FGL;
+
+ Type TIntList = specialize TFPGList<uint32>;
 
  Type TJITOpcodeArgType = (ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg, ptBool, ptChar, ptInt, ptFloat, ptString, ptStackval);
 
@@ -34,6 +36,8 @@ Unit JIT_Base;
                            CompiledData: TStream;
 
                            CompiledState: TJITCompiledState;
+
+                           AllocatedDataBlocks: TIntList;
 
                            Function FetchOpcode: uint8;
                            Function FetchArgument: TJITOpcodeArg;
@@ -139,7 +143,7 @@ Begin
  Result             := uint32(AllocMem(sizeof(Value)));
  PExtended(Result)^ := Value;
 
- // AllocateDataBlocks.Add(Result);
+ AllocatedDataBlocks.Add(Result);
 End;
 
 (* TJITCompilerBase.AllocateInt64 *)
@@ -148,7 +152,7 @@ Begin
  Result          := uint32(AllocMem(sizeof(Value)));
  Pint64(Result)^ := Value;
 
- // AllocateDataBlocks.Add(Result);
+ AllocatedDataBlocks.Add(Result);
 End;
 
 (* TJITCompilerBase.AllocateString *)
@@ -156,7 +160,7 @@ Function TJITCompilerBase.AllocateString(const Value: String): uint32;
 Begin
  Result := uint32(CopyStringToPChar(Value));
 
- // AllocateDataBlocks.Add(Result);
+ AllocatedDataBlocks.Add(Result);
 End;
 
 // -------------------------------------------------------------------------- //
@@ -167,12 +171,19 @@ Begin
 
  CompiledData  := TStream.Create(False);
  CompiledState := csDone;
+
+ AllocatedDataBlocks := TIntList.Create;
 End;
 
 (* TJITCompilerBase.Destroy *)
 Destructor TJITCompilerBase.Destroy;
+Var Pnt: uint32;
 Begin
-// CompiledData.Free;
+ For Pnt in AllocatedDataBlocks Do
+  FreeMem(Pointer(Pnt));
+
+ AllocatedDataBlocks.Free;
+ CompiledData.Free;
 End;
 
 (* TJITCompilerBase.LoadBytecode *)

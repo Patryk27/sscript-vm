@@ -48,11 +48,8 @@ Unit JIT;
                       Private
                        Procedure asm_nop;
 
-                       Procedure asm_push_imm8(const Value: int8);
-                       Procedure asm_push_imm16(const Value: int16);
                        Procedure asm_push_imm32(const Value: int32);
                        Procedure asm_push_imm64(const Value: int64);
-                       Procedure asm_push_immfloat(const Value: Extended);
 
                        Procedure asm_push_mem16(const Mem: uint32);
                        Procedure asm_push_mem32(const Mem: uint32);
@@ -199,20 +196,6 @@ Begin
  CompiledData.write_uint8($90);
 End;
 
-(* TJITCompiler.asm_push_imm8 *)
-{ push dword value }
-Procedure TJITCompiler.asm_push_imm8(const Value: int8);
-Begin
- asm_push_imm32(Value);
-End;
-
-(* TJITCompiler.asm_push_int16 *)
-{ push dword value }
-Procedure TJITCompiler.asm_push_imm16(const Value: int16);
-Begin
- asm_push_imm32(Value);
-End;
-
 (* TJITCompiler.asm_push_imm32 *)
 { push dword value }
 Procedure TJITCompiler.asm_push_imm32(const Value: int32);
@@ -230,14 +213,6 @@ Procedure TJITCompiler.asm_push_imm64(const Value: int64);
 Begin
  asm_push_imm32(hi(Value));
  asm_push_imm32(lo(Value));
-End;
-
-(* TJITCompiler.asm_push_immfloat *)
-Procedure TJITCompiler.asm_push_immfloat(const Value: Extended);
-Var I: uint8;
-Begin
- For I := 0 To 9 Do
-  asm_push_imm8(puint8(uint32(@Value)+I)^);
 End;
 
 (* TJITCompiler.asm_push_mem16 *)
@@ -765,6 +740,22 @@ Var Opcode: TOpcode_E;
     CompareMode  : (cm8Bit, cm64Bit, cmFloat);
     ElemSize     : int32;
 
+    { AddPrologCode }
+    Procedure AddPrologCode;
+    Begin
+     asm_mov_mem32_imm64(getSTPRegMemAddr, 0); // stp = 0;
+    End;
+
+    { AddEpilogCode }
+    Procedure AddEpilogCode;
+    Begin
+     asm_push_imm32(uint32(ResultMV));
+     asm_absolute_call(uint32(@__release_memory));
+
+     asm_push_imm32(uint32(ParamsMV));
+     asm_absolute_call(uint32(@__release_memory));
+    End;
+
     { CompareLoad }
     Procedure CompareLoad(const Arg: TJITOpcodeArg; const Reg8: TRegister8; const Reg32_1, Reg32_2: TRegister32);
     Begin
@@ -897,11 +888,9 @@ Begin
 
  CompiledState := csDone;
 
- New(ResultMV); // @TODO: this should be freed after the JIT compiled code has finished executing.
+ New(ResultMV);
  ParamsMV  := AllocMem(256*sizeof(TMixedValue));
  JumpTable := TJumpTable.Create;
-
- asm_mov_mem32_imm64(getSTPRegMemAddr, 0);
 
  Try
  Try
@@ -1542,6 +1531,7 @@ Begin
     { stop }
     o_stop:
     Begin
+     AddEpilogCode;
      asm_ret;
     End;
 
@@ -1633,5 +1623,7 @@ Begin
    CompiledState := csInvalidBytecode;
   raise;
  End;
+
+ AddEpilogCode;
 End;
 End.

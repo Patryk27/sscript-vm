@@ -10,7 +10,7 @@
 Unit VM;
 
  Interface
- Uses FGL, Stack;
+ Uses Stack, MTypes, FGL;
 
  Const VMVersion = '0.3.4 nightly';
 
@@ -22,15 +22,6 @@ Unit VM;
        StackElementCount  = 1000000; // maximum elements count on the stack; now it's about ~65 MB; @TODO: stack dynamic grow!
 
  Type TJITCompiledState = (csInvalidBytecode, csJITFailed, csJITUnsupported, csDisabled, csDone);
-
- Type Puint8  = ^uint8; // for some reason FPC doesn't have them declared
-      Pint8   = ^int8;
-      Puint16 = ^uint16;
-      Pint16  = ^int16;
-      Puint32 = ^uint32;
-      Pint32  = ^int32;
-      Puint64 = ^uint64;
-      Pint64  = ^int64;
 
  Const TYPE_BOOL   = 3; // do not modify
        TYPE_CHAR   = 4;
@@ -170,7 +161,8 @@ Unit VM;
  Function VM_GetStopReason(VM: Pointer): TStopReason; stdcall;
 
  Implementation
-Uses SysUtils, Loader, Opcodes, Objects, GC, mStrings
+Uses SysUtils, BCLoader, Opcodes, Objects, mStrings,
+     GC, OpcodeInterpreter
 {$IFDEF ENABLE_JIT}, JIT {$ENDIF};
 
 (* VM_Create *)
@@ -179,14 +171,14 @@ Uses SysUtils, Loader, Opcodes, Objects, GC, mStrings
  `VM` must points at already allocated memory area!
 }
 Procedure VM_Create(VM: Pointer; FileName: PChar; GCMemoryLimit: uint32); stdcall;
-Var LoaderClass: TLoader;
+Var LoaderClass: TBCLoader;
 Begin
  With PVM(VM)^ do
  Begin
   InternalCallList := TCallList.Create;
 
   // try to load and parse the input file
-  LoaderClass := TLoader.Create(VM, FileName);
+  LoaderClass := TBCLoader.Create(VM, FileName);
   Try
    LoaderClass.Load;
   Finally
@@ -252,7 +244,7 @@ End;
 (* VM_JITCompile *)
 Function VM_JITCompile(VM: Pointer; EntryPoint: uint32): TJITCompiledState; stdcall;
 {$IFDEF ENABLE_JIT}
-Var Compiler: TJITCompiler;
+Var Compiler: TJITCompiler = nil;
 {$ENDIF}
 Begin
  {$IFDEF ENABLE_JIT}
@@ -263,11 +255,10 @@ Begin
 
    JITCompiler  := nil;
    LastJITError := #0;
-   Compiler     := TJITCompiler.Create(VM);
 
    Try
-    Compiler.LoadBytecode(CodeData); // load bytecode
-    Compiler.Compile; // and compile! :)
+    Compiler := TJITCompiler.Create(VM, CodeData); // create compiler instance, load bytecode...
+    Compiler.Compile; // ...and compile it! :)
    Except
     On E: Exception Do
     Begin

@@ -24,7 +24,7 @@
 
 {$H+}
 Library SSVM;
-Uses SysUtils, VM, Stack, Loader;
+Uses SysUtils, VM, Stack;
 Const NO_ERROR            = 0;
       ERR_FILE_NOT_FOUND  = 1;
       ERR_INVALID_PROGRAM = 2;

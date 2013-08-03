@@ -15,7 +15,7 @@
 Unit JIT;
 
  Interface
- Uses JIT_Base, Opcodes, VM, FGL;
+ Uses JIT_Base, MTypes, Opcodes, VM, FGL;
 
  Type TRegister32  = (reg_eax=0, reg_ecx, reg_edx, reg_ebx, reg_esp, reg_ebp, reg_esi, reg_edi);
  Type TRegister16  = (reg_ax=0, reg_cx, reg_dx, reg_bx, reg_sp, reg_bp, reg_si, reg_di);
@@ -110,8 +110,7 @@ Unit JIT;
  Implementation
 Uses Stack, mStrings, SysUtils;
 
-Type PModRM = ^TModRM; // ModR/M structure
-     TModRM = Bitpacked Record
+Type TModRM = Bitpacked Record // ModR/M structure
                RM  : 0..7;
                Reg : 0..7;
                Mode: 0..3;
@@ -123,21 +122,6 @@ Type PModRM = ^TModRM; // ModR/M structure
                 Mode 3: reg
                }
               End;
-
-(* StripRegFromType *)
-Function StripRegFromType(const T: TJITOpcodeArgType): TJITOpcodeArgType;
-Begin
- Result := T;
-
- Case Result of
-  ptBoolReg     : Result := ptBool;
-  ptCharReg     : Result := ptChar;
-  ptIntReg      : Result := ptInt;
-  ptFloatReg    : Result := ptFloat;
-  ptStringReg   : Result := ptString;
-  ptReferenceReg: Result := ptInt;
- End;
-End;
 
 // -------------------------------------------------------------------------- //
 {$I routines.pas}
@@ -723,9 +707,9 @@ End;
 (* TJITCompiler.Compile *)
 Procedure TJITCompiler.Compile;
 Const SpecialMarker64: uint64 = $C0A0F0E0B0A0B0E;
-      StackSizes     : Array[TJITOpcodeArgType] of uint8 = (0, 0, 0, 0, 0, 0, 4, 4, 8, 0, 4, 0);
+      StackSizes     : Array[TOpcodeArgType] of uint8 = (0, 0, 0, 0, 0, 0, 4, 4, 8, 0, 4, 0);
 Var Opcode: TOpcode_E;
-    Args  : TJITOpcodeArgArray;
+    Args  : TOpcodeArgArray;
 
     icall             : PCall;
     ResultMV, ParamsMV: PMixedValue;
@@ -748,16 +732,23 @@ Var Opcode: TOpcode_E;
 
     { AddEpilogCode }
     Procedure AddEpilogCode;
+    Var I: uint32;
     Begin
      asm_push_imm32(uint32(ResultMV));
      asm_absolute_call(uint32(@__release_memory));
 
      asm_push_imm32(uint32(ParamsMV));
      asm_absolute_call(uint32(@__release_memory));
+
+     For I := 0 To AllocatedDataBlocks.Count-1 Do
+     Begin
+      asm_push_imm32(uint32(AllocatedDataBlocks[I]));
+      asm_absolute_call(uint32(@__release_memory));
+     End;
     End;
 
     { CompareLoad }
-    Procedure CompareLoad(const Arg: TJITOpcodeArg; const Reg8: TRegister8; const Reg32_1, Reg32_2: TRegister32);
+    Procedure CompareLoad(const Arg: TOpcodeArg; const Reg8: TRegister8; const Reg32_1, Reg32_2: TRegister32);
     Begin
      Case Arg.ArgType of
       // bool register
@@ -842,19 +833,13 @@ Var Opcode: TOpcode_E;
       // float immediate
       ptFloat: asm_fld_memfloat(AllocateFloat(Arg.ImmFloat));
 
-      // string register
-      //ptStringReg: asm_push_mem32(getRegMemAddr(Arg));
-
-      // string immediate
-      //ptString: asm_push_imm32(AllocateString(Arg.ImmString));
-
       else
        raise Exception.CreateFmt('CompareLoad() unsupported case: Arg.ArgType = %d', [ord(Arg.ArgType)]);
      End;
     End;
 
     { PushParamOnStack }
-    Function PushParamOnStack(const Arg: TJITOpcodeArg): uint8;
+    Function PushParamOnStack(const Arg: TOpcodeArg): uint8;
     Begin
      Case Arg.ArgType of
       ptBool        : asm_push_imm32(ord(Arg.ImmBool));
@@ -873,19 +858,16 @@ Var Opcode: TOpcode_E;
        raise Exception.CreateFmt('PushParamOnStack() unsupported argument: %d', [ord(Arg.ArgType)]);
      End;
 
-     Result := StackSizes[StripRegFromType(Arg.ArgType)];
+     Result := StackSizes[StripRegFromArgType(Arg.ArgType)];
     End;
 
     { isValueOrReg }
-    Function isValueOrReg(const Typ: TJITOpcodeArgType): Boolean; inline;
+    Function isValueOrReg(const Typ: TOpcodeArgType): Boolean; inline;
     Begin
      Result := (Typ in [ptBool, ptBoolReg, ptChar, ptCharReg, ptInt, ptIntReg, ptFloat, ptFloatReg, ptString, ptStringReg, ptReferenceReg]);
     End;
 
 Begin
- if (BytecodeData = nil) Then
-  raise Exception.Create('Cannot run JIT compiler: no bytecode has been loaded!');
-
  CompiledState := csDone;
 
  New(ResultMV);
@@ -896,17 +878,16 @@ Begin
  Try
   While (CompiledState = csDone) Do
   Begin
-   CurrentBytecodePos := uint32(BytecodeData.Memory)+BytecodeData.Position;
-   JumpTable.AddJump(CurrentBytecodePos, CompiledData.Position);
-
-   Opcode := TOpcode_E(FetchOpcode); // fetch opcode
-
-   if (ord(Opcode) = $FF) Then // `$FF` means end of the bytecode data
+   if (not BCReader.AnyOpcodeLeft) Then
     Break;
 
-   Args := FetchArguments(ord(Opcode)); // fetch opcode arguments
+   CurrentBytecodePos := uint32(BCReader.getBytecodeData.Memory) + BCReader.getBytecodeData.Position;
+   JumpTable.AddJump(CurrentBytecodePos, CompiledData.Position);
 
-   if (isLocationOpcode(ord(Opcode))) Then // skip the "loc_" opcodes
+   Opcode := BCReader.FetchOpcode; // fetch opcode
+   Args   := BCReader.FetchArguments(Opcode); // fetch opcode arguments
+
+   if (isLocationOpcode(Opcode)) Then // skip the "loc_" opcodes
     Continue;
 
    Case Opcode of
@@ -1148,7 +1129,7 @@ Begin
       asm_push_imm32(getSTPRegMemAddr);
       asm_push_imm32(uint32(@VM^.Stack));
 
-      Case StripRegFromType(Args[1].ArgType) of
+      Case StripRegFromArgType(Args[1].ArgType) of
        ptBool        : asm_absolute_call(uint32(@__stackval_boolval_assign));
        ptChar        : asm_absolute_call(uint32(@__stackval_charval_assign));
        ptInt         : asm_absolute_call(uint32(@__stackval_intval_assign));
@@ -1387,7 +1368,7 @@ Begin
      if (Args[0].ArgType = ptStackval) and (isValueOrReg(Args[1].ArgType)) Then
      Begin
       ElemSize        := PushParamOnStack(Args[1]);
-      Args[1].ArgType := StripRegFromType(Args[1].ArgType);
+      Args[1].ArgType := StripRegFromArgType(Args[1].ArgType);
 
       asm_push_imm32(ord(Args[1].ArgType));
       asm_push_imm32(Args[0].StackvalPos);
@@ -1405,7 +1386,7 @@ Begin
      if (isValueOrReg(Args[0].ArgType)) and (Args[1].ArgType = ptStackval) Then
      Begin
       ElemSize        := PushParamOnStack(Args[0]);
-      Args[0].ArgType := StripRegFromType(Args[0].ArgType);
+      Args[0].ArgType := StripRegFromArgType(Args[0].ArgType);
 
       asm_push_imm32(ord(Args[0].ArgType));
       asm_push_imm32(Args[1].StackvalPos);

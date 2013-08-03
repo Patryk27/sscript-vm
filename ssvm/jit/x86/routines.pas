@@ -8,7 +8,7 @@
 {$ASMMODE INTEL}
 
 { ConstructMixedValue }
-Function ConstructMixedValue(const Typ: TJITOpcodeArgType; const DataPointer: Pointer): TMixedValue;
+Function ConstructMixedValue(const Typ: TOpcodeArgType; const DataPointer: Pointer): TMixedValue;
 Var Float: Extended;
 Begin
  Case Typ of
@@ -542,7 +542,7 @@ Begin
 End;
 
 (* __compare_stackval_value *)
-Procedure __compare_stackval_value(const Stack: PStack; const reg_stp: pint32; const reg_if: PBoolean; const Opcode: TOpcode_E; const Stackval1Pos: int32; const ValueType: TJITOpcodeArgType; const Value: Pointer); stdcall;
+Procedure __compare_stackval_value(const Stack: PStack; const reg_stp: pint32; const reg_if: PBoolean; const Opcode: TOpcode_E; const Stackval1Pos: int32; const ValueType: TOpcodeArgType; const Value: Pointer); stdcall;
 Var S1, S2: TMixedValue;
 Begin
  S1 := Stack^[reg_stp^+Stackval1Pos];
@@ -559,7 +559,7 @@ Begin
 End;
 
 (* __compare_value_stackval *)
-Procedure __compare_value_stackval(const Stack: PStack; const reg_stp: pint32; const reg_if: PBoolean; const Opcode: TOpcode_E; const Stackval2Pos: int32; const ValueType: TJITOpcodeArgType; const Value: Pointer); stdcall;
+Procedure __compare_value_stackval(const Stack: PStack; const reg_stp: pint32; const reg_if: PBoolean; const Opcode: TOpcode_E; const Stackval2Pos: int32; const ValueType: TOpcodeArgType; const Value: Pointer); stdcall;
 Var S1, S2: TMixedValue;
 Begin
  S1 := ConstructMixedValue(ValueType, @Value);

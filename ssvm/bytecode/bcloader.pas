@@ -1,39 +1,42 @@
 (*
  Copyright © by Patryk Wychowaniec, 2013
  All rights reserved.
+
+ -------------------
+ Bytecode loader class.
 *)
 {$H+}
-Unit Loader;
+Unit BCLoader;
 
  Interface
  Uses SysUtils, Classes, Zipper, VM;
 
- Type TLoader = Class
-                 Private
-                  VM      : PVM;
-                  FileName: PChar;
+ Type TBCLoader = Class
+                   Private
+                    VM      : PVM;
+                    FileName: PChar;
 
-                  Procedure OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
-                  Procedure OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+                    Procedure OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+                    Procedure OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 
-                  Procedure ParseHeader(AStream: TStream);
-                  Procedure ParseBytecode(AStream: TStream);
+                    Procedure ParseHeader(AStream: TStream);
+                    Procedure ParseBytecode(AStream: TStream);
 
-                 Public
-                  Constructor Create(fVM: PVM; fFileName: PChar);
-                  Procedure Load;
-                 End;
+                   Public
+                    Constructor Create(fVM: PVM; fFileName: PChar);
+                    Procedure Load;
+                  End;
 
  Implementation
 
-(* TLoader.OnCreateStream *)
-Procedure TLoader.OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+(* TBCLoader.OnCreateStream *)
+Procedure TBCLoader.OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 Begin
  AStream := TMemoryStream.Create;
 End;
 
-(* TLoader.OnDoneStream *)
-Procedure TLoader.OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+(* TBCLoader.OnDoneStream *)
+Procedure TBCLoader.OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 Begin
  AStream.Position := 0;
 
@@ -47,11 +50,11 @@ Begin
  End;
 End;
 
-(* TLoader.ParseHeader *)
+(* TBCLoader.ParseHeader *)
 {
  Parses header from specified stream.
 }
-Procedure TLoader.ParseHeader(AStream: TStream);
+Procedure TBCLoader.ParseHeader(AStream: TStream);
 
     // EndingZero
     Function EndingZero(const Text: String): String;
@@ -78,11 +81,11 @@ Begin
  End;
 End;
 
-(* TLoader.ParseBytecode *)
+(* TBCLoader.ParseBytecode *)
 {
  Parses bytecode from specified stream.
 }
-Procedure TLoader.ParseBytecode(AStream: TStream);
+Procedure TBCLoader.ParseBytecode(AStream: TStream);
 Var I: uint32;
 Begin
  With VM^ do
@@ -98,18 +101,18 @@ Begin
 End;
 
 // -------------------------------------------------------------------------- //
-(* TLoader.Create *)
-Constructor TLoader.Create(fVM: PVM; fFileName: PChar);
+(* TBCLoader.Create *)
+Constructor TBCLoader.Create(fVM: PVM; fFileName: PChar);
 Begin
  VM       := fVM;
  FileName := fFileName;
 End;
 
-(* TLoader.Load *)
+(* TBCLoader.Load *)
 {
  Loads bytecode from specified file.
 }
-Procedure TLoader.Load;
+Procedure TBCLoader.Load;
 Var Zip     : TUnzipper;
     FileList: TStringList;
 Begin

@@ -6,45 +6,22 @@
 Unit JIT_Base;
 
  Interface
- Uses VM, Opcodes, Stream, FGL;
+ Uses VM, Opcodes, BCReader, Stream, FGL;
 
  Type TIntList = specialize TFPGList<uint32>;
-
- Type TJITOpcodeArgType = (ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg, ptBool, ptChar, ptInt, ptFloat, ptString, ptStackval);
-
- { TJITOpcodeArg }
- Type TJITOpcodeArg = Record
-                       Case ArgType: TJITOpcodeArgType of
-                        ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg: (RegID: uint8); // @TODO: 'ptBoolReg..ptReferenceReg' (but it makes Lazarus's code completion not working :/)
-
-                        ptBool    : (ImmBool: Boolean);
-                        ptChar    : (ImmChar: Char);
-                        ptInt     : (ImmInt: Int64);
-                        ptFloat   : (ImmFloat: Extended);
-                        ptString  : (ImmString: String);
-                        ptStackval: (StackvalPos: int32);
-                       End;
-
- Type TJITOpcodeArgArray = Array of TJITOpcodeArg;
 
  { TJITCompilerBase }
  Type TJITCompilerBase = Class
                           Protected
                            VM: PVM;
 
-                           BytecodeData: TStream;
-                           CompiledData: TStream;
-
+                           BCReader     : TBCReader;
+                           CompiledData : TStream;
                            CompiledState: TJITCompiledState;
 
                            AllocatedDataBlocks: TIntList;
 
-                           Function FetchOpcode: uint8;
-                           Function FetchArgument: TJITOpcodeArg;
-                           Function FetchArguments(const Opcode: uint8): TJITOpcodeArgArray;
-                           Function isLocationOpcode(const Opcode: uint8): Boolean;
-
-                           Function getRegMemAddr(const Arg: TJITOpcodeArg): uint32;
+                           Function getRegMemAddr(const Arg: TOpcodeArg): uint32;
                            Function getIFRegMemAddr: uint32;
                            Function getSTPRegMemAddr: uint32;
 
@@ -53,10 +30,9 @@ Unit JIT_Base;
                            Function AllocateString(const Value: String): uint32;
 
                           Public
-                           Constructor Create(const fVM: PVM);
+                           Constructor Create(const fVM: PVM; const BytecodeData: Pointer);
                            Destructor Destroy; override;
 
-                           Procedure LoadBytecode(const BytecodePnt: Pointer);
                            Procedure Compile; virtual;
 
                            Property getCompiledData: TStream read CompiledData;
@@ -66,52 +42,8 @@ Unit JIT_Base;
  Implementation
 Uses mStrings;
 
-(* TJITCompilerBase.FetchOpcode *)
-Function TJITCompilerBase.FetchOpcode: uint8;
-Begin
- if (not BytecodeData.Can) Then
-  Exit($FF);
-
- Result := BytecodeData.read_uint8;
-End;
-
-(* TJITCompilerBase.FetchArgument *)
-Function TJITCompilerBase.FetchArgument: TJITOpcodeArg;
-Begin
- Result.ArgType := TJITOpcodeArgType(BytecodeData.read_uint8);
-
- Case Result.ArgType of
-  ptBoolReg..ptReferenceReg: Result.RegID       := BytecodeData.read_uint8;
-  ptBool                   : Result.ImmBool     := Boolean(BytecodeData.read_uint8);
-  ptChar                   : Result.ImmChar     := Char(BytecodeData.read_uint8);
-  ptInt                    : Result.ImmInt      := BytecodeData.read_int64;
-  ptFloat                  : Result.ImmFloat    := BytecodeData.read_float;
-  ptString                 : Result.ImmString   := BytecodeData.read_string;
-  ptStackval               : Result.StackvalPos := BytecodeData.read_int32;
-
-  else
-   BytecodeData.read_int32;
- End;
-End;
-
-(* TJITCompilerBase.FetchArguments *)
-Function TJITCompilerBase.FetchArguments(const Opcode: uint8): TJITOpcodeArgArray;
-Var I: Integer;
-Begin
- SetLength(Result, OpcodeArgCount[TOpcode_E(Opcode)]);
-
- For I := Low(Result) To High(Result) Do
-  Result[I] := FetchArgument;
-End;
-
-(* TJITCompilerBase.isLocationOpcode *)
-Function TJITCompilerBase.isLocationOpcode(const Opcode: uint8): Boolean;
-Begin
- Result := Opcode in [ord(o_loc_file), ord(o_loc_func), ord(o_loc_line)];
-End;
-
 (* TJITCompilerBase.getRegMemAddr *)
-Function TJITCompilerBase.getRegMemAddr(const Arg: TJITOpcodeArg): uint32;
+Function TJITCompilerBase.getRegMemAddr(const Arg: TOpcodeArg): uint32;
 Begin
  Result := 0;
 
@@ -165,9 +97,11 @@ End;
 
 // -------------------------------------------------------------------------- //
 (* TJITCompilerBase.Create *)
-Constructor TJITCompilerBase.Create(const fVM: PVM);
+Constructor TJITCompilerBase.Create(const fVM: PVM; const BytecodeData: Pointer);
 Begin
  VM := fVM;
+
+ BCReader := TBCReader.Create(BytecodeData);
 
  CompiledData  := TStream.Create(False);
  CompiledState := csDone;
@@ -184,24 +118,7 @@ Begin
 
  AllocatedDataBlocks.Free;
  CompiledData.Free;
-End;
-
-(* TJITCompilerBase.LoadBytecode *)
-Procedure TJITCompilerBase.LoadBytecode(const BytecodePnt: Pointer);
-Type puint8 = ^uint8;
-Var I: uint32 = 0;
-Begin
- BytecodeData          := TStream.Create(True);
- BytecodeData.Position := 0;
-
- // @TODO: why "BytecodeData.WriteBuffer" doesn't work?
- While (I < MemSize(BytecodePnt)) Do
- Begin
-  BytecodeData.write_uint8(puint8(BytecodePnt+I)^);
-  Inc(I);
- End;
-
- BytecodeData.Position := 0;
+ BCReader.Free;
 End;
 
 (* TJITCompilerBase.Compile *)

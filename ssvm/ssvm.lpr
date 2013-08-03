@@ -60,7 +60,7 @@ Begin
 
  if (not FileExists(FileName)) Then // file not found
  Begin
-  SetError(ERR_FILE_NOT_FOUND, 'File "'+FileName+'" cannot be found.');
+  SetError(ERR_FILE_NOT_FOUND, 'File "'+FileName+'" couldn''t be found.');
   Exit(nil);
  End;
 

@@ -10,13 +10,9 @@
 Unit VM;
 
  Interface
- Uses Stack, MTypes, FGL;
+ Uses Stack, MTypes, BCLoader, FGL;
 
  Const VMVersion = '0.3.4 nightly';
-
- Const SupportedBytecode: Record
-                           Major, Minor: uint8;
-                          End = (Major: 0; Minor: 41); // current bytecode version: 0.41
 
  Const ExceptionStackSize = 2*1024; // 2 KB
        StackElementCount  = 1000000; // maximum elements count on the stack; now it's about ~65 MB; @TODO: stack dynamic grow!
@@ -70,11 +66,7 @@ Unit VM;
                     r: Array[1..4] of Pointer;  // er1, er2, er3, er4
                    End;
 
-             Loader: Record // filled by TLoader
-                      MagicNumber               : uint32;
-                      isRunnable                : Boolean;
-                      VersionMajor, VersionMinor: uint8;
-                     End;
+             LoaderData: TBCLoaderData; // filled by TBCLoader
 
              ExceptionStack: Puint32; // exception stack elements
              Stack         : Array of TStackElement; // stack elements
@@ -161,7 +153,7 @@ Unit VM;
  Function VM_GetStopReason(VM: Pointer): TStopReason; stdcall;
 
  Implementation
-Uses SysUtils, BCLoader, Opcodes, Objects, mStrings,
+Uses SysUtils, Opcodes, Objects, mStrings,
      GC, OpcodeInterpreter
 {$IFDEF ENABLE_JIT}, JIT {$ENDIF};
 
@@ -178,10 +170,11 @@ Begin
   InternalCallList := TCallList.Create;
 
   // try to load and parse the input file
-  LoaderClass := TBCLoader.Create(VM, FileName);
+  LoaderClass := TBCLoader.Create(FileName);
   Try
-   LoaderClass.Load;
+   LoaderData := LoaderClass.Load^;
   Finally
+   CodeData := LoaderData.CodeData;
    LoaderClass.Free;
   End;
 
@@ -213,8 +206,8 @@ Begin
   if (CodeData = nil) Then
    raise Exception.Create('Couldn''t run program: no bytecode has been loaded!');
 
-  if (not Loader.isRunnable) Then
-   raise Exception.Create('Cannot run a library!');
+  if (not LoaderData.isRunnable) Then
+   raise Exception.Create('File is not runnable!');
 
   ExceptionHandler  := -1;
   LastException.Typ := etNone;
@@ -226,7 +219,7 @@ Begin
   StackPos  := @Regs.i[5];
   StackPos^ := 0;
 
-  if (JITCode <> nil) Then // if possible, execute the JIT compiled code
+  if (JITCode <> nil) Then // if possible, execute the JIT code
   Begin
    TProcedure(JITCode)();
    Exit;

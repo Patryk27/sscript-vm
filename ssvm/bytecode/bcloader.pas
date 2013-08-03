@@ -3,18 +3,37 @@
  All rights reserved.
 
  -------------------
- Bytecode loader class.
+ Bytecode loader class for version 0.41.
 *)
 {$H+}
 Unit BCLoader;
 
  Interface
- Uses SysUtils, Classes, Zipper, VM;
+ Uses SysUtils, Classes, Zipper;
 
+ Const BytecodeMajor = 0;
+       BytecodeMinor = 41;
+
+ { TLoadState }
+ Type TLoadState = (lsSuccess, lsFailed, lsFileNotFound);
+
+ { TBCLoaderData }
+ Type PBCLoaderData = ^TBCLoaderData;
+      TBCLoaderData = Record
+                       State: TLoadState;
+
+                       CodeData: PByte;
+
+                       MagicNumber               : uint32;
+                       isRunnable                : Boolean;
+                       VersionMajor, VersionMinor: uint8;
+                      End;
+
+ { TBCLoader }
  Type TBCLoader = Class
                    Private
-                    VM      : PVM;
-                    FileName: PChar;
+                    FileName  : String;
+                    LoaderData: PBCLoaderData;
 
                     Procedure OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
                     Procedure OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
@@ -23,9 +42,9 @@ Unit BCLoader;
                     Procedure ParseBytecode(AStream: TStream);
 
                    Public
-                    Constructor Create(fVM: PVM; fFileName: PChar);
-                    Procedure Load;
-                  End;
+                    Constructor Create(const fFileName: String);
+                    Function Load: PBCLoaderData;
+                   End;
 
  Implementation
 
@@ -56,7 +75,7 @@ End;
 }
 Procedure TBCLoader.ParseHeader(AStream: TStream);
 
-    // EndingZero
+    { EndingZero }
     Function EndingZero(const Text: String): String;
     Begin
      if (Length(Text) = 1) Then
@@ -65,7 +84,7 @@ Procedure TBCLoader.ParseHeader(AStream: TStream);
     End;
 
 Begin
- With VM^.Loader do
+ With LoaderData^ do
  Begin
   MagicNumber  := BEtoN(AStream.ReadDWord);
   isRunnable   := Boolean(AStream.ReadByte);
@@ -75,9 +94,9 @@ Begin
   if (MagicNumber <> $0DEFACED) Then
    raise Exception.CreateFmt('Invalid magic number: %i', [MagicNumber]);
 
-  if (VersionMajor <> SupportedBytecode.Major) or (VersionMinor <> SupportedBytecode.Minor) Then
+  if (VersionMajor <> BytecodeMajor) or (VersionMinor <> BytecodeMinor) Then
    raise Exception.CreateFmt('Unsupported bytecode version: %s.%s, expecting %s.%s', [IntToStr(VersionMajor), EndingZero(IntToStr(VersionMinor)),
-                                                                                      IntToStr(SupportedBytecode.Major), EndingZero(IntToStr(SupportedBytecode.Minor))]);
+                                                                                      IntToStr(BytecodeMajor), EndingZero(IntToStr(BytecodeMinor))]);
  End;
 End;
 
@@ -88,23 +107,21 @@ End;
 Procedure TBCLoader.ParseBytecode(AStream: TStream);
 Var I: uint32;
 Begin
- With VM^ do
+ With LoaderData^ do
  Begin
   if (AStream.Size = 0) Then
    raise Exception.Create('No bytecode to be loaded!');
 
   CodeData := AllocMem(AStream.Size);
-
-  For I := 0 To AStream.Size-1 Do // @TODO: AStream.Read
+  For I := 0 To AStream.Size-1 Do // @TODO: AStream.Read/AStream.ReadBuffer
    CodeData[I] := AStream.ReadByte;
  End;
 End;
 
 // -------------------------------------------------------------------------- //
 (* TBCLoader.Create *)
-Constructor TBCLoader.Create(fVM: PVM; fFileName: PChar);
+Constructor TBCLoader.Create(const fFileName: String);
 Begin
- VM       := fVM;
  FileName := fFileName;
 End;
 
@@ -112,22 +129,29 @@ End;
 {
  Loads bytecode from specified file.
 }
-Procedure TBCLoader.Load;
+Function TBCLoader.Load: PBCLoaderData;
 Var Zip     : TUnzipper;
     FileList: TStringList;
 Begin
- if (not FileExists(FileName)) Then // file not exists
+ New(Result);
+ LoaderData := Result;
+
+ if (not FileExists(FileName)) Then // file doesn't exist
+ Begin
+  Result^.State := lsFileNotFound;
   Exit;
+ End;
 
- Zip      := TUnzipper.Create;
- FileList := TStringList.Create;
-
+ Zip          := TUnzipper.Create;
  Zip.FileName := FileName;
 
- With VM^ do
- Begin
+ FileList := TStringList.Create;
+
+ Result^.State := lsSuccess;
+
+ Try
   Try
-   CodeData := nil;
+   Result^.CodeData := nil;
 
    Zip.Examine;
    Zip.OnCreateStream := @OnCreateStream;
@@ -145,6 +169,9 @@ Begin
    FileList.Free;
    Zip.Free;
   End;
+ Except
+  Result^.State := lsFailed;
+  Exit;
  End;
 End;
 End.

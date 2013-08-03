@@ -261,6 +261,18 @@ Begin
  Result := A div B;
 End;
 
+(* __intshl_int_int *)
+Function __intshl_int_int(const A, B: int64): int64; stdcall;
+Begin
+ Result := A << B;
+End;
+
+(* __intshr_int_int *)
+Function __intshr_int_int(const A, B: int64): int64; stdcall;
+Begin
+ Result := A >> B;
+End;
+
 (* __create_icall_parameter_list *)
 Procedure __create_icall_parameter_list(const Params: PMixedValue; const ParamCount: uint32; const Stack: PStack; const reg_stp: pint32); stdcall;
 Var I: Integer;
@@ -354,6 +366,32 @@ Begin
   mvFloat: SVal^.Value.Float /= Value;
   else
    raise Exception.CreateFmt('Cannot execute ''__stackval_div_int'' on type `%d`', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_shl_int *)
+Procedure __stackval_shl_int(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32; const Value: int64); stdcall;
+Var SVal: PStackElement;
+Begin
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt: SVal^.Value.Int := SVal^.Value.Int << Value;
+  else
+   raise Exception.CreateFmt('Cannot execute ''__stackval_shl_int'' on type `%d`', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_shr_int *)
+Procedure __stackval_shr_int(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32; const Value: int64); stdcall;
+Var SVal: PStackElement;
+Begin
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt: SVal^.Value.Int := SVal^.Value.Int >> Value;
+  else
+   raise Exception.CreateFmt('Cannot execute ''__stackval_shr_int'' on type `%d`', [ord(SVal^.Typ)]);
  End;
 End;
 

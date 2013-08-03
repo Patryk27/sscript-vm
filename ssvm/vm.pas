@@ -76,7 +76,7 @@ Unit VM;
 
              ExceptionHandler: Int64; // current bytecode exception handler (must be a signed type!); `-1` means no handler set
              LastException   : TExceptionBlock; // last exception block
-             StackPos        : PInt64; // pointer at `Regs.i[5]` - current stack position
+             StackPos        : PInt64; // points at `Regs.i[5]` (current stack position)
 
              Stop      : Boolean; // used by the `stop()` opcode, if equal `true` - VM stops executing bytecode
              StopReason: TStopReason;
@@ -160,7 +160,7 @@ Uses SysUtils, Opcodes, Objects, mStrings,
 (* VM_Create *)
 {
  Sets fields to their default values, allocates memory etc. and loads the specified bytecode file.
- `VM` must points at already allocated memory area!
+ `VM` must point at already allocated memory area!
 }
 Procedure VM_Create(VM: Pointer; FileName: PChar; GCMemoryLimit: uint32); stdcall;
 Var LoaderClass: TBCLoader;
@@ -196,7 +196,7 @@ End;
 
 (* VM_Run *)
 {
- Runs the program from specified point ('EntryPoint').
+ Executes the program from specified point ('EntryPoint').
 }
 Procedure VM_Run(VM: Pointer; EntryPoint: uint32); stdcall;
 Type TProcedure = Procedure;
@@ -235,6 +235,7 @@ Begin
 End;
 
 (* VM_JITCompile *)
+{ Executes JIT compiler on already loaded bytecode in specified VM instance }
 Function VM_JITCompile(VM: Pointer; EntryPoint: uint32): TJITCompiledState; stdcall;
 {$IFDEF ENABLE_JIT}
 Var Compiler: TJITCompiler = nil;
@@ -273,18 +274,21 @@ Begin
 End;
 
 (* VM_GetLastJITError *)
+{ Returns last JIT compiler error }
 Function VM_GetLastJITError(VM: Pointer): PChar; stdcall;
 Begin
  Result := PVM(VM)^.LastJITError;
 End;
 
 (* VM_GetJITCode *)
+{ Return JIT-compiled code pointer }
 Function VM_GetJITCode(VM: Pointer): Pointer; stdcall;
 Begin
  Result := PVM(VM)^.JITCode;
 End;
 
 (* VM_GetJITCodeSize *)
+{ Returns JIT-compiled code size }
 Function VM_GetJITCodeSize(VM: Pointer): uint32; stdcall;
 Begin
  Result := PVM(VM)^.JITCodeSize;

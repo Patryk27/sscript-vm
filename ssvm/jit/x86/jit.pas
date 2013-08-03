@@ -63,6 +63,7 @@ Unit JIT;
                        Procedure asm_mov_mem16_imm16(const Mem: uint32; const Value: int16);
                        Procedure asm_mov_reg32_imm32(const Reg: TRegister32; const Value: int32);
                        Procedure asm_mov_reg32_mem32(const Reg: TRegister32; const Mem: uint32);
+                       Procedure asm_mov_reg32_reg32(const RegA: TRegister32; const RegB: TRegister32);
                        Procedure asm_mov_mem32_reg32(const Reg: TRegister32; const Reg2: TRegister32);
                        Procedure asm_mov_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
                        Procedure asm_mov_mem32_imm32(const Mem: uint32; const Value: int32);
@@ -78,6 +79,7 @@ Unit JIT;
                        Procedure asm_add_reg32_imm32(const Reg: TRegister32; const Value: int32);
                        Procedure asm_add_mem32_imm32(const Mem: uint32; const Value: int32);
                        Procedure asm_sub_mem32_imm32(const Mem: uint32; const Value: int32);
+                       Procedure asm_sub_reg32_reg32(const RegA: TRegister32; const RegB: TRegister32);
                        Procedure asm_cmp_reg32_reg32(const RegA, RegB: TRegister32);
                        Procedure asm_cmp_reg8_reg8(const RegA, RegB: TRegister8);
                        Procedure asm_cmp_mem32_imm32(const Mem: uint32; const Value: int32);
@@ -91,6 +93,11 @@ Unit JIT;
                        Procedure asm_setbe_mem8(const Mem: uint32);
                        Procedure asm_seta_mem8(const Mem: uint32);
                        Procedure asm_setae_mem8(const Mem: uint32);
+
+                       Procedure asm_or_reg32_reg32(const RegA, RegB: TRegister32);
+                       Procedure asm_and_reg32_reg32(const RegA, RegB: TRegister32);
+                       Procedure asm_xor_reg32_reg32(const RegA, RegB: TRegister32);
+                       Procedure asm_shr_reg32_cl(const RegA: TRegister32);
 
                        Procedure asm_fild_mem64(const Mem: uint32);
                        Procedure asm_fld_memfloat(const Mem: uint32);
@@ -329,6 +336,19 @@ Begin
  End;
 End;
 
+(* TJITCompiler.asm_mov_reg32_reg32 *)
+{ mov regA, regB }
+Procedure TJITCompiler.asm_mov_reg32_reg32(const RegA: TRegister32; const RegB: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := ord(RegB);
+ ModRM.RM   := ord(RegA);
+
+ CompiledData.write_uint8($89);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+End;
+
 (* TJITCompiler.asm_mov_mem32_reg32 *)
 { mov dword [reg], reg }
 Procedure TJITCompiler.asm_mov_mem32_reg32(const Reg: TRegister32; const Reg2: TRegister32);
@@ -486,6 +506,19 @@ Begin
  CompiledData.write_int32(Value);
 End;
 
+(* TJITCompiler.asm_sub_reg32_reg32 *)
+{ sub regA, regB }
+Procedure TJITCompiler.asm_sub_reg32_reg32(const RegA: TRegister32; const RegB: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := ord(RegB);
+ ModRM.RM   := ord(RegA);
+
+ CompiledData.write_uint8($29);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+End;
+
 (* TJITCompiler.asm_cmp_reg32_reg32 *)
 { cmp regA, regB }
 Procedure TJITCompiler.asm_cmp_reg32_reg32(const RegA, RegB: TRegister32);
@@ -621,6 +654,53 @@ Begin
  CompiledData.write_uint32(Mem);
 End;
 
+(* TJITCompiler.asm_or_reg32_reg32 *)
+{ or regA, regB }
+Procedure TJITCompiler.asm_or_reg32_reg32(const RegA, RegB: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := ord(RegA);
+ ModRM.RM   := ord(RegB);
+
+ CompiledData.write_uint8($0B);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+End;
+
+(* TJITCompiler.asm_and_reg32_reg32 *)
+{ and regA, regB }
+Procedure TJITCompiler.asm_and_reg32_reg32(const RegA, RegB: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := ord(RegB);
+ ModRM.RM   := ord(RegA);
+
+ CompiledData.write_uint8($21);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+End;
+
+(* TJITCompiler.asm_xor_reg32_reg32 *)
+{ xor regA, regB }
+Procedure TJITCompiler.asm_xor_reg32_reg32(const RegA, RegB: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := ord(RegB);
+ ModRM.RM   := ord(RegA);
+
+ CompiledData.write_uint8($31);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+End;
+
+(* TJITCompiler.asm_shr_reg32_cl *)
+{ shr regA, cl }
+Procedure TJITCompiler.asm_shr_reg32_cl(const RegA: TRegister32);
+Begin
+ CompiledData.write_uint8($D3);
+ CompiledData.write_uint8($E8 + ord(RegA));
+End;
+
 (* TJITCompiler.asm_fild_mem64 *)
 { fild qword [mem] }
 Procedure TJITCompiler.asm_fild_mem64(const Mem: uint32);
@@ -721,7 +801,7 @@ Var Opcode: TOpcode_E;
     Pos: uint32;
 
     isFloatOpcode: Boolean;
-    CompareMode  : (cm8Bit, cm64Bit, cmFloat);
+    LoadMode     : (cm8Bit, cm64Bit, cmFloat);
     ElemSize     : int32;
 
     { AddPrologCode }
@@ -747,13 +827,13 @@ Var Opcode: TOpcode_E;
      End;
     End;
 
-    { CompareLoad }
-    Procedure CompareLoad(const Arg: TOpcodeArg; const Reg8: TRegister8; const Reg32_1, Reg32_2: TRegister32);
+    { LoadToReg }
+    Procedure LoadToReg(const Arg: TOpcodeArg; const Reg8: TRegister8; const Reg32_1, Reg32_2: TRegister32);
     Begin
      Case Arg.ArgType of
       // bool register
       ptBoolReg:
-       Case CompareMode of
+       Case LoadMode of
         cm8Bit: asm_mov_reg8_mem8(Reg8, getRegMemAddr(Arg));
 
         cm64Bit:
@@ -766,7 +846,7 @@ Var Opcode: TOpcode_E;
 
       // bool immediate
       ptBool:
-       Case CompareMode of
+       Case LoadMode of
         cm8Bit: asm_mov_reg8_imm8(Reg8, ord(Arg.ImmBool));
 
         cm64Bit:
@@ -779,7 +859,7 @@ Var Opcode: TOpcode_E;
 
       // char register
       ptCharReg:
-       Case CompareMode of
+       Case LoadMode of
         cm8Bit: asm_mov_reg8_mem8(Reg8, getRegMemAddr(Arg));
 
         cm64Bit:
@@ -792,7 +872,7 @@ Var Opcode: TOpcode_E;
 
       // char immediate
       ptChar:
-       Case CompareMode of
+       Case LoadMode of
         cm8Bit: asm_mov_reg8_imm8(Reg8, ord(Arg.ImmChar));
 
         cm64Bit:
@@ -805,7 +885,7 @@ Var Opcode: TOpcode_E;
 
       // int register
       ptIntReg:
-       Case CompareMode of
+       Case LoadMode of
         cmFloat: asm_fild_mem64(getRegMemAddr(Arg));
 
         cm64Bit:
@@ -817,7 +897,7 @@ Var Opcode: TOpcode_E;
 
       // int immediate
       ptInt:
-       Case CompareMode of
+       Case LoadMode of
         cmFloat: asm_fild_mem64(AllocateInt64(Arg.ImmInt));
 
         cm64Bit:
@@ -891,24 +971,59 @@ Begin
     Continue;
 
    Case Opcode of
-    { add, sub, mul, div }
-    o_add, o_sub, o_mul, o_div:
+    { add, sub, mul, div, or, and, xor, shl, shr }
+    o_add, o_sub, o_mul, o_div, o_or, o_and, o_xor, o_shl, o_shr:
     Begin
      // opcode(reg int, imm/reg int/char)
      if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptInt, ptIntReg{, ptChar, ptCharReg @TODO}]) Then
      Begin
-      Case Args[1].ArgType of
-       ptInt   : asm_push_imm64(Args[1].ImmInt);
-       ptIntReg: asm_push_mem64(getRegMemAddr(Args[1]));
-      End;
+      if (Opcode in [o_add, o_sub, o_mul, o_div, o_shl, o_shr]) Then
+      Begin
+       Case Args[1].ArgType of
+        ptInt   : asm_push_imm64(Args[1].ImmInt);
+        ptIntReg: asm_push_mem64(getRegMemAddr(Args[1]));
+       End;
 
-      asm_push_mem64(getRegMemAddr(Args[0]));
+       asm_push_mem64(getRegMemAddr(Args[0]));
 
-      Case Opcode of
-       o_add: asm_absolute_call(uint32(@__intadd_int_int));
-       o_sub: asm_absolute_call(uint32(@__intsub_int_int));
-       o_mul: asm_absolute_call(uint32(@__intmul_int_int));
-       o_div: asm_absolute_call(uint32(@__intdiv_int_int));
+       Case Opcode of
+        o_add: asm_absolute_call(uint32(@__intadd_int_int));
+        o_sub: asm_absolute_call(uint32(@__intsub_int_int));
+        o_mul: asm_absolute_call(uint32(@__intmul_int_int));
+        o_div: asm_absolute_call(uint32(@__intdiv_int_int));
+        o_shl: asm_absolute_call(uint32(@__intshl_int_int)); // @TODO: it's a really lame solution
+        o_shr: asm_absolute_call(uint32(@__intshr_int_int)); // @TODO: it's a really lame solution
+       End;
+      End Else
+      Begin
+       {
+        @TODO: when right operand is known, we don't have to load it into register(s)
+       }
+
+       LoadMode := cm64Bit;
+
+       LoadToReg(Args[0], reg_al, reg_eax, reg_ebx);
+       LoadToReg(Args[1], reg_cl, reg_ecx, reg_edx);
+
+       Case Opcode of
+        o_or:
+        Begin
+         asm_or_reg32_reg32(reg_eax, reg_ecx);
+         asm_or_reg32_reg32(reg_ebx, reg_edx);
+        End;
+
+        o_and:
+        Begin
+         asm_and_reg32_reg32(reg_eax, reg_ecx);
+         asm_and_reg32_reg32(reg_ebx, reg_edx);
+        End;
+
+        o_xor:
+        Begin
+         asm_xor_reg32_reg32(reg_eax, reg_ecx);
+         asm_xor_reg32_reg32(reg_ebx, reg_edx);
+        End;
+       End;
       End;
 
       asm_mov_mem32_reg32(getRegMemAddr(Args[0]), reg_eax); // copy result back to the first register
@@ -916,7 +1031,8 @@ Begin
      End Else
 
      // opcode(reg float, imm/reg int/float)
-     if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType in [ptInt, ptIntReg, ptFloat, ptFloatReg]) Then
+     if (Opcode in [o_add, o_sub, o_mul, o_div]) and
+        (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType in [ptInt, ptIntReg, ptFloat, ptFloatReg]) Then
      Begin
       Case Args[1].ArgType of
        ptInt     : asm_fild_mem64(AllocateInt64(Args[1].ImmInt));
@@ -962,6 +1078,9 @@ Begin
         o_sub: asm_absolute_call(uint32(@__stackval_sub_float));
         o_mul: asm_absolute_call(uint32(@__stackval_mul_float));
         o_div: asm_absolute_call(uint32(@__stackval_div_float));
+
+        else
+         raise Exception.CreateFmt('invalid instruction: arithmetic_opcode(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
        End;
       End Else
       Begin
@@ -970,6 +1089,11 @@ Begin
         o_sub: asm_absolute_call(uint32(@__stackval_sub_int));
         o_mul: asm_absolute_call(uint32(@__stackval_mul_int));
         o_div: asm_absolute_call(uint32(@__stackval_div_int));
+        o_shl: asm_absolute_call(uint32(@__stackval_shl_int));
+        o_shr: asm_absolute_call(uint32(@__stackval_shr_int));
+
+        else
+         raise Exception.CreateFmt('invalid instruction: arithmetic_opcode(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
        End;
       End;
      End Else
@@ -1289,24 +1413,24 @@ Begin
          cmp(imm, mem)
       }
 
-      CompareMode := cm8Bit;
+      LoadMode := cm8Bit;
 
       if (Args[0].ArgType in [ptInt, ptIntReg]) or (Args[1].ArgType in [ptInt, ptIntReg]) Then
-       CompareMode := cm64Bit;
+       LoadMode := cm64Bit;
 
       if (Args[0].ArgType in [ptFloat, ptFloatReg]) or (Args[1].ArgType in [ptFloat, ptFloatReg]) Then
-       CompareMode := cmFloat;
+       LoadMode := cmFloat;
 
-      if ((CompareMode = cmFloat) and (not (Args[0].ArgType in [ptFloat, ptFloatReg, ptInt, ptIntReg]))) or
-         ((CompareMode = cmFloat) and (not (Args[1].ArgType in [ptFloat, ptFloatReg, ptInt, ptIntReg]))) Then // cannot compare float with non-float nor non-int
+      if ((LoadMode = cmFloat) and (not (Args[0].ArgType in [ptFloat, ptFloatReg, ptInt, ptIntReg]))) or
+         ((LoadMode = cmFloat) and (not (Args[1].ArgType in [ptFloat, ptFloatReg, ptInt, ptIntReg]))) Then // cannot compare float with non-float nor non-int
       Begin
        raise Exception.CreateFmt('cannot compare floats with non-floats nor non-ints: type(%d), type(%d)', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
       End;
 
-      CompareLoad(Args[1], reg_cl, reg_ecx, reg_edx);
-      CompareLoad(Args[0], reg_al, reg_eax, reg_ebx);
+      LoadToReg(Args[1], reg_cl, reg_ecx, reg_edx);
+      LoadToReg(Args[0], reg_al, reg_eax, reg_ebx);
 
-      if (CompareMode = cmFloat) Then
+      if (LoadMode = cmFloat) Then
       Begin
        asm_fcompp();
        asm_fstsw_ax();
@@ -1322,7 +1446,7 @@ Begin
        End;
       End Else
       Begin
-       if (CompareMode = cm64Bit) Then
+       if (LoadMode = cm64Bit) Then
        Begin
         // @TODO (maybe converting to float and comparing as floats?)
         asm_cmp_reg32_reg32(reg_eax, reg_ecx);
@@ -1522,7 +1646,10 @@ Begin
     End;
 
     Else
+    Begin
      CompiledState := csJITUnsupported;
+     raise Exception.CreateFmt('unimplemented opcode: 0x%x', [ord(Opcode)]);
+    End;
    End;
   End;
 

@@ -528,9 +528,18 @@ Procedure __stackval_opcode_stackval(const Stack: PStack; const reg_stp: pint32;
 Var S1, S2, Result: TMixedValue;
     FVal1, FVal2  : Extended;
     IVal1, IVal2  : Int64;
+    BVal1, BVal2  : Boolean;
 Begin
  S1 := Stack^[reg_stp^+Stackval1Pos];
  S2 := Stack^[reg_stp^+Stackval2Pos];
+
+ // bool, bool
+ if (S1.Typ = mvBool) and (S2.Typ = mvBool) Then
+ Begin
+  BVal1      := S1.Value.Bool;
+  BVal2      := S2.Value.Bool;
+  Result.Typ := mvBool;
+ End Else
 
  // int, int
  if (S1.Typ = mvInt) and (S2.Typ = mvInt) Then
@@ -567,6 +576,20 @@ Begin
  // invalid call
   raise Exception.CreateFmt('''__stackval_opcode_stackval'' called with invalid args: %d, %d', [ord(S1.Typ), ord(S2.Typ)]);
 
+ // bools
+ if (Result.Typ = mvBool) Then
+ Begin
+  Case Opcode of
+   o_or : Result.Value.Bool := BVal1 or BVal2;
+   o_and: Result.Value.Bool := BVal1 and BVal2;
+   o_xor: Result.Value.Bool := BVal1 xor BVal2;
+
+   else
+    raise Exception.CreateFmt('''__stackval_opcode_stackval'' called with invalid opcode: %d', [ord(Opcode)]);
+  End;
+ End Else
+
+ // floats
  if (Result.Typ = mvFloat) Then
  Begin
   Case Opcode of
@@ -579,6 +602,9 @@ Begin
     raise Exception.CreateFmt('''__stackval_opcode_stackval'' called with invalid opcode: %d', [ord(Opcode)]);
   End;
  End Else
+
+ // ints
+ if (Result.Typ = mvInt) Then
  Begin
   Case Opcode of
    o_add: Result.Value.Int := IVal1 + IVal2;
@@ -586,6 +612,9 @@ Begin
    o_mul: Result.Value.Int := IVal1 * IVal2;
    o_div: Result.Value.Int := IVal1 div IVal2;
    o_mod: Result.Value.Int := IVal1 mod IVal2;
+   o_or : Result.Value.Int := IVal1 or IVal2;
+   o_and: Result.Value.Int := IVal1 and IVal2;
+   o_xor: Result.Value.Int := IVal1 xor IVal2;
 
    else
     raise Exception.CreateFmt('''__stackval_opcode_stackval'' called with invalid opcode: %d', [ord(Opcode)]);
@@ -691,6 +720,12 @@ Begin
   else
    raise Exception.CreateFmt('''__stackval_not'' called with invalid stack element type: %d', [ord(SVal^.Typ)]);
  End;
+End;
+
+(* __stackval_fetch_bool *)
+Function __stackval_fetch_bool(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32): Boolean; stdcall;
+Begin
+ Result := getBool(Stack^[reg_stp^+StackvalPos]);
 End;
 
 (* __stackval_fetch_int *)

@@ -95,8 +95,11 @@ Unit JIT;
                        Procedure asm_setae_mem8(const Mem: uint32);
 
                        Procedure asm_or_reg32_reg32(const RegA, RegB: TRegister32);
+                       Procedure asm_or_mem8_reg8(const Mem: uint32; const Reg: TRegister8);
                        Procedure asm_and_reg32_reg32(const RegA, RegB: TRegister32);
+                       Procedure asm_and_mem8_reg8(const Mem: uint32; const Reg: TRegister8);
                        Procedure asm_xor_reg32_reg32(const RegA, RegB: TRegister32);
+                       Procedure asm_xor_mem8_reg8(const Mem: uint32; const Reg: TRegister8);
                        Procedure asm_shr_reg32_cl(const RegA: TRegister32);
 
                        Procedure asm_not_reg32(const Reg: TRegister32);
@@ -689,6 +692,34 @@ Begin
  CompiledData.write_uint8(puint8(@ModRM)^);
 End;
 
+(* TJITCompiler.asm_or_mem8_reg8 *)
+{ or byte [mem], reg }
+Procedure TJITCompiler.asm_or_mem8_reg8(const Mem: uint32; const Reg: TRegister8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := ord(Reg);
+ ModRM.RM   := 5;
+
+ CompiledData.write_uint8($08);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+ CompiledData.write_uint32(Mem);
+End;
+
+(* TJITCompiler.asm_and_mem8_reg8 *)
+{ and byte [mem], reg }
+Procedure TJITCompiler.asm_and_mem8_reg8(const Mem: uint32; const Reg: TRegister8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := ord(Reg);
+ ModRM.RM   := 5;
+
+ CompiledData.write_uint8($20);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+ CompiledData.write_uint32(Mem);
+End;
+
 (* TJITCompiler.asm_and_reg32_reg32 *)
 { and regA, regB }
 Procedure TJITCompiler.asm_and_reg32_reg32(const RegA, RegB: TRegister32);
@@ -713,6 +744,20 @@ Begin
 
  CompiledData.write_uint8($31);
  CompiledData.write_uint8(puint8(@ModRM)^);
+End;
+
+(* TJITCompiler.asm_xor_mem8_reg8 *)
+{ xor byte [mem], reg }
+Procedure TJITCompiler.asm_xor_mem8_reg8(const Mem: uint32; const Reg: TRegister8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := ord(Reg);
+ ModRM.RM   := 5;
+
+ CompiledData.write_uint8($30);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+ CompiledData.write_uint32(Mem);
 End;
 
 (* TJITCompiler.asm_shr_reg32_cl *)
@@ -1072,6 +1117,29 @@ Begin
     { add, sub, mul, div, or, and, xor, shl, shr }
     o_add, o_sub, o_mul, o_div, o_or, o_and, o_xor, o_shl, o_shr:
     Begin
+     // or/and/xor(reg bool, imm/reg bool/stackval)
+     if (Opcode in [o_or, o_and, o_xor]) and (Args[0].ArgType = ptBoolReg) and (Args[1].ArgType in [ptBool, ptBoolReg, ptStackval]) Then
+     Begin
+      Case Args[1].ArgType of
+       ptBool   : asm_mov_reg8_imm8(reg_al, ord(Args[1].ImmBool));
+       ptBoolReg: asm_mov_reg8_mem8(reg_al, getRegMemAddr(Args[1]));
+
+       ptStackval:
+       Begin
+        asm_push_imm32(Args[1].StackvalPos);
+        asm_push_imm32(getSTPRegMemAddr);
+        asm_push_imm32(uint32(@VM^.Stack));
+        asm_absolute_call(uint32(@__stackval_fetch_bool));
+       End;
+      End;
+
+      Case Opcode of
+       o_or : asm_or_mem8_reg8(getRegMemAddr(Args[0]), reg_al);
+       o_and: asm_and_mem8_reg8(getRegMemAddr(Args[0]), reg_al);
+       o_xor: asm_xor_mem8_reg8(getRegMemAddr(Args[0]), reg_al);
+      End;
+     End Else
+
      // opcode(reg int, imm/reg int/char/stackval)
      if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptInt, ptIntReg, ptChar, ptCharReg, ptStackval]) Then
      Begin

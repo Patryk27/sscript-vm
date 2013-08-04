@@ -509,7 +509,7 @@ End;
 }
 Procedure TVM.SetPosition(const Pos: uint32);
 Begin
- Position := PByte(uint64(CodeData)+Pos);
+ Position := PByte(uint32(CodeData)+Pos);
 End;
 
 (* TVM.GetPosition *)
@@ -518,7 +518,7 @@ End;
 }
 Function TVM.GetPosition: uint32;
 Begin
- Result := uint32(uint64(Position)-uint64(CodeData));
+ Result := uint32(uint32(Position)-uint32(CodeData));
 End;
 
 (* TVM.FindInternalCall *)
@@ -689,7 +689,7 @@ Begin
   btIntReg      : Result.Value.Int   := Regs.i[Result.RegIndex];
   btFloatReg    : Result.Value.Float := Regs.f[Result.RegIndex];
   btStringReg   : Result.Value.Str   := CopyStringToPChar(Regs.s[Result.RegIndex]);
-  btReferenceReg: Result.Value.Int   := uint64(Regs.r[Result.RegIndex]);
+  btReferenceReg: Result.Value.Int   := uint32(Regs.r[Result.RegIndex]);
 
   { constant value }
   btBool  : Result.Value.Bool  := Boolean(read_uint8);

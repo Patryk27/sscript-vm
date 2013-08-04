@@ -145,7 +145,7 @@ Begin
 
   While (Mem < MemEnd) Do
   Begin
-   Obj := TMObject(Pointer(Pint64(Mem)^));
+   Obj := TMObject(Pointer(uint32(Pint64(Mem)^)));
    if (VM^.isValidObject(Obj)) Then
     Obj.GC_Mark;
 

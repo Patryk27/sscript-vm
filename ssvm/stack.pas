@@ -274,7 +274,7 @@ End;
 (* getReference *)
 Function getReference(MV: TMixedValue): Pointer;
 Begin
- Result := Pointer(getInt(MV));
+ Result := Pointer(uint32(getInt(MV)));
 End;
 
 (* getTypeName *)

@@ -993,7 +993,7 @@ Begin
    { ARSET (stackval, index count, value) }
    With refreg.Stackval^ do
     Case refreg.Typ of
-      mvInt, mvReference: TMArray(CheckObject(Pointer(Value.Int))).setValue(PosArray, new_value);
+      mvInt, mvReference: TMArray(CheckObject(Pointer(Int32(Value.Int)))).setValue(PosArray, new_value);
 
       mvString:
       Begin
@@ -1066,7 +1066,7 @@ Begin
    { ARGET (stackval, index count, result register) }
    With refreg.Stackval^ do
     Case refreg.Typ of
-     mvInt, mvReference: AValue := TMArray(CheckObject(Pointer(Value.Int))).getValue(PosArray);
+     mvInt, mvReference: AValue := TMArray(CheckObject(Pointer(Int32(Value.Int)))).getValue(PosArray);
 
      mvString: // string stackval
      Begin
@@ -1131,7 +1131,7 @@ Begin
   ArrayObj := TMArray.Create(VM, getInt(typ), Sizes);
 
   Case refreg.Typ of
-   mvInt      : Regs.i[refreg.RegIndex] := uint64(Pointer(ArrayObj));
+   mvInt      : Regs.i[refreg.RegIndex] := uint32(Pointer(ArrayObj));
    mvReference: Regs.r[refreg.RegIndex] := ArrayObj;
 
    else

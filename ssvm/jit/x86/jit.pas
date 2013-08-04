@@ -917,7 +917,6 @@ Var Opcode: TOpcode_E;
 
     { AddEpilogCode }
     Procedure AddEpilogCode;
-    Var I: int32;
     Begin
      asm_push_imm32(uint32(ResultMV));
      asm_absolute_call(uint32(@__release_memory));

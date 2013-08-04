@@ -54,7 +54,7 @@ Begin
 
  For I := VM^.Regs.i[5] Downto 0 Do // traverse the stack
   if (VM^.Stack[I].Typ = mvReference) Then
-   TryToMark(Pointer(VM^.Stack[I].Value.Int));
+   TryToMark(Pointer(uint32(VM^.Stack[I].Value.Int)));
 
  For I := Low(VM^.Regs.r) To High(VM^.Regs.r) Do
   TryToMark(VM^.Regs.r[i]);
@@ -62,7 +62,7 @@ End;
 
 (* TGarbageCollector.Sweep *)
 Procedure TGarbageCollector.Sweep;
-Var I, Removed: uint32;
+Var I, Removed: Int32;
 Begin
  I       := 0;
  Removed := 0;

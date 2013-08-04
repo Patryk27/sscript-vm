@@ -76,6 +76,7 @@
       <Style Value="1"/>
     </Parsing>
     <CodeGeneration>
+      <SmartLinkUnit Value="True"/>
       <RelocatableUnit Value="True"/>
       <Optimizations>
         <VariablesInRegisters Value="True"/>
@@ -91,6 +92,7 @@
       <CompilerMessages>
         <MsgFileName Value=""/>
       </CompilerMessages>
+      <CustomOptions Value="-vm4055"/>
       <CompilerPath Value="$(CompPath)"/>
     </Other>
   </CompilerOptions>

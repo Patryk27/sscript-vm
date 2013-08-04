@@ -1207,6 +1207,8 @@ Begin
       asm_absolute_call(uint32(@__stackval_opcode_stackval));
      End Else
 
+     // @TODO: opcode(reg int/float, stackval)
+
       raise Exception.CreateFmt('invalid instruction: arithmetic_opcode(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
     End;
 
@@ -1365,6 +1367,8 @@ Begin
         raise Exception.CreateFmt('invalid instruction: mov(stackval, type(%d))', [ord(Args[1].ArgType)]);
       End;
      End Else
+
+     // @TODO: mov(stackval, stackval)
 
       raise Exception.CreateFmt('invalid instruction: mov(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
     End;
@@ -1798,6 +1802,61 @@ Begin
      End Else
 
       raise Exception.CreateFmt('invalid opcode: not(type(%d))', [ord(Args[0].ArgType)]);
+    End;
+
+    { mod }
+    o_mod:
+    Begin
+     // mod(reg int, imm/reg int/stackval)
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptInt, ptIntReg, ptStackval]) Then
+     Begin
+      Case Args[1].ArgType of
+       ptInt     : asm_push_imm64(Args[1].ImmInt);
+       ptIntReg  : asm_push_mem64(getRegMemAddr(Args[1]));
+       ptStackval:
+       Begin
+        asm_push_imm32(Args[1].StackvalPos);
+        asm_push_imm32(getSTPRegMemAddr);
+        asm_push_imm32(uint32(@VM^.Stack));
+        asm_absolute_call(uint32(@__stackval_fetch_int));
+        asm_push_reg32(reg_edx);
+        asm_push_reg32(reg_eax);
+       End;
+      End;
+
+      asm_push_mem64(getRegMemAddr(Args[0]));
+      asm_absolute_call(uint32(@__intmod_int_int));
+
+      asm_mov_mem32_reg32(getRegMemAddr(Args[0]), reg_eax); // copy result back to the first register
+      asm_mov_mem32_reg32(getRegMemAddr(Args[0])+4, reg_edx);
+     End Else
+
+     // mod(stackval, imm/reg int)
+     if (Args[0].ArgType = ptStackval) and (Args[1].ArgType in [ptInt, ptIntReg]) Then
+     Begin
+      Case Args[1].ArgType of
+       ptInt   : asm_push_imm64(Args[1].ImmInt);
+       ptIntReg: asm_push_mem64(getRegMemAddr(Args[1]));
+      End;
+
+      asm_push_imm32(Args[0].StackvalPos);
+      asm_push_imm32(getSTPRegMemAddr);
+      asm_push_imm32(uint32(@VM^.Stack));
+      asm_absolute_call(uint32(@__stackval_mod_int));
+     End Else
+
+     // mod(stackval, stackval)
+     if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptStackval) Then
+     Begin
+      asm_push_imm32(ord(Opcode));
+      asm_push_imm32(Args[1].StackvalPos);
+      asm_push_imm32(Args[0].StackvalPos);
+      asm_push_imm32(getSTPRegMemAddr);
+      asm_push_imm32(uint32(@VM^.Stack));
+      asm_absolute_call(uint32(@__stackval_opcode_stackval));
+     End Else
+
+      raise Exception.CreateFmt('invalid opcode: mod(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
     End;
 
     { stop }

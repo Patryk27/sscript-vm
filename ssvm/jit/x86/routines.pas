@@ -273,6 +273,12 @@ Begin
  Result := A >> B;
 End;
 
+(* __intmod_int_int *)
+Function __intmod_int_int(const A, B: int64): int64; stdcall;
+Begin
+ Result := A mod B;
+End;
+
 (* __create_icall_parameter_list *)
 Procedure __create_icall_parameter_list(const Params: PMixedValue; const ParamCount: uint32; const Stack: PStack; const reg_stp: pint32); stdcall;
 Var I: Integer;
@@ -392,6 +398,19 @@ Begin
   mvInt: SVal^.Value.Int := SVal^.Value.Int >> Value;
   else
    raise Exception.CreateFmt('Cannot execute ''__stackval_shr_int'' on type `%d`', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_mod_int *)
+Procedure __stackval_mod_int(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32; const Value: int64); stdcall;
+Var SVal: PStackElement;
+Begin
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt: SVal^.Value.Int := SVal^.Value.Int mod Value;
+  else
+   raise Exception.CreateFmt('Cannot execute ''__stackval_mod_int'' on type `%d`', [ord(SVal^.Typ)]);
  End;
 End;
 
@@ -549,10 +568,11 @@ Begin
  End Else
  Begin
   Case Opcode of
-   o_add: Result.Value.Int := IVal1 - IVal2;
+   o_add: Result.Value.Int := IVal1 + IVal2;
    o_sub: Result.Value.Int := IVal1 - IVal2;
-   o_mul: Result.Value.Int := IVal1 - IVal2;
-   o_div: Result.Value.Int := IVal1 - IVal2;
+   o_mul: Result.Value.Int := IVal1 * IVal2;
+   o_div: Result.Value.Int := IVal1 div IVal2;
+   o_mod: Result.Value.Int := IVal1 mod IVal2;
 
    else
     raise Exception.CreateFmt('''__stackval_opcode_stackval'' called with invalid opcode: %d', [ord(Opcode)]);
@@ -658,6 +678,12 @@ Begin
   else
    raise Exception.CreateFmt('''__stackval_not'' called with invalid stack element type: %d', [ord(SVal^.Typ)]);
  End;
+End;
+
+(* __stackval_fetch_int *)
+Function __stackval_fetch_int(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32): int64; stdcall;
+Begin
+ Result := getInt(Stack^[reg_stp^+StackvalPos]);
 End;
 
 (* __release_memory *)

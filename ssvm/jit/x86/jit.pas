@@ -1072,14 +1072,45 @@ Begin
     { add, sub, mul, div, or, and, xor, shl, shr }
     o_add, o_sub, o_mul, o_div, o_or, o_and, o_xor, o_shl, o_shr:
     Begin
-     // opcode(reg int, imm/reg int/char)
-     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptInt, ptIntReg{, ptChar, ptCharReg @TODO}]) Then
+     // opcode(reg int, imm/reg int/char/stackval)
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptInt, ptIntReg, ptChar, ptCharReg, ptStackval]) Then
      Begin
       if (Opcode in [o_add, o_sub, o_mul, o_div, o_shl, o_shr]) Then
       Begin
        Case Args[1].ArgType of
-        ptInt   : asm_push_imm64(Args[1].ImmInt);
-        ptIntReg: asm_push_mem64(getRegMemAddr(Args[1]));
+        ptInt    : asm_push_imm64(Args[1].ImmInt);
+        ptIntReg : asm_push_mem64(getRegMemAddr(Args[1]));
+        ptChar   : asm_push_imm64(ord(Args[1].ImmChar));
+        ptCharReg:
+        Begin
+         asm_mov_reg32_imm32(reg_eax, 0);
+         asm_mov_reg8_mem8(reg_al, getRegMemAddr(Args[1]));
+         asm_push_imm32(0);
+         asm_push_reg32(reg_eax);
+
+         {
+          @Note: we can't directly do "push byte [mem]", so we're basically doing this:
+
+           1) mov eax, 0
+           2) mov al, byte [Args[1].Register]
+           3) push 0
+           4) push eax
+
+           1 -> we need to zero the 'eax' register, so it doesn't contain any garbage
+           2 -> just loading a byte from memory here
+           3, 4 -> a 64-bit value have to be pushed, so the high 32 bits must be empty, and the low 32 bits are our 8-bit value.
+         }
+        End;
+
+        ptStackval:
+        Begin
+         asm_push_imm32(Args[1].StackvalPos);
+         asm_push_imm32(getSTPRegMemAddr);
+         asm_push_imm32(uint32(@VM^.Stack));
+         asm_absolute_call(uint32(@__stackval_fetch_int));
+         asm_push_reg32(reg_edx);
+         asm_push_reg32(reg_eax);
+        End;
        End;
 
        asm_push_mem64(getRegMemAddr(Args[0]));
@@ -1206,8 +1237,6 @@ Begin
       asm_push_imm32(uint32(@VM^.Stack));
       asm_absolute_call(uint32(@__stackval_opcode_stackval));
      End Else
-
-     // @TODO: opcode(reg int/float, stackval)
 
       raise Exception.CreateFmt('invalid instruction: arithmetic_opcode(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
     End;

@@ -312,6 +312,19 @@ Begin
  PPChar(RegAddr)^ := CopyStringToPChar(AnsiString(PPChar(RegAddr)^) + AnsiString(StrPnt));
 End;
 
+(* __stringconcat_stackval_string *)
+Procedure __stringconcat_stackval_string(const Stack: PStack; const reg_stp: Puint32; const StackvalPos: int32; const StrPnt: PChar); stdcall;
+Var SVal: PMixedValue;
+Begin
+ SVal := @Stack^[int32(reg_stp^)+StackvalPos];
+
+ if (SVal^.Typ = mvString) Then
+ Begin
+  SVal^.Value.Str := CopyStringToPChar(AnsiString(SVal^.Value.Str) + AnsiString(StrPnt));
+ End Else
+  raise Exception.CreateFmt('Cannot execute ''__stringconcat_stackval_string'' on type `%d`', [ord(SVal^.Typ)]);
+End;
+
 (* __ret *)
 Function __ret(const Stack: PStack; const reg_stp: pint32): uint32; stdcall;
 Begin
@@ -684,6 +697,12 @@ End;
 Function __stackval_fetch_int(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32): int64; stdcall;
 Begin
  Result := getInt(Stack^[reg_stp^+StackvalPos]);
+End;
+
+(* __stackval_fetch_string *)
+Function __stackval_fetch_string(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32): PChar; stdcall;
+Begin
+ Result := getString(Stack^[reg_stp^+StackvalPos]);
 End;
 
 (* __release_memory *)

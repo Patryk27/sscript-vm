@@ -1748,19 +1748,48 @@ Begin
     { strjoin }
     o_strjoin:
     Begin
-     // @TODO: strjoin(stackval, imm/reg string)
-     // @TODO: strjoin(stackval, stackval)
-
-     // strjoin(reg string, imm/reg string)
-     if (Args[0].ArgType = ptStringReg) and (Args[1].ArgType in [ptString, ptStringReg]) Then
+     // strjoin(reg string, imm/reg string/stackval)
+     if (Args[0].ArgType = ptStringReg) and (Args[1].ArgType in [ptString, ptStringReg, ptStackval]) Then
      Begin
-      if (Args[1].ArgType = ptString) Then
-       asm_push_imm32(AllocateString(Args[1].ImmString)) Else
-       asm_push_mem32(getRegMemAddr(Args[1]));
+      Case Args[1].ArgType of
+       ptString   : asm_push_imm32(AllocateString(Args[1].ImmString));
+       ptStringReg: asm_push_mem32(getRegMemAddr(Args[1]));
+
+       ptStackval:
+       Begin
+        asm_push_imm32(Args[1].StackvalPos);
+        asm_push_imm32(getSTPRegMemAddr);
+        asm_push_imm32(uint32(@VM^.Stack));
+        asm_absolute_call(uint32(@__stackval_fetch_string));
+        asm_push_reg32(reg_eax);
+       End;
+      End;
 
       asm_push_imm32(getRegMemAddr(Args[0]));
-
       asm_absolute_call(uint32(@__stringconcat_reg_string));
+     End Else
+
+     // strjoin(stackval, imm/reg string/stackval)
+     if (Args[0].ArgType = ptStackval) and (Args[1].ArgType in [ptString, ptStringReg, ptStackval]) Then
+     Begin
+      Case Args[1].ArgType of
+       ptString   : asm_push_imm32(AllocateString(Args[1].ImmString));
+       ptStringReg: asm_push_mem32(getRegMemAddr(Args[1]));
+
+       ptStackval:
+       Begin
+        asm_push_imm32(Args[1].StackvalPos);
+        asm_push_imm32(getSTPRegMemAddr);
+        asm_push_imm32(uint32(@VM^.Stack));
+        asm_absolute_call(uint32(@__stackval_fetch_string));
+        asm_push_reg32(reg_eax);
+       End;
+      End;
+
+      asm_push_imm32(Args[0].StackvalPos);
+      asm_push_imm32(getSTPRegMemAddr);
+      asm_push_imm32(uint32(@VM^.Stack));
+      asm_absolute_call(uint32(@__stringconcat_stackval_string));
      End Else
 
       raise Exception.CreateFmt('invalid opcode: strjoin(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);

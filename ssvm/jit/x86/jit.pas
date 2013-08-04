@@ -68,8 +68,6 @@ Unit JIT;
                        Procedure asm_mov_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
                        Procedure asm_mov_mem32_imm32(const Mem: uint32; const Value: int32);
                        Procedure asm_mov_mem32_imm64(const Mem: uint32; const Value: int64);
-                       Procedure asm_mov_memfloat_immfloat(const Mem: uint32; const Value: Extended);
-                       Procedure asm_mov_memfloat_st0(const Mem: uint32);
 
                        Procedure asm_absolute_call(const Addr: uint32);
                        Procedure asm_absolute_jmp(const Addr: uint32);
@@ -80,6 +78,8 @@ Unit JIT;
                        Procedure asm_add_mem32_imm32(const Mem: uint32; const Value: int32);
                        Procedure asm_sub_mem32_imm32(const Mem: uint32; const Value: int32);
                        Procedure asm_sub_reg32_reg32(const RegA: TRegister32; const RegB: TRegister32);
+                       Procedure asm_sbb_reg32_imm32(const Reg: TRegister32; const Value: int32);
+                       Procedure asm_sbb_reg32_imm8(const Reg: TRegister32; const Value: int8);
                        Procedure asm_cmp_reg32_reg32(const RegA, RegB: TRegister32);
                        Procedure asm_cmp_reg8_reg8(const RegA, RegB: TRegister8);
                        Procedure asm_cmp_mem32_imm32(const Mem: uint32; const Value: int32);
@@ -99,15 +99,25 @@ Unit JIT;
                        Procedure asm_xor_reg32_reg32(const RegA, RegB: TRegister32);
                        Procedure asm_shr_reg32_cl(const RegA: TRegister32);
 
+                       Procedure asm_not_reg32(const Reg: TRegister32);
+                       Procedure asm_not_mem8(const Mem: uint32);
+                       Procedure asm_not_mem32(const Mem: uint32);
+                       Procedure asm_neg_reg32(const Reg: TRegister32);
+                       Procedure asm_neg_mem32(const Mem: uint32);
+
+                       Procedure asm_test_reg8_reg8(const RegA, RegB: TRegister8);
+
                        Procedure asm_fild_mem64(const Mem: uint32);
                        Procedure asm_fld_memfloat(const Mem: uint32);
-                       Procedure asm_fadd_st0(const Reg: TRegisterFPU);
-                       Procedure asm_fsub_st0(const Reg: TRegisterFPU);
-                       Procedure asm_fmul_st0(const Reg: TRegisterFPU);
-                       Procedure asm_fdiv_st0(const Reg: TRegisterFPU);
+                       Procedure asm_fstp_memfloat(const Mem: uint32);
+                       Procedure asm_faddp_st0(const Reg: TRegisterFPU);
+                       Procedure asm_fsubp_st0(const Reg: TRegisterFPU);
+                       Procedure asm_fmulp_st0(const Reg: TRegisterFPU);
+                       Procedure asm_fdivp_st0(const Reg: TRegisterFPU);
                        Procedure asm_fcomi_st0(const Reg: TRegisterFPU);
                        Procedure asm_fcompp;
                        Procedure asm_fstsw_ax;
+                       Procedure asm_fchs;
                        Procedure asm_sahf;
 
                       Public
@@ -405,23 +415,6 @@ Begin
  asm_mov_mem32_imm32(Mem+4, hi(Value));
 End;
 
-(* TJITCompiler.asm_mov_memfloat_immfloat *)
-Procedure TJITCompiler.asm_mov_memfloat_immfloat(const Mem: uint32; const Value: Extended);
-Var I: uint8;
-Begin
- For I := 0 To 9 Do
-  asm_mov_mem8_imm8(Mem+I, puint8(uint32(@Value)+I)^);
-End;
-
-(* TJITCompiler.asm_mov_memfloat_st0 *)
-{ fstp [mem] }
-Procedure TJITCompiler.asm_mov_memfloat_st0(const Mem: uint32);
-Begin
- CompiledData.write_uint8($DB);
- CompiledData.write_uint8($3D);
- CompiledData.write_uint32(Mem);
-End;
-
 (* TJITCompiler.asm_absolute_call *)
 {
  mov eax, addr
@@ -519,6 +512,34 @@ Begin
  CompiledData.write_uint8(puint8(@ModRM)^);
 End;
 
+(* TJITCompiler.asm_sbb_reg32_imm32 *)
+{ sbb reg, value }
+Procedure TJITCompiler.asm_sbb_reg32_imm32(const Reg: TRegister32; const Value: int32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := 3;
+ ModRM.RM   := ord(Reg);
+
+ CompiledData.write_uint8($81);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+ CompiledData.write_int32(Value);
+End;
+
+(* TJITCompiler.asm_sbb_reg32_imm8 *)
+{ sbb reg, value }
+Procedure TJITCompiler.asm_sbb_reg32_imm8(const Reg: TRegister32; const Value: int8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := 3;
+ ModRM.RM   := ord(Reg);
+
+ CompiledData.write_uint8($83);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+ CompiledData.write_int8(Value);
+End;
+
 (* TJITCompiler.asm_cmp_reg32_reg32 *)
 { cmp regA, regB }
 Procedure TJITCompiler.asm_cmp_reg32_reg32(const RegA, RegB: TRegister32);
@@ -533,6 +554,7 @@ Begin
 End;
 
 (* TJITCompiler.asm_cmp_reg8_reg8 *)
+{ cmp regA, regB }
 Procedure TJITCompiler.asm_cmp_reg8_reg8(const RegA, RegB: TRegister8);
 Var ModRM: TModRM;
 Begin
@@ -701,6 +723,72 @@ Begin
  CompiledData.write_uint8($E8 + ord(RegA));
 End;
 
+(* TJITCompiler.asm_not_reg32 *)
+{ not reg }
+Procedure TJITCompiler.asm_not_reg32(const Reg: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := 2;
+ ModRM.RM   := ord(Reg);
+
+ CompiledData.write_uint8($F7);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+End;
+
+(* TJITCompiler.asm_not_mem8 *)
+{ not byte [mem] }
+Procedure TJITCompiler.asm_not_mem8(const Mem: uint32);
+Begin
+ CompiledData.write_uint8($F6);
+ CompiledData.write_uint8($15);
+ CompiledData.write_uint32(Mem);
+End;
+
+(* TJITCompiler.asm_not_mem32 *)
+{ not dword [mem] }
+Procedure TJITCompiler.asm_not_mem32(const Mem: uint32);
+Begin
+ CompiledData.write_uint8($F7);
+ CompiledData.write_uint8($15);
+ CompiledData.write_uint32(Mem);
+End;
+
+(* TJITCompiler.asm_neg_reg32 *)
+{ neg reg }
+Procedure TJITCompiler.asm_neg_reg32(const Reg: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := 3;
+ ModRM.RM   := ord(Reg);
+
+ CompiledData.write_uint8($F7);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+End;
+
+(* TJITCompiler.asm_neg_mem32 *)
+{ neg dword [mem] }
+Procedure TJITCompiler.asm_neg_mem32(const Mem: uint32);
+Begin
+ CompiledData.write_uint8($F7);
+ CompiledData.write_uint8($1D);
+ CompiledData.write_uint32(Mem);
+End;
+
+(* TJITCompiler.asm_test_reg8_reg8 *)
+{ test regA, regB }
+Procedure TJITCompiler.asm_test_reg8_reg8(const RegA, RegB: TRegister8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := ord(RegB);
+ ModRM.RM   := ord(RegA);
+
+ CompiledData.write_uint8($84);
+ CompiledData.write_uint8(puint8(@ModRM)^);
+End;
+
 (* TJITCompiler.asm_fild_mem64 *)
 { fild qword [mem] }
 Procedure TJITCompiler.asm_fild_mem64(const Mem: uint32);
@@ -719,36 +807,45 @@ Begin
  CompiledData.write_uint32(Mem);
 End;
 
-(* TJITCompiler.asm_fadd_st0 *)
-{ fadd st(0), reg }
-Procedure TJITCompiler.asm_fadd_st0(const Reg: TRegisterFPU);
+(* TJITCompiler.asm_fstp_memfloat *)
+{ fstp [mem] }
+Procedure TJITCompiler.asm_fstp_memfloat(const Mem: uint32);
 Begin
- CompiledData.write_uint8($D8);
+ CompiledData.write_uint8($DB);
+ CompiledData.write_uint8($3D);
+ CompiledData.write_uint32(Mem);
+End;
+
+(* TJITCompiler.asm_faddp_st0 *)
+{ faddp st(0), reg }
+Procedure TJITCompiler.asm_faddp_st0(const Reg: TRegisterFPU);
+Begin
+ CompiledData.write_uint8($DE);
  CompiledData.write_uint8($C0 + ord(Reg));
 End;
 
-(* TJITCompiler.asm_fsub_st0 *)
-{ fsub st(0), reg }
-Procedure TJITCompiler.asm_fsub_st0(const Reg: TRegisterFPU);
+(* TJITCompiler.asm_fsubp_st0 *)
+{ fsubp st(0), reg }
+Procedure TJITCompiler.asm_fsubp_st0(const Reg: TRegisterFPU);
 Begin
- CompiledData.write_uint8($D8);
- CompiledData.write_uint8($E0 + ord(Reg));
+ CompiledData.write_uint8($DE);
+ CompiledData.write_uint8($E8 + ord(Reg));
 End;
 
-(* TJITCompiler.asm_fmul_st0 *)
-{ fmul st(0), reg }
-Procedure TJITCompiler.asm_fmul_st0(const Reg: TRegisterFPU);
+(* TJITCompiler.asm_fmulp_st0 *)
+{ fmulp st(0), reg }
+Procedure TJITCompiler.asm_fmulp_st0(const Reg: TRegisterFPU);
 Begin
- CompiledData.write_uint8($D8);
+ CompiledData.write_uint8($DE);
  CompiledData.write_uint8($C8 + ord(Reg));
 End;
 
-(* TJITCompiler.asm_fdiv_st0 *)
-{ fdiv st(0), reg }
-Procedure TJITCompiler.asm_fdiv_st0(const Reg: TRegisterFPU);
+(* TJITCompiler.asm_fdivp_st0 *)
+{ fdivp st(0), reg }
+Procedure TJITCompiler.asm_fdivp_st0(const Reg: TRegisterFPU);
 Begin
- CompiledData.write_uint8($D8);
- CompiledData.write_uint8($F0 + ord(Reg));
+ CompiledData.write_uint8($DE);
+ CompiledData.write_uint8($F8 + ord(Reg));
 End;
 
 (* TJITCompiler.asm_fcomi_st0 *)
@@ -773,6 +870,14 @@ Procedure TJITCompiler.asm_fstsw_ax;
 Begin
  CompiledData.write_uint8($9B);
  CompiledData.write_uint8($DF);
+ CompiledData.write_uint8($E0);
+End;
+
+(* TJITCompiler.asm_fchs *)
+{ fchs }
+Procedure TJITCompiler.asm_fchs;
+Begin
+ CompiledData.write_uint8($D9);
  CompiledData.write_uint8($E0);
 End;
 
@@ -819,12 +924,6 @@ Var Opcode: TOpcode_E;
 
      asm_push_imm32(uint32(ParamsMV));
      asm_absolute_call(uint32(@__release_memory));
-
-     For I := 0 To AllocatedDataBlocks.Count-1 Do
-     Begin
-      asm_push_imm32(uint32(AllocatedDataBlocks[I]));
-      asm_absolute_call(uint32(@__release_memory));
-     End;
     End;
 
     { LoadToReg }
@@ -1044,13 +1143,13 @@ Begin
       asm_fld_memfloat(getRegMemAddr(Args[0])); // push register value
 
       Case Opcode of
-       o_add: asm_fadd_st0(reg_st1);
-       o_sub: asm_fsub_st0(reg_st1);
-       o_mul: asm_fmul_st0(reg_st1);
-       o_div: asm_fdiv_st0(reg_st1);
+       o_add: asm_faddp_st0(reg_st1);
+       o_sub: asm_fsubp_st0(reg_st1);
+       o_mul: asm_fmulp_st0(reg_st1);
+       o_div: asm_fdivp_st0(reg_st1);
       End;
 
-      asm_mov_memfloat_st0(getRegMemAddr(Args[0])); // copy result back to the first register
+      asm_fstp_memfloat(getRegMemAddr(Args[0])); // copy result back to the first register
      End Else
 
      // opcode(stackval, imm/reg int/float)
@@ -1188,27 +1287,29 @@ Begin
      // mov(reg float, imm int)
      if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType = ptInt) Then
      Begin
-      asm_mov_memfloat_immfloat(getRegMemAddr(Args[0]), Args[1].ImmInt);
+      asm_fild_mem64(AllocateInt64(Args[1].ImmInt));
+      asm_fstp_memfloat(getRegMemAddr(Args[0]));
      End Else
 
      // mov(reg float, imm float)
      if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType = ptFloat) Then
      Begin
-      asm_mov_memfloat_immfloat(getRegMemAddr(Args[0]), Args[1].ImmFloat);
+      asm_fld_memfloat(AllocateFloat(Args[1].ImmFloat));
+      asm_fstp_memfloat(getRegMemAddr(Args[0]));
      End Else
 
      // mov(reg float, reg int)
      if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType = ptIntReg) Then
      Begin
       asm_fild_mem64(getRegMemAddr(Args[1])); // push 64-bit number to the FPU stack
-      asm_mov_memfloat_st0(getRegMemAddr(Args[0])); // pop result to the first register
+      asm_fstp_memfloat(getRegMemAddr(Args[0])); // pop result to the first register
      End Else
 
      // mov(reg float, reg float)
      if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType = ptFloatReg) Then
      Begin
       asm_fld_memfloat(getRegMemAddr(Args[1])); // push float register value to the FPU stack
-      asm_mov_memfloat_st0(getRegMemAddr(Args[0])); // pop result to the first register
+      asm_fstp_memfloat(getRegMemAddr(Args[0])); // pop result to the first register
      End Else
 
      // mov(reg string, imm string)
@@ -1631,6 +1732,55 @@ Begin
      End Else
 
       raise Exception.CreateFmt('invalid opcode: strjoin(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
+    End;
+
+    { neg }
+    o_neg:
+    Begin
+     // neg(reg int)
+     if (Args[0].ArgType = ptIntReg) Then
+     Begin
+      LoadMode := cm64Bit;
+      LoadToReg(Args[0], reg_al, reg_eax, reg_ebx);
+
+      asm_not_reg32(reg_ebx);
+      asm_neg_reg32(reg_eax);
+      asm_sbb_reg32_imm8(reg_ebx, -1);
+
+      asm_mov_mem32_reg32(getRegMemAddr(Args[0]), reg_eax);
+      asm_mov_mem32_reg32(getRegMemAddr(Args[0])+4, reg_ebx);
+     End Else
+
+     // neg(reg float)
+     if (Args[0].ArgType = ptFloatReg) Then
+     Begin
+      asm_fld_memfloat(getRegMemAddr(Args[0]));
+      asm_fchs;
+      asm_fstp_memfloat(getRegMemAddr(Args[0]));
+     End Else
+
+      raise Exception.CreateFmt('invalid opcode: neg(type(%d))', [ord(Args[0].ArgType)]);
+    End;
+
+    { not }
+    o_not:
+    Begin
+     // not(reg bool)
+     if (Args[0].ArgType = ptBoolReg) Then
+     Begin
+      asm_mov_reg8_mem8(reg_al, getRegMemAddr(Args[0]));
+      asm_test_reg8_reg8(reg_al, reg_al);
+      asm_sete_mem8(getRegMemAddr(Args[0]));
+     End Else
+
+     // not(reg int)
+     if (Args[0].ArgType = ptIntReg) Then
+     Begin
+      asm_not_mem32(getRegMemAddr(Args[0]));
+      asm_not_mem32(getRegMemAddr(Args[0])+4);
+     End Else
+
+      raise Exception.CreateFmt('invalid opcode: not(type(%d))', [ord(Args[0].ArgType)]);
     End;
 
     { stop }

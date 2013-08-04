@@ -630,6 +630,36 @@ Begin
  End;
 End;
 
+(* __stackval_neg *)
+Procedure __stackval_neg(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32); stdcall;
+Var SVal: PMixedValue;
+Begin
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvInt  : SVal^.Value.Int   := -SVal^.Value.Int;
+  mvFloat: SVal^.Value.Float := -SVal^.Value.Float;
+
+  else
+   raise Exception.CreateFmt('''__stackval_neg'' called with invalid stack element type: %d', [ord(SVal^.Typ)]);
+ End;
+End;
+
+(* __stackval_not *)
+Procedure __stackval_not(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32); stdcall;
+Var SVal: PMixedValue;
+Begin
+ SVal := @Stack^[reg_stp^+StackvalPos];
+
+ Case SVal^.Typ of
+  mvBool : SVal^.Value.Bool := not SVal^.Value.Bool;
+  mvInt  : SVal^.Value.Int  := not SVal^.Value.Int;
+
+  else
+   raise Exception.CreateFmt('''__stackval_not'' called with invalid stack element type: %d', [ord(SVal^.Typ)]);
+ End;
+End;
+
 (* __release_memory *)
 Procedure __release_memory(const Pnt: Pointer); stdcall;
 Begin

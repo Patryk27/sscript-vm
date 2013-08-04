@@ -1759,6 +1759,15 @@ Begin
       asm_fstp_memfloat(getRegMemAddr(Args[0]));
      End Else
 
+     // neg(stackval)
+     if (Args[0].ArgType = ptStackval) Then
+     Begin
+      asm_push_imm32(Args[0].StackvalPos);
+      asm_push_imm32(getSTPRegMemAddr);
+      asm_push_imm32(uint32(@VM^.Stack));
+      asm_absolute_call(uint32(@__stackval_neg));
+     End Else
+
       raise Exception.CreateFmt('invalid opcode: neg(type(%d))', [ord(Args[0].ArgType)]);
     End;
 
@@ -1778,6 +1787,15 @@ Begin
      Begin
       asm_not_mem32(getRegMemAddr(Args[0]));
       asm_not_mem32(getRegMemAddr(Args[0])+4);
+     End Else
+
+     // not(stackval)
+     if (Args[0].ArgType = ptStackval) Then
+     Begin
+      asm_push_imm32(Args[0].StackvalPos);
+      asm_push_imm32(getSTPRegMemAddr);
+      asm_push_imm32(uint32(@VM^.Stack));
+      asm_absolute_call(uint32(@__stackval_not));
      End Else
 
       raise Exception.CreateFmt('invalid opcode: not(type(%d))', [ord(Args[0].ArgType)]);

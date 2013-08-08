@@ -2,23 +2,25 @@
  Copyright © by Patryk Wychowaniec, 2013
  All rights reserved.
 
- Simple mark-and-sweep garbage collector for SScript Virtual Machine.
+ A simple mark-and-sweep garbage collector for the SScript Virtual Machine.
 *)
 Unit GC;
 
  Interface
  Uses Classes, SysUtils, FGL, VM, Objects;
 
+ Const ObjectListCount = 1; // Number of object allocation lists; keep in mind, that the higher number you put here, the higher amount of threads will be executed during the GC's mark stage (1 object list = 1 thread) and that doesn't mean it will be any faster. In fact, more than 2 sweeping-threads will most likely just slow down everything.
+
  Type TObjectList = specialize TFPGList<TMObject>;
 
  Type TGarbageCollector = Class
                            Private
-                            ObjectList: TObjectList;
+                            ObjectLists: Array[1..ObjectListCount] of TObjectList;
 
                             VM         : PVM;
                             MemoryLimit: uint32;
 
-                            Procedure Mark;
+                            Procedure Mark(const ObjectList: TObjectList);
                             Procedure Sweep;
 
                            Public
@@ -34,10 +36,56 @@ Unit GC;
  Implementation
 Uses Stack;
 
-(* TGarbageCollector.Mark *)
-Procedure TGarbageCollector.Mark;
+{ TGCSweepWorker }
+Type TGCSweepWorker = Class(TThread)
+                       Private
+                        ObjectList: TObjectList;
+                        isWorking : Boolean;
 
-  // TryToMark
+                       Public
+                        Constructor Create(const fObjectList: TObjectList);
+
+                       Protected
+                        Procedure Execute; override;
+                       End;
+
+(* TGCSweepWorker.Create *)
+Constructor TGCSweepWorker.Create(const fObjectList: TObjectList);
+Begin
+ ObjectList := fObjectList;
+ isWorking  := True;
+
+ inherited Create(False);
+End;
+
+(* TGCSweepWorker.Execute *)
+Procedure TGCSweepWorker.Execute;
+Var I, ObjectCount: int32;
+Begin
+ isWorking := True;
+
+ ObjectCount := ObjectList.Count;
+ I           := 0;
+
+ While (I < ObjectCount) Do
+ Begin
+  if (not ObjectList[I].isMarked) Then
+  Begin
+   ObjectList[I].Free;
+   ObjectList[I] := nil;
+  End;
+
+  Inc(I);
+ End;
+
+ isWorking := False;
+End;
+
+// -------------------------------------------------------------------------- //
+(* TGarbageCollector.Mark *)
+Procedure TGarbageCollector.Mark(const ObjectList: TObjectList);
+
+  { TryToMark }
   Procedure TryToMark(const Address: Pointer);
   Var Obj: TMObject;
   Begin
@@ -56,64 +104,114 @@ Begin
   if (VM^.Stack[I].Typ = mvReference) Then
    TryToMark(Pointer(uint32(VM^.Stack[I].Value.Int)));
 
- For I := Low(VM^.Regs.r) To High(VM^.Regs.r) Do
+ For I := Low(VM^.Regs.r) To High(VM^.Regs.r) Do // check the reference registers
   TryToMark(VM^.Regs.r[i]);
 End;
 
 (* TGarbageCollector.Sweep *)
 Procedure TGarbageCollector.Sweep;
-Var I: int32;
+Var Workers: Array[1..ObjectListCount] of TGCSweepWorker;
+    I      : uint8;
+
+    { isWorking }
+    Function isWorking: Boolean;
+    Var I: uint8;
+    Begin
+     Result := False;
+
+     For I := Low(Workers) To High(Workers) Do
+      if (Workers[I].isWorking) Then
+       Exit(True);
+    End;
+
+    { CreateNewList }
+    Procedure CreateNewList(var ObjectList: TObjectList);
+    Var NewList: TObjectList;
+        I      : Integer;
+    Begin
+     NewList := TObjectList.Create;
+
+     For I := 0 To ObjectList.Count-1 Do // usually creating an entire new list if faster than removing elements from the previous one.
+      if (ObjectList[I] <> nil) Then
+       NewList.Add(ObjectList[I]);
+
+     ObjectList.Free;
+     ObjectList := NewList;
+    End;
+
 Begin
- I := ObjectList.Count-1;
+ For I := Low(Workers) To High(Workers) Do
+  Workers[I] := TGCSweepWorker.Create(ObjectLists[I]);
 
- While (I >= 0) Do
- Begin
-  if (not ObjectList[I].isMarked) Then
-  Begin
-   ObjectList[I].Free;
-   ObjectList.Delete(I);
-  End;
+ While (isWorking) Do; // wait while workers are sweeping memory
 
-  Dec(I);
- End;
+ For I := Low(Workers) To High(Workers) Do
+  Workers[I].Free;
+
+ // create new lists
+ For I := Low(ObjectLists) To High(ObjectLists) Do
+  CreateNewList(ObjectLists[I]);
 End;
 
 (* TGarbageCollector.Create *)
 Constructor TGarbageCollector.Create(const fVM: PVM; const fMemoryLimit: uint32);
+Var I: uint8;
 Begin
  VM          := fVM;
  MemoryLimit := fMemoryLimit;
- ObjectList  := TObjectList.Create;
+
+ For I := Low(ObjectLists) To High(ObjectLists) Do
+  ObjectLists[I] := TObjectList.Create;
 End;
 
 (* TGarbageCollector.Destroy *)
 Destructor TGarbageCollector.Destroy;
-Var Obj: TMObject;
+Var List: TObjectList;
+    Obj : TMObject;
 Begin
- For Obj in ObjectList Do
-  Obj.Free;
- ObjectList.Free;
+ For List in ObjectLists Do
+ Begin
+  For Obj in List Do
+   Obj.Free;
+  List.Free;
+ End;
 End;
 
 (* TGarbageCollector.PutObject *)
 Procedure TGarbageCollector.PutObject(const Obj: TMObject);
+Var List: TObjectList;
+    I   : uint8;
 Begin
  if (GetFPCHeapStatus.CurrHeapUsed > MemoryLimit) Then
   DoGarbageCollection;
 
- ObjectList.Add(Obj);
+ List := ObjectLists[Low(ObjectLists)];
+
+ For I := Low(ObjectLists)+1 To High(ObjectLists) Do
+  if (ObjectLists[I].Count < List.Count) Then // choose the list with the least number of elements
+   List := ObjectLists[I];
+
+ List.Add(Obj);
 End;
 
 (* TGarbageCollector.findObject *)
 Function TGarbageCollector.findObject(const Obj: TMObject): Boolean;
+Var List: TObjectList;
 Begin
- Result := (ObjectList.IndexOf(Obj) > -1);
+ Result := False;
+
+ For List in ObjectLists Do
+  if (List.IndexOf(Obj) > -1) Then
+   Exit(True);
 End;
 
 (* TGarbageCollector.DoGarbageCollection *)
 Procedure TGarbageCollector.DoGarbageCollection;
+Var List: TObjectList;
 Begin
- Mark();
+ For List in ObjectLists Do
+  Mark(List);
+
  Sweep();
 End;
 End.

@@ -735,7 +735,10 @@ Begin
    End;
 
    LastException := Exception;
-   SetPosition(ExceptionHandler);
+
+   if (JITCode = nil) Then
+    SetPosition(ExceptionHandler) Else
+    raise SysUtils.Exception.Create('Bytecode has raised an exception!');
   End;
  End;
 End;

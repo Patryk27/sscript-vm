@@ -64,7 +64,7 @@ Begin
   ptIntReg      : Result := ptInt;
   ptFloatReg    : Result := ptFloat;
   ptStringReg   : Result := ptString;
-  ptReferenceReg: Result := ptInt;
+//  ptReferenceReg: Result := ptInt;
  End;
 End;
 

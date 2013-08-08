@@ -51,6 +51,19 @@ Begin
  End;
 End;
 
+{ FetchArraySizesFromStack }
+Function FetchArraySizesFromStack(const VM: PVM; const Count: uint8): uint32Array;
+Var I: Integer;
+Begin
+ SetLength(Result, Count);
+
+ For I := 0 To Count-1 Do
+ Begin
+  Result[I] := getInt(VM^.Stack[VM^.Regs.i[5]]);
+  Dec(VM^.Regs.i[5]);
+ End;
+End;
+
 // -------------------------------------------------------------------------- //
 (* __stack_push_bool *)
 Procedure __stack_push_bool(const StackPnt: PStack; const reg_stp: pint32; const Value: Boolean); stdcall;
@@ -231,10 +244,10 @@ Begin
 End;
 
 (* __stackval_referenceval_assign *)
-Procedure __stackval_referenceval_assign(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32; const Value: Pointer); stdcall;
+Procedure __stackval_referenceval_assign(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32; const Value: uint32); stdcall;
 Begin
  Stack^[reg_stp^+StackvalPos].Typ       := mvReference;
- Stack^[reg_stp^+StackvalPos].Value.Int := uint32(Value);
+ Stack^[reg_stp^+StackvalPos].Value.Int := Value;
 End;
 
 (* __intadd_int_int *)
@@ -734,10 +747,131 @@ Begin
  Result := getInt(Stack^[reg_stp^+StackvalPos]);
 End;
 
+(* __stackval_fetch_float *)
+Function __stackval_fetch_float(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32): Extended; stdcall;
+Begin
+ Result := getFloat(Stack^[reg_stp^+StackvalPos]);
+End;
+
 (* __stackval_fetch_string *)
 Function __stackval_fetch_string(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32): PChar; stdcall;
 Begin
  Result := getString(Stack^[reg_stp^+StackvalPos]);
+End;
+
+(* __stackval_fetch_reference *)
+Function __stackval_fetch_reference(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32): Pointer; stdcall;
+Begin
+ Result := getReference(Stack^[reg_stp^+StackvalPos]);
+End;
+
+(* __array_create *)
+Function __array_create(const VM: PVM; const Typ: uint32; const DimCount: uint32): Pointer; stdcall;
+Begin
+ Result := TMArray.Create(VM, Typ, FetchArraySizesFromStack(VM, DimCount));
+End;
+
+(* __array_set_bool *)
+Procedure __array_set_bool(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Value: Boolean); stdcall;
+Var MVal: TMixedValue;
+Begin
+ MVal.Typ        := mvBool;
+ MVal.Value.Bool := Value;
+
+ Arr.setValue(FetchArraySizesFromStack(VM, IndexesCount), MVal);
+End;
+
+(* __array_set_char *)
+Procedure __array_set_char(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Value: Char); stdcall;
+Var MVal: TMixedValue;
+Begin
+ MVal.Typ        := mvChar;
+ MVal.Value.Char := Value;
+
+ Arr.setValue(FetchArraySizesFromStack(VM, IndexesCount), MVal);
+End;
+
+(* __array_set_int *)
+Procedure __array_set_int(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Value: int64); stdcall;
+Var MVal: TMixedValue;
+Begin
+ MVal.Typ       := mvInt;
+ MVal.Value.Int := Value;
+
+ Arr.setValue(FetchArraySizesFromStack(VM, IndexesCount), MVal);
+End;
+
+(* __array_set_float *)
+Procedure __array_set_float(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32); stdcall;
+Var MVal : TMixedValue;
+    Value: Extended;
+Begin
+ asm
+  fstp Value
+ end;
+
+ MVal.Typ         := mvFloat;
+ MVal.Value.Float := Value;
+
+ Arr.setValue(FetchArraySizesFromStack(VM, IndexesCount), MVal);
+End;
+
+(* __array_set_string *)
+Procedure __array_set_string(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Value: PChar); stdcall;
+Var MVal: TMixedValue;
+Begin
+ MVal.Typ       := mvString;
+ MVal.Value.Str := Value;
+
+ Arr.setValue(FetchArraySizesFromStack(VM, IndexesCount), MVal);
+End;
+
+(* __array_set_string_char *) // called on opcode 'arset(reg string, 1, reg/imm char)'
+Procedure __array_set_string_char(const VM: PVM; const Reg: PPChar; const Value: uint32); stdcall;
+Begin
+ Reg^[FetchArraySizesFromStack(VM, 1)[0]-1] := Char(Value);
+End;
+
+(* __array_get_bool *)
+Procedure __array_get_bool(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Reg: PBoolean); stdcall;
+Begin
+ Reg^ := getBool(Arr.getValue(FetchArraySizesFromStack(VM, IndexesCount)));
+End;
+
+(* __array_get_char *)
+Procedure __array_get_char(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Reg: PChar); stdcall;
+Begin
+ Reg^ := getChar(Arr.getValue(FetchArraySizesFromStack(VM, IndexesCount)));
+End;
+
+(* __array_get_int *)
+Procedure __array_get_int(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Reg: puint32); stdcall;
+Begin
+ Reg^ := getInt(Arr.getValue(FetchArraySizesFromStack(VM, IndexesCount)));
+End;
+
+(* __array_get_float *)
+Procedure __array_get_float(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Reg: PExtended); stdcall;
+Begin
+ Reg^ := getFloat(Arr.getValue(FetchArraySizesFromStack(VM, IndexesCount)));
+End;
+
+(* __array_get_string *)
+Procedure __array_get_string(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Reg: PPChar); stdcall;
+Begin
+ Reg^ := getString(Arr.getValue(FetchArraySizesFromStack(VM, IndexesCount)));
+End;
+
+(* __array_get_string_char *) // called on opcode 'arget(reg/imm string, 1, reg char)'
+Procedure __array_get_string_char(const VM: PVM; const Str: PChar; const Reg: PChar); stdcall;
+Begin
+ Reg^ := Str[FetchArraySizesFromStack(VM, 1)[0]-1];
+End;
+
+(* __array_get_dim_size *)
+Procedure __array_get_dim_size(const Arr: TMArray; const Dimension: uint32; const Reg: Puint64); stdcall;
+Begin
+ Reg^ := Arr.getSize(Dimension);
 End;
 
 (* __release_memory *)

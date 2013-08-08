@@ -32,7 +32,7 @@ Unit Stack;
       TStackElement = TMixedValue;
 
  {$IF sizeof(TMixedValue) <> 64}
-  {$FATAL Size of TMixedValue structure must have exactly 64 bytes!}
+  {$FATAL Size of TMixedValue structure must be exactly 64 bytes!}
  {$ENDIF}
 
  Const MixedValueTypeNames: Array[TMixedValueType] of String = ('none', 'bool', 'char', 'int', 'float', 'string', 'reference', 'callstack reference');

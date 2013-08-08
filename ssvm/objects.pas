@@ -8,7 +8,8 @@ Unit Objects;
  Interface
  Uses SysUtils, Stack, VM;
 
- Type uint32Array = Array of uint32;
+ Type puint32Array = ^uint32Array;
+      uint32Array = Array of uint32;
 
  { TMObject }
  Type TMObject = Class
@@ -35,7 +36,7 @@ Unit Objects;
                   Function getElementMemory(Position: uint32Array): Pointer;
 
                  Public
-                  Constructor Create(const fVM: Pointer; const fType: Byte; fSizes: uint32Array);
+                  Constructor Create(const fVM: Pointer; const fType: Byte; const fSizes: uint32Array);
                   Destructor Destroy; override;
 
                   Procedure GC_Mark; override;
@@ -89,7 +90,7 @@ Begin
 End;
 
 (* TMArray.Create *)
-Constructor TMArray.Create(const fVM: Pointer; const fType: Byte; fSizes: uint32Array);
+Constructor TMArray.Create(const fVM: Pointer; const fType: Byte; const fSizes: uint32Array);
 Var I: uint32;
 Begin
  inherited Create(fVM);

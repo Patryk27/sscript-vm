@@ -11,6 +11,9 @@
 // @TODO: 'mov reg, 0' -> 'xor reg, reg'
 // @TODO: maybe instead of pushing @VM^.Stack and 'stp' wouldn't it be easier and better to push VM-address?
 // @TODO: let the real x86 stack hold addresses of MixedValues? It would be A LOT better.
+// ---------------- //
+// @TODO: acall (maybe save the jump table and use it? But it would be slooooow aaaaas fuuuuuuuck)
+// @TODO: "vm." icalls
 
 Unit JIT;
 
@@ -83,6 +86,7 @@ Unit JIT;
                        Procedure asm_cmp_reg32_reg32(const RegA, RegB: TRegister32);
                        Procedure asm_cmp_reg8_reg8(const RegA, RegB: TRegister8);
                        Procedure asm_cmp_mem32_imm32(const Mem: uint32; const Value: int32);
+                       Procedure asm_cmp_mem8_imm8(const Mem: uint32; const Value: int8);
                        Procedure asm_sete_mem8(const Mem: uint32);
                        Procedure asm_setne_mem8(const Mem: uint32);
                        Procedure asm_setg_mem8(const Mem: uint32);
@@ -117,7 +121,6 @@ Unit JIT;
                        Procedure asm_fsubp_st0(const Reg: TRegisterFPU);
                        Procedure asm_fmulp_st0(const Reg: TRegisterFPU);
                        Procedure asm_fdivp_st0(const Reg: TRegisterFPU);
-                       Procedure asm_fcomi_st0(const Reg: TRegisterFPU);
                        Procedure asm_fcompp;
                        Procedure asm_fstsw_ax;
                        Procedure asm_fchs;
@@ -128,7 +131,7 @@ Unit JIT;
                       End;
 
  Implementation
-Uses Stack, mStrings, SysUtils;
+Uses Stack, mStrings, Objects, SysUtils;
 
 Type TModRM = Bitpacked Record // ModR/M structure
                RM  : 0..7;
@@ -300,9 +303,9 @@ End;
 Procedure TJITCompiler.asm_mov_mem8_reg8(const Mem: uint32; const Reg: TRegister8);
 Var ModRM: TModRM;
 Begin
- ModRM.Mode := 3;
+ ModRM.Mode := 0;
  ModRM.Reg  := ord(Reg);
- ModRM.RM   := 0;
+ ModRM.RM   := 5;
 
  CompiledData.write_uint8($88);
  CompiledData.write_uint8(puint8(@ModRM)^);
@@ -577,6 +580,16 @@ Begin
  CompiledData.write_uint8($3D);
  CompiledData.write_uint32(Mem);
  CompiledData.write_int32(Value);
+End;
+
+(* TJITCompiler.asm_cmp_mem8_imm8 *)
+{ cmp byte [mem], value }
+Procedure TJITCompiler.asm_cmp_mem8_imm8(const Mem: uint32; const Value: int8);
+Begin
+ CompiledData.write_uint8($80);
+ CompiledData.write_uint8($3D);
+ CompiledData.write_uint32(Mem);
+ CompiledData.write_int8(Value);
 End;
 
 (* TJITCompiler.asm_sete_mem8 *)
@@ -893,14 +906,6 @@ Begin
  CompiledData.write_uint8($F8 + ord(Reg));
 End;
 
-(* TJITCompiler.asm_fcomi_st0 *)
-{ fcomi st(0), reg }
-Procedure TJITCompiler.asm_fcomi_st0(const Reg: TRegisterFPU);
-Begin
- CompiledData.write_uint8($DB);
- CompiledData.write_uint8($F0+ord(Reg));
-End;
-
 (* TJITCompiler.asm_fcompp *)
 { fcompp }
 Procedure TJITCompiler.asm_fcompp;
@@ -1097,6 +1102,8 @@ Begin
  ParamsMV  := AllocMem(256*sizeof(TMixedValue));
  JumpTable := TJumpTable.Create;
 
+ AddPrologCode;
+
  Try
  Try
   While (CompiledState = csDone) Do
@@ -1141,7 +1148,7 @@ Begin
      End Else
 
      // opcode(reg int, imm/reg int/char/stackval)
-     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptInt, ptIntReg, ptChar, ptCharReg, ptStackval]) Then
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptInt, ptIntReg, ptChar, ptCharReg, ptStackval]) Then // @TODO: 'stp' can is used as 32-bit register, so we don't have to call "__int*" functions when operating on it.
      Begin
       if (Opcode in [o_add, o_sub, o_mul, o_div, o_shl, o_shr]) Then
       Begin
@@ -1166,7 +1173,7 @@ Begin
 
            1 -> we need to zero the 'eax' register, so it doesn't contain any garbage
            2 -> just loading a byte from memory here
-           3, 4 -> a 64-bit value have to be pushed, so the high 32 bits must be empty, and the low 32 bits are our 8-bit value.
+           3, 4 -> a 64-bit value have to be pushed, so the high 32 bits must be empty and the low 32 bits are our 8-bit value.
          }
         End;
 
@@ -1227,18 +1234,25 @@ Begin
       asm_mov_mem32_reg32(getRegMemAddr(Args[0])+4, reg_edx);
      End Else
 
-     // opcode(reg float, imm/reg int/float)
+     // opcode(reg float, imm/reg int/float/stackval)
      if (Opcode in [o_add, o_sub, o_mul, o_div]) and
-        (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType in [ptInt, ptIntReg, ptFloat, ptFloatReg]) Then
+        (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType in [ptInt, ptIntReg, ptFloat, ptFloatReg, ptStackval]) Then
      Begin
+      asm_fld_memfloat(getRegMemAddr(Args[0])); // push register value
+
       Case Args[1].ArgType of
        ptInt     : asm_fild_mem64(AllocateInt64(Args[1].ImmInt));
        ptIntReg  : asm_fild_mem64(getRegMemAddr(Args[1]));
        ptFloat   : asm_fld_memfloat(AllocateFloat(Args[1].ImmFloat));
        ptFloatReg: asm_fld_memfloat(getRegMemAddr(Args[1]));
+       ptStackval:
+       Begin
+        asm_push_imm32(Args[1].StackvalPos);
+        asm_push_imm32(getSTPRegMemAddr);
+        asm_push_imm32(uint32(@VM^.Stack));
+        asm_absolute_call(uint32(@__stackval_fetch_float));
+       End;
       End;
-
-      asm_fld_memfloat(getRegMemAddr(Args[0])); // push register value
 
       Case Opcode of
        o_add: asm_faddp_st0(reg_st1);
@@ -1423,6 +1437,25 @@ Begin
       asm_mov_mem32_reg32(getRegMemAddr(Args[0]), reg_eax);
      End Else
 
+     // mov(reg string, imm char)
+     if (Args[0].ArgType = ptStringReg) and (Args[1].ArgType = ptChar) Then
+     Begin
+      asm_mov_mem32_imm32(getRegMemAddr(Args[0]), ord(Args[1].ImmChar));
+     End Else
+
+     // mov(reg string, reg char)
+     {if (Args[0].ArgType = ptStringReg) and (Args[1].ArgType = ptCharReg) Then
+     Begin
+      @TODO
+     End Else}
+
+     // mov(reg reference, reg reference)
+     if (Args[0].ArgType = ptReferenceReg) and (Args[1].ArgType = ptReferenceReg) Then
+     Begin
+      asm_mov_reg32_mem32(reg_eax, getRegMemAddr(Args[1]));
+      asm_mov_mem32_reg32(getRegMemAddr(Args[0]), reg_eax);
+     End Else
+
      // mov(reg, stackval)
      if (Args[1].ArgType = ptStackval) Then
      Begin
@@ -1444,8 +1477,8 @@ Begin
       End;
      End Else
 
-     // mov(stackval, value)
-     if (Args[0].ArgType = ptStackval) Then
+     // mov(stackval, reg/imm)
+     if (Args[0].ArgType = ptStackval) and (isValueOrReg(Args[1].ArgType)) Then
      Begin
       PushParamOnStack(Args[1]);
       asm_push_imm32(Args[0].StackvalPos);
@@ -1747,8 +1780,6 @@ Begin
        asm_push_imm32(icall^.ParamCount);
        asm_push_imm32(uint32(ParamsMV));
        asm_absolute_call(uint32(@__create_icall_parameter_list));
-       CompiledData.write_uint8($01); // cleanup stack: add esp, eax
-       CompiledData.write_uint8($C4);
 
        // clean 'ResultMV'
        asm_push_imm32(uint32(ResultMV));
@@ -1985,6 +2016,150 @@ Begin
       raise Exception.CreateFmt('invalid opcode: mod(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
     End;
 
+    { arcrt }
+    o_arcrt:
+    Begin
+     // arcrt(reg ref/stackval, primary type id, array dim count)
+     if (Args[0].ArgType in [ptReferenceReg, ptStackval]) and (Args[1].ArgType = ptInt) and (Args[2].ArgType = ptInt) Then
+     Begin
+      asm_push_imm32(Args[2].ImmInt);
+      asm_push_imm32(Args[1].ImmInt);
+      asm_push_imm32(uint32(VM));
+      asm_absolute_call(uint32(@__array_create));
+
+      if (Args[0].ArgType = ptReferenceReg) Then
+      Begin
+       asm_mov_mem32_reg32(getRegMemAddr(Args[0]), reg_eax);
+      End Else
+      Begin
+       // @TODO: check this
+       asm_push_reg32(reg_eax);
+       asm_push_imm32(Args[0].StackvalPos);
+       asm_push_imm32(getSTPRegMemAddr);
+       asm_push_imm32(uint32(@VM^.Stack));
+       asm_absolute_call(uint32(@__stackval_referenceval_assign));
+      End;
+     End Else
+
+      raise Exception.CreateFmt('invalid opcode: arcrt(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);
+    End;
+
+    { arset }
+    o_arset:
+    Begin
+     // arset(reg ref/stackval, indexes count, value)
+     if (Args[0].ArgType in [ptReferenceReg, ptStackval]) and (Args[1].ArgType = ptInt) and (isValueOrReg(Args[2].ArgType)) Then
+     Begin
+      PushParamOnStack(Args[2]);
+
+      asm_push_imm32(Args[1].ImmInt);
+
+      if (Args[0].ArgType = ptReferenceReg) Then
+      Begin
+       asm_push_mem32(getRegMemAddr(Args[0]));
+      End Else
+      Begin
+       asm_push_imm32(Args[0].StackvalPos);
+       asm_push_imm32(getSTPRegMemAddr);
+       asm_push_imm32(uint32(@VM^.Stack));
+       asm_absolute_call(uint32(@__stackval_fetch_reference));
+       asm_push_reg32(reg_eax);
+      End;
+
+      asm_push_imm32(uint32(VM));
+
+      Case StripRegFromArgType(Args[2].ArgType) of
+       ptBool  : asm_absolute_call(uint32(@__array_set_bool));
+       ptChar  : asm_absolute_call(uint32(@__array_set_char));
+       ptInt   : asm_absolute_call(uint32(@__array_set_int));
+       ptFloat : asm_absolute_call(uint32(@__array_set_float));
+       ptString: asm_absolute_call(uint32(@__array_set_string));
+
+       else
+        raise Exception.CreateFmt('invalid opcode: arset(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);
+      End;
+     End Else
+
+     // arset(reg string, 1, reg/imm char)
+     if (Args[0].ArgType = ptStringReg) and (Args[1].ArgType = ptInt) and (Args[1].ImmInt = 1) and (Args[2].ArgType in [ptChar, ptCharReg]) Then
+     Begin
+      {
+       @TODO: this can be done without calling any slow external routine:
+         eax -> pointer to Args[0] string
+         ebx -> an integer from the bc-stack
+
+         mov cl, byte [Args[2]]
+         mov byte [eax+ebx], cl
+      }
+
+      PushParamOnStack(Args[2]);
+      asm_push_imm32(getRegMemAddr(Args[0]));
+      asm_push_imm32(uint32(VM));
+      asm_absolute_call(uint32(@__array_set_string_char));
+     End Else
+
+      raise Exception.CreateFmt('invalid opcode: arset(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);
+    End;
+
+    { arget }
+    o_arget:
+    Begin
+     // arget(reg ref, indexes count, out reg)
+     if (Args[0].ArgType = ptReferenceReg) and (Args[1].ArgType = ptInt) Then
+     Begin
+      asm_push_imm32(getRegMemAddr(Args[2]));
+      asm_push_imm32(Args[1].ImmInt);
+      asm_push_mem32(getRegMemAddr(Args[0]));
+      asm_push_imm32(uint32(VM));
+
+      Case Args[2].ArgType of
+       ptBoolReg  : asm_absolute_call(uint32(@__array_get_bool));
+       ptCharReg  : asm_absolute_call(uint32(@__array_get_char));
+       ptIntReg   : asm_absolute_call(uint32(@__array_get_int));
+       ptFloatReg : asm_absolute_call(uint32(@__array_get_float));
+       ptStringReg: asm_absolute_call(uint32(@__array_get_string));
+
+       else
+        raise Exception.CreateFmt('invalid opcode: arget(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);
+      End;
+     End Else
+
+     // arget(reg/imm string, 1, reg char)
+     if (Args[0].ArgType in [ptString, ptStringReg]) and (Args[1].ArgType = ptInt) and (Args[1].ImmInt = 1) and (Args[2].ArgType = ptCharReg) Then
+     Begin
+      {
+       @TODO: this can be done without calling any slow external routine:
+         eax -> pointer to Args[0] string
+         ebx -> an integer from the bc-stack
+
+         mov al, byte [eax+ebx]
+         mov byte [Args[2]], al
+      }
+
+      asm_push_imm32(getRegMemAddr(Args[2]));
+      PushParamOnStack(Args[0]);
+      asm_push_imm32(uint32(VM));
+      asm_absolute_call(uint32(@__array_get_string_char));
+     End Else
+
+      raise Exception.CreateFmt('invalid opcode: arget(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);
+    End;
+
+    { arlen }
+    o_arlen:
+    Begin
+     // arlen(reg ref, dimension, out reg)
+     if (Args[0].ArgType = ptReferenceReg) and (Args[1].ArgType = ptInt) and (Args[2].ArgType = ptIntReg) Then
+     Begin
+      asm_push_imm32(getRegMemAddr(Args[2]));
+      asm_push_imm32(Args[1].ImmInt);
+      asm_push_mem32(getRegMemAddr(Args[0]));
+      asm_absolute_call(uint32(@__array_get_dim_size));
+     End Else
+
+      raise Exception.CreateFmt('invalid opcode: arlen(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);
+    End;
+
     { stop }
     o_stop:
     Begin
@@ -2046,8 +2221,8 @@ Begin
 
       // conditonal jump
       Case Opcode of
-       o_tjmp: asm_cmp_mem32_imm32(getIFRegMemAddr, 1);
-       o_fjmp: asm_cmp_mem32_imm32(getIFRegMemAddr, 0);
+       o_tjmp: asm_cmp_mem8_imm8(getIFRegMemAddr, 1);
+       o_fjmp: asm_cmp_mem8_imm8(getIFRegMemAddr, 0);
       End;
 
       asm_relative_jne(7); // '7' is size of mov+jmp
@@ -2085,5 +2260,6 @@ Begin
  End;
 
  AddEpilogCode;
+ asm_ret;
 End;
 End.

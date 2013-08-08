@@ -70,7 +70,7 @@ Unit JIT;
                        Procedure asm_mov_mem32_reg32(const Reg: TRegister32; const Reg2: TRegister32);
                        Procedure asm_mov_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
                        Procedure asm_mov_mem32_imm32(const Mem: uint32; const Value: int32);
-                       Procedure asm_mov_mem32_imm64(const Mem: uint32; const Value: int64);
+                       Procedure asm_mov_mem64_imm64(const Mem: uint32; const Value: int64);
 
                        Procedure asm_absolute_call(const Addr: uint32);
                        Procedure asm_absolute_jmp(const Addr: uint32);
@@ -117,6 +117,7 @@ Unit JIT;
                        Procedure asm_fild_mem64(const Mem: uint32);
                        Procedure asm_fld_memfloat(const Mem: uint32);
                        Procedure asm_fstp_memfloat(const Mem: uint32);
+                       Procedure asm_fistp_mem64(const Mem: uint32);
                        Procedure asm_faddp_st0(const Reg: TRegisterFPU);
                        Procedure asm_fsubp_st0(const Reg: TRegisterFPU);
                        Procedure asm_fmulp_st0(const Reg: TRegisterFPU);
@@ -410,12 +411,12 @@ Begin
  CompiledData.write_int32(Value);
 End;
 
-(* TJITCompiler.asm_mov_mem32_imm64 *)
+(* TJITCompiler.asm_mov_mem64_imm64 *)
 {
  mov dword [mem+0], lo(Value)
  mov dword [mem+4], hi(Value)
 }
-Procedure TJITCompiler.asm_mov_mem32_imm64(const Mem: uint32; const Value: int64);
+Procedure TJITCompiler.asm_mov_mem64_imm64(const Mem: uint32; const Value: int64);
 Begin
  asm_mov_mem32_imm32(Mem, lo(Value));
  asm_mov_mem32_imm32(Mem+4, hi(Value));
@@ -866,10 +867,19 @@ Begin
 End;
 
 (* TJITCompiler.asm_fstp_memfloat *)
-{ fstp [mem] }
+{ fstp tword [mem] }
 Procedure TJITCompiler.asm_fstp_memfloat(const Mem: uint32);
 Begin
  CompiledData.write_uint8($DB);
+ CompiledData.write_uint8($3D);
+ CompiledData.write_uint32(Mem);
+End;
+
+(* TJITCompiler.asm_fistp_mem64 *)
+{ fistp qword [mem] }
+Procedure TJITCompiler.asm_fistp_mem64(const Mem: uint32);
+Begin
+ CompiledData.write_uint8($DF);
  CompiledData.write_uint8($3D);
  CompiledData.write_uint32(Mem);
 End;
@@ -962,7 +972,7 @@ Var Opcode: TOpcode_E;
     { AddPrologCode }
     Procedure AddPrologCode;
     Begin
-     asm_mov_mem32_imm64(getSTPRegMemAddr, 0); // stp = 0;
+     asm_mov_mem64_imm64(getSTPRegMemAddr, 0); // stp = 0;
     End;
 
     { AddEpilogCode }
@@ -1061,6 +1071,22 @@ Var Opcode: TOpcode_E;
       // float immediate
       ptFloat: asm_fld_memfloat(AllocateFloat(Arg.ImmFloat));
 
+      // stackval
+      ptStackval:
+      Begin
+       asm_push_imm32(Arg.StackvalPos);
+       asm_push_imm32(getSTPRegMemAddr);
+       asm_push_imm32(uint32(@VM^.Stack));
+
+       Case LoadMode of
+        cmFloat: asm_absolute_call(uint32(@__stackval_fetch_float));
+        cm64Bit: asm_absolute_call(uint32(@__stackval_fetch_int));
+
+        else
+         raise Exception.CreateFmt('CompareLoad() unsupported case: ''Arg.ArgType = ptStackval'' and ''LoadMode = %d''', [ord(LoadMode)]);
+       End;
+      End;
+
       else
        raise Exception.CreateFmt('CompareLoad() unsupported case: Arg.ArgType = %d', [ord(Arg.ArgType)]);
      End;
@@ -1147,8 +1173,8 @@ Begin
       End;
      End Else
 
-     // opcode(reg int, imm/reg int/char/stackval)
-     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptInt, ptIntReg, ptChar, ptCharReg, ptStackval]) Then // @TODO: 'stp' can is used as 32-bit register, so we don't have to call "__int*" functions when operating on it.
+     // opcode(reg int/char, imm/reg int/char/stackval)
+     if (Args[0].ArgType in [ptIntReg, ptCHarReg]) and (Args[1].ArgType in [ptInt, ptIntReg, ptChar, ptCharReg, ptStackval]) Then // @TODO: 'stp' can is used as 32-bit register, so we don't have to call "__int*" functions when operating on it.
      Begin
       if (Opcode in [o_add, o_sub, o_mul, o_div, o_shl, o_shr]) Then
       Begin
@@ -1188,7 +1214,17 @@ Begin
         End;
        End;
 
-       asm_push_mem64(getRegMemAddr(Args[0]));
+       if (Args[0].ArgType = ptIntReg) Then
+       Begin
+        asm_push_mem64(getRegMemAddr(Args[0]));
+       End Else
+       Begin
+        // @TODO: operations on chars don't have to be converted to 64-bit ones!
+        asm_mov_reg32_imm32(reg_eax, 0);
+        asm_mov_reg8_mem8(reg_al, getRegMemAddr(Args[0]));
+        asm_push_imm32(0);
+        asm_push_reg32(reg_eax);
+       End;
 
        Case Opcode of
         o_add: asm_absolute_call(uint32(@__intadd_int_int));
@@ -1339,6 +1375,19 @@ Begin
       asm_mov_mem8_reg8(getRegMemAddr(Args[0]), reg_al);
      End Else
 
+     // mov(reg bool, imm int)
+     if (Args[0].ArgType = ptBoolReg) and (Args[1].ArgType = ptInt) Then
+     Begin
+      asm_mov_mem8_imm8(getRegMemAddr(Args[0]), Args[1].ImmInt);
+     End Else
+
+     // mov(reg bool, reg int)
+     if (Args[0].ArgType = ptBoolReg) and (Args[1].ArgType = ptIntReg) Then
+     Begin
+      asm_mov_reg8_mem8(reg_al, getRegMemAddr(Args[1]));
+      asm_mov_mem8_reg8(getRegMemAddr(Args[0]), reg_al);
+     End Else
+
      // mov(reg char, imm char)
      if (Args[0].ArgType = ptCharReg) and (Args[1].ArgType = ptChar) Then
      Begin
@@ -1370,7 +1419,7 @@ Begin
      // mov(reg int, imm int)
      if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType = ptInt) Then
      Begin
-      asm_mov_mem32_imm64(getRegMemAddr(Args[0]), Args[1].ImmInt);
+      asm_mov_mem64_imm64(getRegMemAddr(Args[0]), Args[1].ImmInt);
      End Else
 
      // mov(reg int, reg int)
@@ -1385,15 +1434,28 @@ Begin
      // mov(reg int, imm char)
      if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType = ptChar) Then
      Begin
-      asm_mov_mem32_imm64(getRegMemAddr(Args[0]), ord(Args[1].ImmChar));
+      asm_mov_mem64_imm64(getRegMemAddr(Args[0]), ord(Args[1].ImmChar));
      End Else
 
      // mov(reg int, reg char)
      if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType = ptCharReg) Then
      Begin
-      asm_mov_mem32_imm64(getRegMemAddr(Args[0]), 0); // we need to clear the `ei*` register, because assigning char-> int, we only set first one byte, not entire eight
+      asm_mov_mem64_imm64(getRegMemAddr(Args[0]), 0); // we need to clear the `ei*` register, because assigning char->int, we only set first byte, not entire eight
       asm_mov_reg32_mem32(reg_eax, getRegMemAddr(Args[1]));
       asm_mov_mem32_reg32(getRegMemAddr(Args[0]), reg_eax);
+     End Else
+
+     // mov(reg int, imm float)
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType = ptFloat) Then
+     Begin
+      asm_mov_mem64_imm64(getRegMemAddr(Args[0]), Round(Args[1].ImmFloat));
+     End Else
+
+     // mov(reg int, reg float)
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType = ptFloatReg) Then
+     Begin
+      asm_fld_memfloat(getRegMemAddr(Args[1]));
+      asm_fistp_mem64(getRegMemAddr(Args[0]));
      End Else
 
      // mov(reg float, imm int)
@@ -1444,16 +1506,28 @@ Begin
      End Else
 
      // mov(reg string, reg char)
-     {if (Args[0].ArgType = ptStringReg) and (Args[1].ArgType = ptCharReg) Then
+     if (Args[0].ArgType = ptStringReg) and (Args[1].ArgType = ptCharReg) Then
      Begin
-      @TODO
-     End Else}
+      asm_push_mem32(getRegMemAddr(Args[1]));
+      asm_push_imm32(getRegMemAddr(Args[0]));
+      asm_absolute_call(uint32(@__stringreg_char_assign)); // @TODO: I think it can be done without (calling) this routine
+     End Else
 
      // mov(reg reference, reg reference)
      if (Args[0].ArgType = ptReferenceReg) and (Args[1].ArgType = ptReferenceReg) Then
      Begin
       asm_mov_reg32_mem32(reg_eax, getRegMemAddr(Args[1]));
       asm_mov_mem32_reg32(getRegMemAddr(Args[0]), reg_eax);
+     End Else
+
+     // mov(stackval, stackval)
+     if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptStackval) Then
+     Begin
+      asm_push_imm32(Args[1].StackvalPos);
+      asm_push_imm32(Args[0].StackvalPos);
+      asm_push_imm32(getSTPRegMemAddr);
+      asm_push_imm32(uint32(@VM^.Stack));
+      asm_absolute_call(uint32(@__stackval_stackval_assign));
      End Else
 
      // mov(reg, stackval)
@@ -1497,8 +1571,6 @@ Begin
         raise Exception.CreateFmt('invalid instruction: mov(stackval, type(%d))', [ord(Args[1].ArgType)]);
       End;
      End Else
-
-     // @TODO: mov(stackval, stackval)
 
       raise Exception.CreateFmt('invalid instruction: mov(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
     End;
@@ -1767,6 +1839,42 @@ Begin
      // icall(imm string)
      if (Args[0].ArgType = ptString) Then
      Begin
+      if (Args[0].ImmString = 'vm.throw') Then
+      Begin
+       // @TODO - write me!
+       Continue;
+      End;
+
+      if (Args[0].ImmString = 'vm.save_exception_state') Then
+      Begin
+       // @TODO - write me!
+       Continue;
+      End;
+
+      if (Args[0].ImmString = 'vm.restore_exception_state') Then
+      Begin
+       // @TODO - write me!
+       Continue;
+      End;
+
+      if (Args[0].ImmString = 'vm.set_exception_handler') Then
+      Begin
+       // @TODO - write me!
+       Continue;
+      End;
+
+      if (Args[0].ImmString = 'vm.restore_exception_handler') Then
+      Begin
+       // @TODO - write me!
+       Continue;
+      End;
+
+      if (Args[0].ImmString = 'vm.get_last_exception') Then
+      Begin
+       // @TODO - write me!
+       Continue;
+      End;
+
       icall := VM^.FindInternalCall(Args[0].ImmString);
 
       if (icall = nil) Then // error: specified icall not found
@@ -1866,6 +1974,17 @@ Begin
 
       asm_push_imm32(getRegMemAddr(Args[0]));
       asm_absolute_call(uint32(@__stringconcat_reg_string));
+     End Else
+
+     // strjoin(reg string, imm/reg char)
+     if (Args[0].ArgType = ptStringReg) and (Args[1].ArgType in [ptChar, ptCharReg]) Then
+     Begin
+      if (Args[1].ArgType = ptChar) Then
+       asm_push_imm32(ord(Args[1].ImmChar)) Else
+       asm_push_mem32(getRegMemAddr(Args[1]));
+
+      asm_push_imm32(getRegMemAddr(Args[0]));
+      asm_absolute_call(uint32(@__stringconcat_reg_string_char));
      End Else
 
      // strjoin(stackval, imm/reg string/stackval)
@@ -2047,8 +2166,8 @@ Begin
     { arset }
     o_arset:
     Begin
-     // arset(reg ref/stackval, indexes count, value)
-     if (Args[0].ArgType in [ptReferenceReg, ptStackval]) and (Args[1].ArgType = ptInt) and (isValueOrReg(Args[2].ArgType)) Then
+     // arset(reg ref, indexes count, value)
+     if (Args[0].ArgType = ptReferenceReg) and (Args[1].ArgType = ptInt) and (isValueOrReg(Args[2].ArgType)) Then
      Begin
       PushParamOnStack(Args[2]);
 
@@ -2098,6 +2217,31 @@ Begin
       asm_absolute_call(uint32(@__array_set_string_char));
      End Else
 
+     // arset(stackval, indexes count, value)
+     if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptInt) and (isValueOrReg(Args[2].ArgType)) Then
+     Begin
+      ElemSize := PushParamOnStack(Args[2]);
+
+      asm_push_imm32(ord(StripRegFromArgType(Args[2].ArgType)));
+      asm_push_imm32(Args[1].ImmInt);
+      asm_push_imm32(Args[0].StackvalPos);
+      asm_push_imm32(uint32(VM));
+      asm_absolute_call(uint32(@__array_set_stackval));
+
+      if (not (Args[1].ArgType in [ptFloat, ptFloatReg])) Then
+       asm_add_reg32_imm32(reg_esp, -4 + ElemSize);
+     End Else
+
+     // arset(stackval, indexes count, stackval)
+     if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptInt) and (Args[2].ArgType = ptStackval) Then
+     Begin
+      asm_push_imm32(Args[1].ImmInt);
+      asm_push_imm32(Args[2].StackvalPos);
+      asm_push_imm32(Args[0].StackvalPos);
+      asm_push_imm32(uint32(VM));
+      asm_absolute_call(uint32(@__array_set_stackval_stackval));
+     End Else
+
       raise Exception.CreateFmt('invalid opcode: arset(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);
     End;
 
@@ -2142,18 +2286,41 @@ Begin
       asm_absolute_call(uint32(@__array_get_string_char));
      End Else
 
+     // arget(stackval, indexes count, out reg)
+     if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptInt) and (Args[2].ArgType in [ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg]) Then
+     Begin
+      asm_push_imm32(ord(Args[2].ArgType));
+      asm_push_imm32(getRegMemAddr(Args[2]));
+      asm_push_imm32(Args[1].ImmInt);
+      asm_push_imm32(Args[0].StackvalPos);
+      asm_push_imm32(uint32(VM));
+      asm_absolute_call(uint32(@__array_get_stackval));
+     End Else
+
       raise Exception.CreateFmt('invalid opcode: arget(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);
     End;
 
     { arlen }
     o_arlen:
     Begin
-     // arlen(reg ref, dimension, out reg)
-     if (Args[0].ArgType = ptReferenceReg) and (Args[1].ArgType = ptInt) and (Args[2].ArgType = ptIntReg) Then
+     // arlen(reg ref/stackval, dimension, out reg)
+     if (Args[0].ArgType in [ptReferenceReg, ptStackval]) and (Args[1].ArgType = ptInt) and (Args[2].ArgType = ptIntReg) Then
      Begin
       asm_push_imm32(getRegMemAddr(Args[2]));
       asm_push_imm32(Args[1].ImmInt);
-      asm_push_mem32(getRegMemAddr(Args[0]));
+
+      if (Args[0].ArgType = ptReferenceReg) Then
+      Begin
+       asm_push_mem32(getRegMemAddr(Args[0]));
+      End Else
+      Begin
+       asm_push_imm32(Args[0].StackvalPos);
+       asm_push_imm32(getSTPRegMemAddr);
+       asm_push_imm32(uint32(@VM^.Stack));
+       asm_absolute_call(uint32(@__stackval_fetch_reference));
+       asm_push_reg32(reg_eax);
+      End;
+
       asm_absolute_call(uint32(@__array_get_dim_size));
      End Else
 
@@ -2165,6 +2332,12 @@ Begin
     Begin
      AddEpilogCode;
      asm_ret;
+    End;
+
+    { acall }
+    o_acall:
+    Begin
+     // @TODO: write me!
     End;
 
     { nop }

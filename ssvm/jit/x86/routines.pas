@@ -250,6 +250,12 @@ Begin
  Stack^[reg_stp^+StackvalPos].Value.Int := Value;
 End;
 
+(* __stackval_stackval_assign *)
+Procedure __stackval_stackval_assign(const Stack: PStack; const reg_stp: pint32; const Dest, Src: uint32); stdcall;
+Begin
+ Stack^[reg_stp^+Dest] := Stack^[reg_stp^+Src];
+End;
+
 (* __intadd_int_int *)
 Function __intadd_int_int(const A, B: int64): int64; stdcall;
 Begin
@@ -325,6 +331,12 @@ Begin
  PPChar(RegAddr)^ := CopyStringToPChar(AnsiString(PPChar(RegAddr)^) + AnsiString(StrPnt));
 End;
 
+(* __stringconcat_reg_string_char *)
+Procedure __stringconcat_reg_string_char(const RegAddr: uint32; const Value: uint32); stdcall;
+Begin
+ PPChar(RegAddr)^ := CopyStringToPChar(AnsiString(PPChar(RegAddr)^) + Char(Value));
+End;
+
 (* __stringconcat_stackval_string *)
 Procedure __stringconcat_stackval_string(const Stack: PStack; const reg_stp: Puint32; const StackvalPos: int32; const StrPnt: PChar); stdcall;
 Var SVal: PMixedValue;
@@ -336,6 +348,18 @@ Begin
   SVal^.Value.Str := CopyStringToPChar(AnsiString(SVal^.Value.Str) + AnsiString(StrPnt));
  End Else
   raise Exception.CreateFmt('Cannot execute ''__stringconcat_stackval_string'' on type `%d`', [ord(SVal^.Typ)]);
+End;
+
+(* __stringreg_char_assign *)
+Procedure __stringreg_char_assign(const DestReg: PPChar; const Value: uint32); stdcall;
+Var Str: PChar;
+Begin
+ Str := StrAlloc(2);
+
+ Str[0] := Char(Value);
+ Str[1] := #0;
+
+ DestReg^ := Str;
 End;
 
 (* __ret *)
@@ -741,6 +765,12 @@ Begin
  Result := getBool(Stack^[reg_stp^+StackvalPos]);
 End;
 
+(* __stackval_fetch_char *)
+Function __stackval_fetch_char(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32): Char; stdcall;
+Begin
+ Result := getChar(Stack^[reg_stp^+StackvalPos]);
+End;
+
 (* __stackval_fetch_int *)
 Function __stackval_fetch_int(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32): int64; stdcall;
 Begin
@@ -832,6 +862,46 @@ Begin
  Reg^[FetchArraySizesFromStack(VM, 1)[0]-1] := Char(Value);
 End;
 
+(* __array_set_stackval *)
+Procedure __array_set_stackval(const VM: PVM; const StackvalPos: int32; const IndexesCount: uint32; const ArgType: TOpcodeArgType; const Value: Pointer); stdcall;
+Var SVal, Element: TMixedValue;
+    PVal         : PMixedValue;
+    Sizes        : uint32Array;
+Begin
+ PVal    := @VM^.Stack[VM^.Regs.i[5]+StackvalPos];
+ SVal    := PVal^;
+ Element := ConstructMixedValue(ArgType, @Value);
+ Sizes   := FetchArraySizesFromStack(VM, IndexesCount);
+
+ if (SVal.Typ = mvString) and (IndexesCount = 1) and (ArgType = ptChar) Then
+ Begin
+  PVal^.Value.Str[Sizes[0]-1] := PChar(@Value)^;
+ End Else
+ Begin
+  TMArray(getReference(SVal)).setValue(Sizes, Element);
+ End;
+End;
+
+(* __array_set_stackval_stackval *)
+Procedure __array_set_stackval_stackval(const VM: PVM; const Stackval1Pos, Stackval2Pos: int32; const IndexesCount: uint32); stdcall;
+Var SVal, Element: TMixedValue;
+    PVal         : PMixedValue;
+    Sizes        : uint32Array;
+Begin
+ PVal    := @VM^.Stack[VM^.Regs.i[5]+Stackval1Pos];
+ SVal    := PVal^;
+ Element := VM^.Stack[VM^.Regs.i[5]+Stackval2Pos];
+ Sizes   := FetchArraySizesFromStack(VM, IndexesCount);
+
+ if (SVal.Typ = mvString) and (IndexesCount = 1) and (Element.Typ = mvChar) Then
+ Begin
+  PVal^.Value.Str[Sizes[0]-1] := getChar(Element);
+ End Else
+ Begin
+  TMArray(getReference(SVal)).setValue(Sizes, Element);
+ End;
+End;
+
 (* __array_get_bool *)
 Procedure __array_get_bool(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Reg: PBoolean); stdcall;
 Begin
@@ -866,6 +936,35 @@ End;
 Procedure __array_get_string_char(const VM: PVM; const Str: PChar; const Reg: PChar); stdcall;
 Begin
  Reg^ := Str[FetchArraySizesFromStack(VM, 1)[0]-1];
+End;
+
+(* __array_get_stackval *)
+Procedure __array_get_stackval(const VM: PVM; const StackvalPos: int32; const DimCount: uint32; const OutReg: Pointer; const OutRegType: TOpcodeArgType); stdcall;
+Var MVal : TMixedValue;
+    Arr  : TMArray;
+    Sizes: uint32Array;
+Begin
+ MVal  := VM^.Stack[VM^.Regs.i[5]+StackvalPos];
+ Sizes := FetchArraySizesFromStack(VM, DimCount);
+
+ if (MVal.Typ = mvString) and (DimCount = 1) and (OutRegType = ptCharReg) Then
+ Begin
+  PChar(OutReg)^ := getString(MVal)[Sizes[0]-1];
+ End Else
+ Begin
+  Arr := TMArray(getReference(MVal));
+
+  Case OutRegType of
+   ptBoolReg  : PBoolean(OutReg)^ := getBool(Arr.getValue(Sizes));
+   ptCharReg  : PChar(OutReg)^ := getChar(Arr.getValue(Sizes));
+   ptIntReg   : Pint64(OutReg)^ := getInt(Arr.getValue(Sizes));
+   ptFloatReg : PExtended(OutReg)^ := getFloat(Arr.getValue(Sizes));
+   ptStringReg: PPChar(OutReg)^ := getString(Arr.getValue(Sizes));
+
+   else
+    raise Exception.CreateFmt('''__array_get_stackval'' called with invalid out register type: %d', [ord(OutRegType)]);
+  End;
+ End;
 End;
 
 (* __array_get_dim_size *)

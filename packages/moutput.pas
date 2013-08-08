@@ -70,13 +70,13 @@ Begin
  BufferData := '';
 End;
 
-{ output.cursor.hide }
+{ output.cursor_hide }
 Procedure _cursor_hide(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  CRT.CursorOff;
 End;
 
-{ output.cursor.show }
+{ output.cursor_show }
 Procedure _cursor_show(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 Begin
  CRT.CursorOn;

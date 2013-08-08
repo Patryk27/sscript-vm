@@ -62,20 +62,19 @@ End;
 
 (* TGarbageCollector.Sweep *)
 Procedure TGarbageCollector.Sweep;
-Var I, Removed: Int32;
+Var I: int32;
 Begin
- I       := 0;
- Removed := 0;
+ I := ObjectList.Count-1;
 
- While (I < ObjectList.Count) Do
+ While (I >= 0) Do
  Begin
   if (not ObjectList[I].isMarked) Then
   Begin
    ObjectList[I].Free;
    ObjectList.Delete(I);
-   Inc(Removed);
-  End Else
-   Inc(I);
+  End;
+
+  Dec(I);
  End;
 End;
 

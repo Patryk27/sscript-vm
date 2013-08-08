@@ -507,7 +507,7 @@ Begin
    if (AnsiCompareStr(Name, 'vm.get_last_exception') = 0) Then
    Begin
     if (LastException.Typ <> etByMessage) Then
-     raise Exception.Create('VM internal error: opcodes.pas => LastException.Typ <> etByMessage');
+     raise Exception.Create('VM internal error: opcodeinterpreter.pas => LastException.Typ <> etByMessage');
 
     Param.Typ       := mvString;
     Param.Value.Str := LastException.Data;

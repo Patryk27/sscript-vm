@@ -131,7 +131,7 @@ Var Workers: Array[1..ObjectListCount] of TGCSweepWorker;
     Begin
      NewList := TObjectList.Create;
 
-     For I := 0 To ObjectList.Count-1 Do // usually creating an entire new list if faster than removing elements from the previous one.
+     For I := 0 To ObjectList.Count-1 Do // usually creating an entire new list is faster than removing elements from the previous one (especially when a lot of objects were removed during the sweep stage).
       if (ObjectList[I] <> nil) Then
        NewList.Add(ObjectList[I]);
 

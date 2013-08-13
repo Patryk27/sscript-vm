@@ -167,6 +167,13 @@ Begin
  Dec(reg_stp^);
 End;
 
+(* __stack_pop_stackval *)
+Procedure __stack_pop_stackval(const StackPnt: PStack; const reg_stp: pint32; const StackvalPos: int32); stdcall;
+Begin
+ Dec(reg_stp^);
+ StackPnt^[reg_stp^+StackvalPos] := StackPnt^[reg_stp^+1];
+End;
+
 (* __boolreg_stackval_assign *)
 Procedure __boolreg_stackval_assign(const Stack: PStack; const reg_stp: pint32; const StackvalPos: int32; const dest_reg: PBoolean); stdcall;
 Begin
@@ -938,8 +945,8 @@ Begin
  Reg^ := Str[FetchArraySizesFromStack(VM, 1)[0]-1];
 End;
 
-(* __array_get_stackval *)
-Procedure __array_get_stackval(const VM: PVM; const StackvalPos: int32; const DimCount: uint32; const OutReg: Pointer; const OutRegType: TOpcodeArgType); stdcall;
+(* __array_get_stackval_reg *)
+Procedure __array_get_stackval_reg(const VM: PVM; const StackvalPos: int32; const DimCount: uint32; const OutReg: Pointer; const OutRegType: TOpcodeArgType); stdcall;
 Var MVal : TMixedValue;
     Arr  : TMArray;
     Sizes: uint32Array;
@@ -962,8 +969,32 @@ Begin
    ptStringReg: PPChar(OutReg)^ := getString(Arr.getValue(Sizes));
 
    else
-    raise Exception.CreateFmt('''__array_get_stackval'' called with invalid out register type: %d', [ord(OutRegType)]);
+    raise Exception.CreateFmt('''__array_get_stackval_reg'' called with invalid out register type: %d', [ord(OutRegType)]);
   End;
+ End;
+End;
+
+(* __array_get_stackval_stackval *)
+Procedure __array_get_stackval_stackval(const VM: PVM; const StackvalPos: int32; const DimCount: uint32; const OutStackvalPos: int32); stdcall;
+Var MVal : TMixedValue;
+    Sizes: uint32Array;
+    stp  : uint32;
+Begin
+ stp := VM^.Regs.i[5];
+
+ MVal  := VM^.Stack[stp+StackvalPos];
+ Sizes := FetchArraySizesFromStack(VM, DimCount);
+
+ if (MVal.Typ = mvString) and (DimCount = 1) Then
+ Begin
+  With VM^.Stack[stp+OutStackvalPos] do
+  Begin
+   Typ        := mvChar;
+   Value.Char := getString(MVal)[Sizes[0]-1];
+  End;
+ End Else
+ Begin
+  VM^.Stack[stp+OutStackvalPos] := TMArray(getReference(MVal)).getValue(Sizes);
  End;
 End;
 

@@ -81,6 +81,7 @@ Unit JIT;
                        Procedure asm_add_mem32_imm32(const Mem: uint32; const Value: int32);
                        Procedure asm_sub_mem32_imm32(const Mem: uint32; const Value: int32);
                        Procedure asm_sub_reg32_reg32(const RegA: TRegister32; const RegB: TRegister32);
+                       Procedure asm_sub_reg32_imm32(const Reg: TRegister32; const Value: int32);
                        Procedure asm_sbb_reg32_imm32(const Reg: TRegister32; const Value: int32);
                        Procedure asm_sbb_reg32_imm8(const Reg: TRegister32; const Value: int8);
                        Procedure asm_cmp_reg32_reg32(const RegA, RegB: TRegister32);
@@ -521,6 +522,30 @@ Begin
 
  CompiledData.write_uint8($29);
  CompiledData.write_uint8(puint8(@ModRM)^);
+End;
+
+(* TJITCompiler.asm_sub_reg32_imm32 *)
+{ sub reg, value }
+Procedure TJITCompiler.asm_sub_reg32_imm32(const Reg: TRegister32; const Value: int32);
+Var ModRM: TModRM;
+Begin
+ if (Value = 0) Then
+  Exit;
+
+ if (Reg = reg_eax) Then
+ Begin
+  CompiledData.write_uint8($2D);
+  CompiledData.write_int32(Value);
+ End Else
+ Begin
+  ModRM.Mode := 3;
+  ModRM.Reg  := 5;
+  ModRM.RM   := ord(Reg);
+
+  CompiledData.write_uint8($81);
+  CompiledData.write_uint8(puint32(@ModRM)^);
+  CompiledData.write_int32(Value);
+ End;
 End;
 
 (* TJITCompiler.asm_sbb_reg32_imm32 *)
@@ -1681,7 +1706,10 @@ Begin
     { pop }
     o_pop:
     Begin
-     asm_push_imm32(getRegMemAddr(Args[0]));
+     if (Args[0].ArgType = ptStackval) Then
+      asm_push_imm32(Args[0].StackvalPos) Else
+      asm_push_imm32(getRegMemAddr(Args[0]));
+
      asm_push_imm32(getSTPRegMemAddr);
      asm_push_imm32(uint32(@VM^.Stack));
 
@@ -1719,6 +1747,12 @@ Begin
      if (Args[0].ArgType = ptReferenceReg) Then
      Begin
       asm_absolute_call(uint32(@__stack_pop_reference_reg));
+     End Else
+
+     // pop(stackval)
+     if (Args[0].ArgType = ptStackval) Then
+     Begin
+      asm_absolute_call(uint32(@__stack_pop_stackval));
      End Else
 
       raise Exception.CreateFmt('invalid instruction: pop(type(%d))', [ord(Args[0].ArgType)]);
@@ -2313,7 +2347,17 @@ Begin
       asm_push_imm32(Args[1].ImmInt);
       asm_push_imm32(Args[0].StackvalPos);
       asm_push_imm32(uint32(VM));
-      asm_absolute_call(uint32(@__array_get_stackval));
+      asm_absolute_call(uint32(@__array_get_stackval_reg));
+     End Else
+
+     // arget(stackval, indexes count, stackval)
+     if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptInt) and (Args[2].ArgType = ptStackval) Then
+     Begin
+      asm_push_imm32(Args[2].StackvalPos);
+      asm_push_imm32(Args[1].ImmInt);
+      asm_push_imm32(Args[0].StackvalPos);
+      asm_push_imm32(uint32(VM));
+      asm_absolute_call(uint32(@__array_get_stackval_stackval));
      End Else
 
       raise Exception.CreateFmt('invalid opcode: arget(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);
@@ -2349,8 +2393,8 @@ Begin
     { strlen }
     o_strlen:
     Begin
-     // strlen(reg/imm string/stackval, out reg)
-     if (Args[0].ArgType in [ptStringReg, ptString, ptStackval]) and (Args[1].ArgType = ptIntReg) Then
+     // strlen(reg/imm string/stackval, out reg/stackval)
+     if (Args[0].ArgType in [ptStringReg, ptString, ptStackval]) and (Args[1].ArgType in [ptIntReg, ptStackval]) Then
      Begin
       Case Args[0].ArgType of
        ptStringReg: asm_mov_reg32_mem32(reg_edi, getRegMemAddr(Args[0]));
@@ -2372,10 +2416,21 @@ Begin
       asm_cld;
       asm_repne_scasb;
       asm_not_reg32(reg_ecx);
-      asm_add_reg32_imm32(reg_ecx, -1);
+      asm_sub_reg32_imm32(reg_ecx, 1);
 
-      asm_mov_mem32_reg32(getRegMemAddr(Args[1]), reg_ecx);
-      asm_mov_mem32_imm32(getRegMemAddr(Args[1])+4, 0);
+      if (Args[1].ArgType = ptIntReg) Then
+      Begin
+       asm_mov_mem32_reg32(getRegMemAddr(Args[1]), reg_ecx);
+       asm_mov_mem32_imm32(getRegMemAddr(Args[1])+4, 0);
+      End Else
+      Begin
+       asm_push_imm32(0);
+       asm_push_reg32(reg_ecx);
+       asm_push_imm32(Args[1].StackvalPos);
+       asm_push_imm32(getSTPRegMemAddr);
+       asm_push_imm32(uint32(@VM^.Stack));
+       asm_absolute_call(uint32(@__stackval_intval_assign));
+      End;
      End Else
 
       raise Exception.CreateFmt('invalid opcode: strlen(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);

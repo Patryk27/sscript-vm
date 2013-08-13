@@ -138,22 +138,28 @@ Var reg, val: TMixedValue;
 Begin
  With VM^ do
  Begin
-  reg := read_param;
   val := StackPop;
+  reg := read_param;
 
-  if (not reg.isReg) Then
-   raise eInvalidOpcode.Create('''pop'' requires the first parameter to be a register.');
+  if (not (reg.isReg or reg.isStackval)) Then
+   raise eInvalidOpcode.Create('''pop'' requires the first parameter to be a register or a stackval.');
 
-  Case reg.Typ of
-   mvBool     : Regs.b[reg.RegIndex] := getBool(val);
-   mvChar     : Regs.c[reg.RegIndex] := getChar(val);
-   mvInt      : Regs.i[reg.RegIndex] := getInt(val);
-   mvFloat    : Regs.f[reg.RegIndex] := getFloat(val);
-   mvString   : Regs.s[reg.RegIndex] := getString(val);
-   mvReference: Regs.r[reg.RegIndex] := getReference(val);
+  if (reg.isStackval) Then
+  Begin
+   reg.Stackval^ := val;
+  End Else
+  Begin
+   Case reg.Typ of
+    mvBool     : Regs.b[reg.RegIndex] := getBool(val);
+    mvChar     : Regs.c[reg.RegIndex] := getChar(val);
+    mvInt      : Regs.i[reg.RegIndex] := getInt(val);
+    mvFloat    : Regs.f[reg.RegIndex] := getFloat(val);
+    mvString   : Regs.s[reg.RegIndex] := getString(val);
+    mvReference: Regs.r[reg.RegIndex] := getReference(val);
 
-   else
-    raise eInvalidOpcode.Create('''pop'' called with arguments: '+getTypeName(reg)+' <- '+getTypeName(val));
+    else
+     raise eInvalidOpcode.Create('''pop'' called with arguments: '+getTypeName(reg)+' <- '+getTypeName(val));
+   End;
   End;
  End;
 End;
@@ -1023,23 +1029,23 @@ End;
 
 { ARGET (register, index count, result register) }
 Procedure op_ARGET(VM: PVM);
-Var refreg, index_count, out_reg: TMixedValue;
-    PosArray                    : uint32Array;
-    I                           : uint32;
-    AValue                      : TMixedValue;
+Var refreg, index_count, outreg: TMixedValue;
+    PosArray                   : uint32Array;
+    I                          : uint32;
+    AValue                     : TMixedValue;
 Label Fail;
 Begin
  With VM^ do
  Begin
   refreg      := read_param;
   index_count := read_param;
-  out_reg     := read_param;
+  outreg      := read_param;
 
   SetLength(PosArray, getInt(index_count));
   For I := 0 To High(PosArray) Do
    PosArray[I] := getInt(StackPop);
 
-  if (not (refreg.isReg or refreg.isStackval)) or (not (out_reg.isReg or out_reg.isStackval)) Then
+  if (not (refreg.isReg or refreg.isStackval)) or (not (outreg.isReg or outreg.isStackval)) Then
    raise eInvalidOpcode.Create('''arget'' requires the first and third parameter to be a register or a stackval.');
 
   if (refreg.isReg) Then
@@ -1051,7 +1057,7 @@ Begin
     mvString: { string }
     Begin
      AValue.Typ        := mvChar;
-     AValue.Value.Char := getString(refreg)[PosArray[0]-1]; // `-1`, because we have `PChar` (which is counted from zero), not `AnsiString`.
+     AValue.Value.Char := getString(refreg)[PosArray[0]-1]; // `-1`, because we have `PChar` (which is counted from `0`), not `AnsiString` (which is counted from `1`).
     End;
 
     mvChar: // char
@@ -1091,22 +1097,28 @@ Begin
     End;
   End;
 
-  Case out_reg.Typ of
-   mvBool     : Regs.b[out_reg.RegIndex] := getBool(AValue);
-   mvChar     : Regs.c[out_reg.RegIndex] := getChar(AValue);
-   mvInt      : Regs.i[out_reg.RegIndex] := getInt(AValue);
-   mvFloat    : Regs.f[out_reg.RegIndex] := getFloat(AValue);
-   mvString   : Regs.s[out_reg.RegIndex] := getString(AValue);
-   mvReference: Regs.r[out_reg.RegIndex] := getReference(AValue);
+  if (outreg.isStackval) Then
+  Begin
+   outreg.Stackval^ := AValue;
+  End Else
+  Begin
+   Case outreg.Typ of
+    mvBool     : Regs.b[outreg.RegIndex] := getBool(AValue);
+    mvChar     : Regs.c[outreg.RegIndex] := getChar(AValue);
+    mvInt      : Regs.i[outreg.RegIndex] := getInt(AValue);
+    mvFloat    : Regs.f[outreg.RegIndex] := getFloat(AValue);
+    mvString   : Regs.s[outreg.RegIndex] := getString(AValue);
+    mvReference: Regs.r[outreg.RegIndex] := getReference(AValue);
 
-   else
-    goto Fail;
+    else
+     goto Fail;
+   End;
   End;
 
   Exit;
 
  Fail:
-  raise eInvalidOpcode.Create('''arget'' called with arguments: '+getTypeName(refreg)+', '+getTypeName(index_count)+', '+getTypeName(out_reg));
+  raise eInvalidOpcode.Create('''arget'' called with arguments: '+getTypeName(refreg)+', '+getTypeName(index_count)+', '+getTypeName(outreg));
  End;
 End;
 
@@ -1144,21 +1156,21 @@ End;
 
 { ARLEN (register, dimension ID, result register) }
 Procedure op_ARLEN(VM: PVM);
-Var refreg, dimension, out_reg: TMixedValue;
+Var refreg, dimension, outreg: TMixedValue;
 Begin
  With VM^ do
  Begin
   refreg    := read_param;
   dimension := read_param;
-  out_reg   := read_param;
+  outreg   := read_param;
 
   if not (refreg.isReg or refreg.isStackval) Then
    raise eInvalidOpcode.Create('''arlen'' requires the first parameter to be a register or a stackval.');
 
-  if not ((out_reg.isReg) and (out_reg.Typ = mvInt)) Then
+  if not ((outreg.isReg) and (outreg.Typ = mvInt)) Then
    raise eInvalidOpcode.Create('''arlen'' requires the third parameter to be an int register.');
 
-  Regs.i[out_reg.RegIndex] := TMArray(CheckObject(getReference(refreg))).getSize(getInt(dimension));
+  Regs.i[outreg.RegIndex] := TMArray(CheckObject(getReference(refreg))).getSize(getInt(dimension));
  End;
 End;
 
@@ -1174,10 +1186,17 @@ Begin
   if (not (strreg.isReg or strreg.isStackval or (strreg.Typ = mvString))) Then
    raise eInvalidOpcode.Create('''strlen'' requires the first parameter to be a register, stackval or string.');
 
-  if (not (outreg.isReg and (outreg.Typ = mvInt))) Then
-   raise eInvalidOpcode.Create('''strlen'' requires the second parameter to be an int register.');
+  if (not ((outreg.isReg and (outreg.Typ = mvInt)) or outreg.isStackval)) Then
+   raise eInvalidOpcode.Create('''strlen'' requires the second parameter to be an int register or a stackval.');
 
-  Regs.i[outreg.RegIndex] := Length(getString(strreg));
+  if (outreg.isStackval) Then
+  Begin
+   outreg.Stackval^.Typ       := mvInt;
+   outreg.Stackval^.Value.Int := Length(getString(strreg));
+  End Else
+  Begin
+   Regs.i[outreg.RegIndex] := Length(getString(strreg));
+  End;
  End;
 End;
 

@@ -12,7 +12,7 @@ Unit BCLoader;
  Uses SysUtils, Classes, Zipper;
 
  Const BytecodeMajor = 0;
-       BytecodeMinor = 41;
+       BytecodeMinor = 42;
 
  { TLoadState }
  Type TLoadState = (lsSuccess, lsFailed, lsFileNotFound);

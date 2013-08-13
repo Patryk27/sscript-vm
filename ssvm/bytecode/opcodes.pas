@@ -16,7 +16,7 @@ Unit Opcodes;
                    o_strjoin,
                    o_not, o_or, o_xor, o_and, o_shl, o_shr,
                    o_mod,
-                   o_arset, o_arget, o_arcrt, o_arlen,
+                   o_arset, o_arget, o_arcrt, o_arlen, o_strlen,
                    o_loc_file, o_loc_func, o_loc_line);
 
  Const OpcodeArgCount: Array[TOpcode_E] of uint8 = (0, 0,
@@ -27,7 +27,7 @@ Unit Opcodes;
                                                     2,
                                                     1, 2, 2, 2, 2, 2,
                                                     2,
-                                                    3, 3, 3, 3,
+                                                    3, 3, 3, 3, 2,
                                                     1, 1, 1);
 
  Type TOpcodeArgType = (ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg, ptBool, ptChar, ptInt, ptFloat, ptString, ptStackval);

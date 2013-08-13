@@ -19,13 +19,13 @@ Unit VM;
 
  Type TJITCompiledState = (csInvalidBytecode, csJITFailed, csJITUnsupported, csDisabled, csDone);
 
- Const TYPE_BOOL   = 3; // do not modify
-       TYPE_CHAR   = 4;
-       TYPE_INT    = 5;
-       TYPE_FLOAT  = 6;
-       TYPE_STRING = 7;
+ Const TYPE_BOOL_id   = 0; // do not modify
+       TYPE_CHAR_id   = 1;
+       TYPE_INT_id    = 2;
+       TYPE_FLOAT_id  = 3;
+       TYPE_STRING_id = 4;
 
-       TypeSize: Array[TYPE_BOOL..TYPE_STRING] of Byte = (1, 1, 8, 10, 4);
+       TypeSizes: Array[TYPE_BOOL_id..TYPE_STRING_id] of Byte = (1, 1, 8, 10, 4);
 
  // -- internal calls -- //
  Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall; // single icall handler

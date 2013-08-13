@@ -19,7 +19,7 @@
 *)
 {$H+}
 Program VM_;
-Uses vm_header, SysUtils, Classes, mInput, mOutput, mMath, mString, mTime, os_functions;
+Uses vm_header, SysUtils, Classes, mInput, mOutput, mMath, mTime, os_functions;
 Var opt_wait, opt_time, opt_jit, opt_verbose: Boolean;
     GCMemoryLimit                           : uint32;
     JITSaveTo                               : String;
@@ -137,7 +137,6 @@ Begin
   mInput.Init(VM);
   mOutput.Init(VM);
   mMath.Init(VM);
-  mString.Init(VM);
   mTime.Init(VM);
 
   // run JIT compiler?

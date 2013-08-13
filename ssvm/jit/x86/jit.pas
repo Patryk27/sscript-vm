@@ -127,6 +127,10 @@ Unit JIT;
                        Procedure asm_fchs;
                        Procedure asm_sahf;
 
+                       Procedure asm_cld;
+
+                       Procedure asm_repne_scasb;
+
                       Public
                        Procedure Compile; override;
                       End;
@@ -946,6 +950,21 @@ End;
 Procedure TJITCompiler.asm_sahf;
 Begin
  CompiledData.write_uint8($9E);
+End;
+
+(* TJITCompiler.asm_cld *)
+{ cld }
+Procedure TJITCompiler.asm_cld;
+Begin
+ CompiledData.write_uint8($FC);
+End;
+
+(* TJITCompiler.asm_repne_scasb *)
+{ repne scasb }
+Procedure TJITCompiler.asm_repne_scasb;
+Begin
+ CompiledData.write_uint8($F2);
+ CompiledData.write_uint8($AE);
 End;
 
 // -------------------------------------------------------------------------- //
@@ -2325,6 +2344,41 @@ Begin
      End Else
 
       raise Exception.CreateFmt('invalid opcode: arlen(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);
+    End;
+
+    { strlen }
+    o_strlen:
+    Begin
+     // strlen(reg/imm string/stackval, out reg)
+     if (Args[0].ArgType in [ptStringReg, ptString, ptStackval]) and (Args[1].ArgType = ptIntReg) Then
+     Begin
+      Case Args[0].ArgType of
+       ptStringReg: asm_mov_reg32_mem32(reg_edi, getRegMemAddr(Args[0]));
+       ptString   : asm_mov_reg32_imm32(reg_edi, AllocateString(Args[0].ImmString));
+
+       ptStackval:
+       Begin
+        asm_push_imm32(Args[0].StackvalPos);
+        asm_push_imm32(getSTPRegMemAddr);
+        asm_push_imm32(uint32(@VM^.Stack));
+        asm_absolute_call(uint32(@__stackval_fetch_string));
+        asm_mov_reg32_reg32(reg_edi, reg_eax);
+       End;
+      End;
+
+      asm_mov_reg32_imm32(reg_ecx, 0);
+      asm_mov_reg8_imm8(reg_al, 0);
+      asm_not_reg32(reg_ecx);
+      asm_cld;
+      asm_repne_scasb;
+      asm_not_reg32(reg_ecx);
+      asm_add_reg32_imm32(reg_ecx, -1);
+
+      asm_mov_mem32_reg32(getRegMemAddr(Args[1]), reg_ecx);
+      asm_mov_mem32_imm32(getRegMemAddr(Args[1])+4, 0);
+     End Else
+
+      raise Exception.CreateFmt('invalid opcode: strlen(type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType)]);
     End;
 
     { stop }

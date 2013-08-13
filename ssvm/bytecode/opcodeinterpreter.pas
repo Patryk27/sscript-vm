@@ -46,6 +46,7 @@ Unit OpcodeInterpreter;
  Procedure op_ARGET(VM: PVM);
  Procedure op_ARCRT(VM: PVM);
  Procedure op_ARLEN(VM: PVM);
+ Procedure op_STRLEN(VM: PVM);
  Procedure op_LOCATION(VM: PVM);
 
  Type TOpcodeProc = Procedure(VM: PVM);
@@ -86,6 +87,7 @@ Unit OpcodeInterpreter;
   @op_ARGET,
   @op_ARCRT,
   @op_ARLEN,
+  @op_STRLEN,
   @op_LOCATION,
   @op_LOCATION,
   @op_LOCATION
@@ -1157,6 +1159,25 @@ Begin
    raise eInvalidOpcode.Create('''arlen'' requires the third parameter to be an int register.');
 
   Regs.i[out_reg.RegIndex] := TMArray(CheckObject(getReference(refreg))).getSize(getInt(dimension));
+ End;
+End;
+
+{ STRLEN (string register, out int register) }
+Procedure op_STRLEN(VM: PVM);
+Var strreg, outreg: TMixedValue;
+Begin
+ With VM^ do
+ Begin
+  strreg := read_param;
+  outreg := read_param;
+
+  if (not (strreg.isReg or strreg.isStackval or (strreg.Typ = mvString))) Then
+   raise eInvalidOpcode.Create('''strlen'' requires the first parameter to be a register, stackval or string.');
+
+  if (not (outreg.isReg and (outreg.Typ = mvInt))) Then
+   raise eInvalidOpcode.Create('''strlen'' requires the second parameter to be an int register.');
+
+  Regs.i[outreg.RegIndex] := Length(getString(strreg));
  End;
 End;
 

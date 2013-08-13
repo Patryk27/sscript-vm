@@ -72,7 +72,7 @@ Var I: Integer;
 Begin
  if (Length(Position) <> Length(Sizes)) Then
  Begin
-  if (Typ = TYPE_STRING) and (Length(Position)-1 = Length(Sizes)) Then
+  if (Typ = TYPE_STRING_id) and (Length(Position)-1 = Length(Sizes)) Then
    SetLength(Position, High(Position)) Else
    VM^.ThrowExceptionByMessage('Invalid array access.');
  End;
@@ -97,7 +97,7 @@ Begin
 
  { set class fields }
  Typ       := fType;
- CTypeSize := TypeSize[fType];
+ CTypeSize := TypeSizes[fType];
  Sizes     := fSizes;
 
  { allocate memory }
@@ -117,7 +117,7 @@ End;
 Destructor TMArray.Destroy;
 Var Mem, MemEnd: Pointer;
 Begin
- if (Typ = TYPE_STRING) Then // strings need a special freeing
+ if (Typ = TYPE_STRING_id) Then // strings need a special freeing
  Begin
   Mem    := Data;
   MemEnd := Mem+MemSize;
@@ -139,7 +139,7 @@ Var Mem, MemEnd: Pointer;
 Begin
  inherited;
 
- if (Typ = TYPE_INT) Then
+ if (Typ = TYPE_INT_id) Then
  Begin
   Mem    := Data;
   MemEnd := Mem+MemSize;
@@ -164,7 +164,7 @@ Begin
 
  With NewValue do
  Begin
-  if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING) Then // special 'feature': immediate string's char reading
+  if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING_id) Then // special 'feature': immediate string's char reading
   Begin
    Str                           := LoadString(DataPos);
    Str[Position[High(Position)]] := getChar(NewValue);
@@ -172,11 +172,11 @@ Begin
   End;
 
   Case self.Typ of
-   TYPE_BOOL  : PBoolean(DataPos)^ := Value.Bool;
-   TYPE_CHAR  : PChar(DataPos)^ := Value.Char;
-   TYPE_INT   : Pint64(DataPos)^ := Value.Int;
-   TYPE_FLOAT : PExtended(DataPos)^ := getFloat(NewValue);
-   TYPE_STRING: SaveString(DataPos, getString(NewValue));
+   TYPE_BOOL_id  : PBoolean(DataPos)^ := Value.Bool;
+   TYPE_CHAR_id  : PChar(DataPos)^ := Value.Char;
+   TYPE_INT_id   : Pint64(DataPos)^ := Value.Int;
+   TYPE_FLOAT_id : PExtended(DataPos)^ := getFloat(NewValue);
+   TYPE_STRING_id: SaveString(DataPos, getString(NewValue));
 
    else
     raise Exception.CreateFmt('Invalid internal array type: %d', [ord(Typ)]);
@@ -193,11 +193,11 @@ Begin
  With Result do
  Begin
   Case self.Typ of
-   TYPE_BOOL  : Typ := mvBool;
-   TYPE_CHAR  : Typ := mvChar;
-   TYPE_INT   : Typ := mvInt;
-   TYPE_FLOAT : Typ := mvFloat;
-   TYPE_STRING: Typ := mvString;
+   TYPE_BOOL_id  : Typ := mvBool;
+   TYPE_CHAR_id  : Typ := mvChar;
+   TYPE_INT_id   : Typ := mvInt;
+   TYPE_FLOAT_id : Typ := mvFloat;
+   TYPE_STRING_id: Typ := mvString;
 
    else
     raise Exception.CreateFmt('Invalid internal array type: %d', [ord(self.Typ)]); // shouldn't happen
@@ -211,7 +211,7 @@ Begin
    mvString: Value.Str   := CopyStringToPChar(LoadString(DataPos));
   End;
 
-  if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING) Then
+  if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING_id) Then
   Begin
    Value.Str := PChar(AnsiString(Value.Str[Position[High(Position)]]));
    Value.Int := ord(Value.Str[1]);

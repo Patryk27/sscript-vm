@@ -1154,27 +1154,37 @@ Begin
  End;
 End;
 
-{ ARLEN (register, dimension ID, result register) }
+{ ARLEN (register, dimension ID, result register/stackval) }
 Procedure op_ARLEN(VM: PVM);
 Var refreg, dimension, outreg: TMixedValue;
+    DimSize                  : uint32;
 Begin
  With VM^ do
  Begin
   refreg    := read_param;
   dimension := read_param;
-  outreg   := read_param;
+  outreg    := read_param;
 
   if not (refreg.isReg or refreg.isStackval) Then
    raise eInvalidOpcode.Create('''arlen'' requires the first parameter to be a register or a stackval.');
 
-  if not ((outreg.isReg) and (outreg.Typ = mvInt)) Then
-   raise eInvalidOpcode.Create('''arlen'' requires the third parameter to be an int register.');
+  if not (((outreg.isReg) and (outreg.Typ = mvInt)) or outreg.isStackval) Then
+   raise eInvalidOpcode.Create('''arlen'' requires the third parameter to be an int register or a stackval.');
 
-  Regs.i[outreg.RegIndex] := TMArray(CheckObject(getReference(refreg))).getSize(getInt(dimension));
+  DimSize := TMArray(CheckObject(getReference(refreg))).getSize(getInt(dimension));
+
+  if (outreg.isStackval) Then
+  Begin
+   outreg.Stackval^.Typ       := mvInt;
+   outreg.Stackval^.Value.Int := DimSize;
+  End Else
+  Begin
+   Regs.i[outreg.RegIndex] := DimSize;
+  End;
  End;
 End;
 
-{ STRLEN (string register, out int register) }
+{ STRLEN (string register, out int register/stackval) }
 Procedure op_STRLEN(VM: PVM);
 Var strreg, outreg: TMixedValue;
 Begin

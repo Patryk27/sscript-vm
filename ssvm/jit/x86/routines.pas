@@ -999,9 +999,9 @@ Begin
 End;
 
 (* __array_get_dim_size *)
-Procedure __array_get_dim_size(const Arr: TMArray; const Dimension: uint32; const Reg: Puint64); stdcall;
+Function __array_get_dim_size(const Arr: TMArray; const Dimension: uint32): uint32; stdcall;
 Begin
- Reg^ := Arr.getSize(Dimension);
+ Result := Arr.getSize(Dimension);
 End;
 
 (* __release_memory *)

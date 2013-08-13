@@ -2366,10 +2366,9 @@ Begin
     { arlen }
     o_arlen:
     Begin
-     // arlen(reg ref/stackval, dimension, out reg)
-     if (Args[0].ArgType in [ptReferenceReg, ptStackval]) and (Args[1].ArgType = ptInt) and (Args[2].ArgType = ptIntReg) Then
+     // arlen(reg ref/stackval, dimension, out reg/stackval)
+     if (Args[0].ArgType in [ptReferenceReg, ptStackval]) and (Args[1].ArgType = ptInt) and (Args[2].ArgType in [ptIntReg, ptStackval]) Then
      Begin
-      asm_push_imm32(getRegMemAddr(Args[2]));
       asm_push_imm32(Args[1].ImmInt);
 
       if (Args[0].ArgType = ptReferenceReg) Then
@@ -2385,6 +2384,20 @@ Begin
       End;
 
       asm_absolute_call(uint32(@__array_get_dim_size));
+
+      if (Args[2].ArgType = ptIntReg) Then
+      Begin
+       asm_mov_mem32_reg32(getRegMemAddr(Args[2]), reg_eax);
+       asm_mov_mem32_imm32(getRegMemAddr(Args[2])+4, 0);
+      End Else
+      Begin
+       asm_push_imm32(0);
+       asm_push_reg32(reg_eax);
+       asm_push_imm32(Args[2].StackvalPos);
+       asm_push_imm32(getSTPRegMemAddr);
+       asm_push_imm32(uint32(@VM^.Stack));
+       asm_absolute_call(uint32(@__stackval_intval_assign));
+      End;
      End Else
 
       raise Exception.CreateFmt('invalid opcode: arlen(type(%d), type(%d), type(%d))', [ord(Args[0].ArgType), ord(Args[1].ArgType), ord(Args[2].ArgType)]);

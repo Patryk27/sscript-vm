@@ -123,8 +123,8 @@ Unit VM;
             End;
 
  Procedure VM_Create(VM: Pointer; FileName: PChar; GCMemoryLimit: uint32); stdcall;
- Procedure VM_Run(VM: Pointer; EntryPoint: uint32); stdcall;
- Function VM_JITCompile(VM: Pointer; EntryPoint: uint32): TJITCompiledState; stdcall;
+ Procedure VM_Run(VM: Pointer); stdcall;
+ Function VM_JITCompile(VM: Pointer): TJITCompiledState; stdcall;
  Function VM_GetLastJITError(VM: Pointer): PChar; stdcall;
  Function VM_GetJITCode(VM: Pointer): Pointer; stdcall;
  Function VM_GetJITCodeSize(VM: Pointer): uint32; stdcall;
@@ -196,9 +196,9 @@ End;
 
 (* VM_Run *)
 {
- Executes the program from specified point ('EntryPoint').
+ Executes the program.
 }
-Procedure VM_Run(VM: Pointer; EntryPoint: uint32); stdcall;
+Procedure VM_Run(VM: Pointer); stdcall;
 Type TProcedure = Procedure;
 Begin
  With PVM(VM)^ do
@@ -212,7 +212,7 @@ Begin
   ExceptionHandler  := -1;
   LastException.Typ := etNone;
 
-  SetPosition(EntryPoint);
+  setPosition(0);
 
   StopReason := srNormal;
 
@@ -236,7 +236,7 @@ End;
 
 (* VM_JITCompile *)
 { Executes JIT compiler on already loaded bytecode in specified VM instance }
-Function VM_JITCompile(VM: Pointer; EntryPoint: uint32): TJITCompiledState; stdcall;
+Function VM_JITCompile(VM: Pointer): TJITCompiledState; stdcall;
 {$IFDEF ENABLE_JIT}
 Var Compiler: TJITCompiler = nil;
 {$ENDIF}

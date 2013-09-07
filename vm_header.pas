@@ -76,8 +76,8 @@ Unit vm_header;
 
  Function LoadProgram(FileName: PChar; GCMemoryLimit: uint32): Pointer;                                              stdcall external 'ssvm.dll';
 
- Procedure Run(VM: Pointer; EntryPoint: uint32=0);                                                                   stdcall external 'ssvm.dll';
- Function JITCompile(VM: Pointer; EntryPoint: uint32=0): TJITCompiledState;                                          stdcall external 'ssvm.dll';
+ Procedure Run(VM: Pointer);                                                                                         stdcall external 'ssvm.dll';
+ Function JITCompile(VM: Pointer): TJITCompiledState;                                                                stdcall external 'ssvm.dll';
  Function GetLastJITError(VM: Pointer): PChar;                                                                       stdcall external 'ssvm.dll';
  Function GetJITCode(VM: Pointer): Pointer;                                                                          stdcall external 'ssvm.dll';
  Function GetJITCodeSize(VM: Pointer): uint32;                                                                       stdcall external 'ssvm.dll';

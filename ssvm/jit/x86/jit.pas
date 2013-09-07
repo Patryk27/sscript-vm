@@ -1190,6 +1190,8 @@ Begin
    if (isLocationOpcode(Opcode)) Then // skip the "loc_" opcodes
     Continue;
 
+  // CompiledData.write_uint8($CC); // int3
+
    Case Opcode of
     { add, sub, mul, div, or, and, xor, shl, shr }
     o_add, o_sub, o_mul, o_div, o_or, o_and, o_xor, o_shl, o_shr:
@@ -2366,7 +2368,7 @@ Begin
     { arlen }
     o_arlen:
     Begin
-     // arlen(reg ref/stackval, dimension, out reg/stackval)
+     // arlen(reg ref/stackval, const int dimension, out reg/stackval)
      if (Args[0].ArgType in [ptReferenceReg, ptStackval]) and (Args[1].ArgType = ptInt) and (Args[2].ArgType in [ptIntReg, ptStackval]) Then
      Begin
       asm_push_imm32(Args[1].ImmInt);

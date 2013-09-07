@@ -111,11 +111,11 @@ Begin
 End;
 
 (* __stack_push_reference *)
-Procedure __stack_push_reference(const StackPnt: PStack; const reg_stp: pint32; const Value: Pointer); stdcall;
+Procedure __stack_push_reference(const StackPnt: PStack; const reg_stp: pint32; const Value: uint32); stdcall;
 Begin
  Inc(reg_stp^);
  StackPnt^[reg_stp^].Typ       := mvReference;
- StackPnt^[reg_stp^].Value.Int := uint32(Value);
+ StackPnt^[reg_stp^].Value.Int := Value;
 End;
 
 (* __stack_push_stackval *)

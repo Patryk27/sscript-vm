@@ -346,8 +346,8 @@ Procedure VM_StackPush(VM: Pointer; Element: TMixedValue); stdcall;
 Begin
  With PVM(VM)^ do
  Begin
-  Stack[StackPos^] := Element;
   Inc(StackPos^);
+  Stack[StackPos^] := Element;
  End;
 End;
 
@@ -359,8 +359,8 @@ Function VM_StackPop(VM: Pointer): TMixedValue; stdcall;
 Begin
  With PVM(VM)^ do
  Begin
-  Dec(StackPos^);
   Result := Stack[StackPos^];
+  Dec(StackPos^);
  End;
 End;
 

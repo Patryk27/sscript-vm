@@ -2,32 +2,41 @@
  Copyright © by Patryk Wychowaniec, 2013
  All rights reserved.
 *)
+{$MODESWITCH ADVANCEDRECORDS}
 {$H+}
 Unit Stack;
 
  Interface
 
+ { TMixedValueType }
  Type TMixedValueType = (mvNone=-1, mvBool, mvChar, mvInt, mvFloat, mvString, mvReference, mvCallstackRef);
 
+ { TMixedValue }
  Type PStackElement = ^TStackElement;
 
       PMixedValue = ^TMixedValue;
-      TMixedValue = Record
-                     Typ  : TMixedValueType;
-                     Value: Record
-                             Bool : Boolean;
-                             Char : Char;
-                             Int  : Int64;
-                             Float: Extended;
-                             Str  : PChar;
-                            End;
+      TMixedValue =
+      Record
+       Typ  : TMixedValueType;
+       Value: Record
+               Bool : Boolean;
+               Char : Char;
+               Int  : Int64;
+               Float: Extended;
+               Str  : PChar;
+              End;
 
-                     isStackval: Boolean;
-                     Stackval  : PStackElement;
+       isStackval: Boolean;
+       Stackval  : PStackElement;
 
-                     isReg   : Boolean;
-                     RegIndex: uint8;
-                    End;
+       isReg   : Boolean;
+       isMemRef: Boolean;
+       RegIndex: uint8;
+       MemAddr : uint32;
+
+       Function isLValue: Boolean;
+       Procedure Reset;
+      End;
 
       TStackElement = TMixedValue;
 
@@ -74,6 +83,12 @@ Begin
  if (P1.Typ = mvInt) and (P2.Typ = mvFloat) { int = float } Then
   Exit(P1.Value.Int = P2.Value.Float);
 
+ if (P1.Typ = mvChar) and (P2.Typ = mvInt) { char = int } Then
+  Exit(ord(P1.Value.Char) = P2.Value.Int);
+
+ if (P1.Typ = mvInt) and (P2.Typ = mvChar) { int = char } Then
+  Exit(P1.Value.Int = ord(P2.Value.Char));
+
  if (P1.Typ <> P2.Typ) Then
   Exit(False);
 
@@ -103,6 +118,12 @@ Begin
  if (P1.Typ = mvInt) and (P2.Typ = mvFloat) { int > float } Then
   Exit(P1.Value.Int > P2.Value.Float);
 
+ if (P1.Typ = mvChar) and (P2.Typ = mvInt) { char > int } Then
+  Exit(ord(P1.Value.Char) > P2.Value.Int);
+
+ if (P1.Typ = mvInt) and (P2.Typ = mvChar) { int > char } Then
+  Exit(P1.Value.Int > ord(P2.Value.Char));
+
  if (P1.Typ <> P2.Typ) Then
   Exit(False);
 
@@ -125,6 +146,12 @@ Begin
 
  if (P1.Typ = mvInt) and (P2.Typ = mvFloat) { int >= float } Then
   Exit(P1.Value.Int >= P2.Value.Float);
+
+ if (P1.Typ = mvChar) and (P2.Typ = mvInt) { char >= int } Then
+  Exit(ord(P1.Value.Char) >= P2.Value.Int);
+
+ if (P1.Typ = mvInt) and (P2.Typ = mvChar) { int >= char } Then
+  Exit(P1.Value.Int >= ord(P2.Value.Char));
 
  if (P1.Typ <> P2.Typ) Then
   Exit(False);
@@ -149,6 +176,12 @@ Begin
  if (P1.Typ = mvInt) and (P2.Typ = mvFloat) { int < float } Then
   Exit(P1.Value.Int < P2.Value.Float);
 
+ if (P1.Typ = mvChar) and (P2.Typ = mvInt) { char < int } Then
+  Exit(ord(P1.Value.Char) < P2.Value.Int);
+
+ if (P1.Typ = mvInt) and (P2.Typ = mvChar) { int < char } Then
+  Exit(P1.Value.Int < ord(P2.Value.Char));
+
  if (P1.Typ <> P2.Typ) Then
   Exit(False);
 
@@ -171,6 +204,12 @@ Begin
 
  if (P1.Typ = mvInt) and (P2.Typ = mvFloat) { int <= float } Then
   Exit(P1.Value.Int <= P2.Value.Float);
+
+ if (P1.Typ = mvChar) and (P2.Typ = mvInt) { char <= int } Then
+  Exit(ord(P1.Value.Char) <= P2.Value.Int);
+
+ if (P1.Typ = mvInt) and (P2.Typ = mvChar) { int <= char } Then
+  Exit(P1.Value.Int <= ord(P2.Value.Char));
 
  if (P1.Typ <> P2.Typ) Then
   Exit(False);
@@ -203,6 +242,10 @@ End;
 Function getChar(MV: TMixedValue): Char;
 Begin
  With MV do
+ Begin
+  if (isMemRef) Then
+   Exit(PChar(MemAddr)^);
+
   Case Typ of
    { char }
    mvChar: Exit(Value.Char);
@@ -213,6 +256,7 @@ Begin
    { string }
    mvString: Exit(Value.Str[1]);
   End;
+ End;
 
  raise Exception.Create('Invalid casting: '+MixedValueTypeNames[MV.Typ]+' -> char');
 End;
@@ -221,6 +265,10 @@ End;
 Function getInt(MV: TMixedValue): Int64;
 Begin
  With MV do
+ Begin
+  if (isMemRef) Then
+   Exit(PInt64(MemAddr)^);
+
   Case Typ of
    { bool }
    mvBool: Exit(Int64(Value.Bool));
@@ -234,6 +282,7 @@ Begin
    { float }
    mvFloat: Exit(Round(Value.Float)); // @TODO: inf, NaN?
   End;
+ End;
 
  raise Exception.Create('Invalid casting: '+MixedValueTypeNames[MV.Typ]+' -> int');
 End;
@@ -242,6 +291,10 @@ End;
 Function getFloat(MV: TMixedValue): Extended;
 Begin
  With MV do
+ Begin
+  if (isMemRef) Then
+   Exit(PExtended(MemAddr)^);
+
   Case Typ of
    { bool }
    mvBool: Exit(uint8(Value.Bool));
@@ -252,6 +305,7 @@ Begin
    { float }
    mvFloat: Exit(Value.Float);
   End;
+ End;
 
  raise Exception.Create('Invalid casting: '+MixedValueTypeNames[MV.Typ]+' -> float');
 End;
@@ -260,6 +314,10 @@ End;
 Function getString(MV: TMixedValue): PChar;
 Begin
  With MV do
+ Begin
+  if (isMemRef) Then
+   Exit(PPChar(MemAddr)^);
+
   Case Typ of
    { char }
    mvChar: Exit(CopyStringToPChar(Value.Char));
@@ -267,6 +325,7 @@ Begin
    { string }
    mvString: Exit(Value.Str);
   End;
+ End;
 
  raise Exception.Create('Invalid casting: '+MixedValueTypeNames[MV.Typ]+' -> string');
 End;
@@ -284,5 +343,23 @@ Begin
 
  if (MV.isReg) Then
   Result += ' reg';
+End;
+
+// -------------------------------------------------------------------------- //
+(* TMixedValue.isLValue *)
+Function TMixedValue.isLValue: Boolean;
+Begin
+ Result := (isReg or isStackval or isMemRef);
+End;
+
+(* TMixedValue.Reset *)
+Procedure TMixedValue.Reset;
+Begin
+ Typ        := mvNone;
+ isStackval := False;
+ isReg      := False;
+ isMemRef   := False;
+ RegIndex   := 0;
+ MemAddr    := 0;
 End;
 End.

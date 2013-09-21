@@ -11,6 +11,8 @@
 Function ConstructMixedValue(const Typ: TOpcodeArgType; const DataPointer: Pointer): TMixedValue;
 Var Float: Extended;
 Begin
+ Result.Reset;
+
  Case Typ of
   ptBool:
   Begin
@@ -812,6 +814,7 @@ End;
 Procedure __array_set_bool(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Value: Boolean); stdcall;
 Var MVal: TMixedValue;
 Begin
+ MVal.Reset;
  MVal.Typ        := mvBool;
  MVal.Value.Bool := Value;
 
@@ -822,6 +825,7 @@ End;
 Procedure __array_set_char(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Value: Char); stdcall;
 Var MVal: TMixedValue;
 Begin
+ MVal.Reset;
  MVal.Typ        := mvChar;
  MVal.Value.Char := Value;
 
@@ -832,6 +836,7 @@ End;
 Procedure __array_set_int(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Value: int64); stdcall;
 Var MVal: TMixedValue;
 Begin
+ MVal.Reset;
  MVal.Typ       := mvInt;
  MVal.Value.Int := Value;
 
@@ -847,6 +852,7 @@ Begin
   fstp Value
  end;
 
+ MVal.Reset;
  MVal.Typ         := mvFloat;
  MVal.Value.Float := Value;
 
@@ -857,6 +863,7 @@ End;
 Procedure __array_set_string(const VM: PVM; const Arr: TMArray; const IndexesCount: uint32; const Value: PChar); stdcall;
 Var MVal: TMixedValue;
 Begin
+ MVal.Reset;
  MVal.Typ       := mvString;
  MVal.Value.Str := Value;
 

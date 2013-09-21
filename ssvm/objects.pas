@@ -188,6 +188,8 @@ End;
 Function TMArray.getValue(const Position: uint32Array): TMixedValue;
 Var DataPos: Pointer;
 Begin
+ Result.Reset;
+
  DataPos := getElementMemory(Position);
 
  With Result do

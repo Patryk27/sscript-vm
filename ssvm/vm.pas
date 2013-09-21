@@ -200,36 +200,55 @@ End;
 }
 Procedure VM_Run(VM: Pointer); stdcall;
 Type TProcedure = Procedure;
+Var I: uint32;
 Begin
  With PVM(VM)^ do
  Begin
-  if (CodeData = nil) Then
-   raise Exception.Create('Couldn''t run program: no bytecode has been loaded!');
+  Try
+   ExceptionHandler   := -1;
+   LastException.Typ  := etNone;
+   LastException.Data := nil;
 
-  if (not LoaderData.isRunnable) Then
-   raise Exception.Create('File is not runnable!');
+   if (CodeData = nil) Then
+    raise Exception.Create('Couldn''t run program: no bytecode has been loaded!');
 
-  ExceptionHandler  := -1;
-  LastException.Typ := etNone;
+   if (not LoaderData.isRunnable) Then
+    raise Exception.Create('File is not runnable!');
 
-  setPosition(0);
+   setPosition(0);
 
-  StopReason := srNormal;
+   StopReason := srNormal;
 
-  StackPos  := @Regs.i[5];
-  StackPos^ := 0;
+   StackPos  := @Regs.i[5];
+   StackPos^ := 0;
 
-  if (JITCode <> nil) Then // if possible, execute the JIT code
-  Begin
-   TProcedure(JITCode)();
-   Exit;
-  End;
+   For I := Low(Stack) To High(Stack) Do // reset stack
+    Stack[I].isMemRef := False;
 
-  Stop := False;
-  While (not Stop) Do
-  Begin
-   CurrentOpcode := Position;
-   OpcodeTable[TOpcode_E(read_uint8)](VM);
+   if (JITCode <> nil) Then // if possible, execute the JIT code
+   Begin
+    TProcedure(JITCode)();
+    Exit;
+   End;
+
+   Stop := False;
+
+   While (not Stop) Do
+   Begin
+    CurrentOpcode := Position;
+    OpcodeTable[TOpcode_E(read_uint8)](VM);
+   End;
+  Except
+   On E: Exception Do
+   Begin
+    StopReason := srException;
+
+    if (LastException.Data = nil) Then
+    Begin
+     LastException.Typ  := etByMessage;
+     LastException.Data := CopyStringToPChar(E.Message);
+    End;
+   End;
   End;
  End;
 End;
@@ -540,8 +559,8 @@ End;
 }
 Procedure TVM.StackPush(E: TStackElement);
 Begin
- Stack[StackPos^] := E;
  Inc(StackPos^);
+ Stack[StackPos^] := E;
 End;
 
 (* TVM.StackPop *)
@@ -550,8 +569,8 @@ End;
 }
 Function TVM.StackPop: TStackElement;
 Begin
- Dec(StackPos^);
  Result := Stack[StackPos^];
+ Dec(StackPos^);
 End;
 
 (* TVM.read_uint8 *)
@@ -657,26 +676,25 @@ End;
  Reads an opcode's param
 }
 Function TVM.read_param: TMixedValue;
-Type TBytecodeArgType = (btBoolReg=0, btCharReg, btIntReg, btFloatReg, btStringReg, btReferenceReg,
-                         btBool, btChar, btInt, btFloat, btString, btStackVal);
-Var Typ: TBytecodeArgType;
+Var Typ: TOpcodeArgType;
 Begin
- Typ := TBytecodeArgType(read_uint8);
+ Result.Reset;
 
- if (Typ in [btBoolReg..btReferenceReg]) Then // register
- Begin
-  Result.isReg    := True;
+ Typ := TOpcodeArgType(read_uint8);
+
+ Result.isReg := (Typ in [ptBoolReg..ptReferenceReg]);
+
+ if (Result.isReg) Then // if it's a register, read this register's ID
   Result.RegIndex := read_uint8;
- End Else
-  Result.isReg := False;
 
  Case Typ of
-  btBoolReg, btBool    : Result.Typ := mvBool;
-  btCharReg, btChar    : Result.Typ := mvChar;
-  btIntReg, btInt      : Result.Typ := mvInt;
-  btFloatReg, btFloat  : Result.Typ := mvFloat;
-  btStringReg, btString: Result.Typ := mvString;
-  btReferenceReg       : Result.Typ := mvReference;
+  ptBoolReg, ptBool    : Result.Typ := mvBool;
+  ptCharReg, ptChar    : Result.Typ := mvChar;
+  ptIntReg, ptInt      : Result.Typ := mvInt;
+  ptFloatReg, ptFloat  : Result.Typ := mvFloat;
+  ptStringReg, ptString: Result.Typ := mvString;
+  ptReferenceReg       : Result.Typ := mvReference;
+  ptConstantMemRef     : Result.Typ := mvReference;
 
   else
    Result.Typ := mvInt;
@@ -684,32 +702,39 @@ Begin
 
  Case Typ of
   { register value }
-  btBoolReg     : Result.Value.Bool  := Regs.b[Result.RegIndex];
-  btCharReg     : Result.Value.Char  := Regs.c[Result.RegIndex];
-  btIntReg      : Result.Value.Int   := Regs.i[Result.RegIndex];
-  btFloatReg    : Result.Value.Float := Regs.f[Result.RegIndex];
-  btStringReg   : Result.Value.Str   := CopyStringToPChar(Regs.s[Result.RegIndex]);
-  btReferenceReg: Result.Value.Int   := uint32(Regs.r[Result.RegIndex]);
+  ptBoolReg     : Result.Value.Bool  := Regs.b[Result.RegIndex];
+  ptCharReg     : Result.Value.Char  := Regs.c[Result.RegIndex];
+  ptIntReg      : Result.Value.Int   := Regs.i[Result.RegIndex];
+  ptFloatReg    : Result.Value.Float := Regs.f[Result.RegIndex];
+  ptStringReg   : Result.Value.Str   := CopyStringToPChar(Regs.s[Result.RegIndex]);
+  ptReferenceReg: Result.Value.Int   := uint32(Regs.r[Result.RegIndex]);
 
   { constant value }
-  btBool  : Result.Value.Bool  := Boolean(read_uint8);
-  btChar  : Result.Value.Char  := chr(read_uint8);
-  btInt   : Result.Value.Int   := read_int64;
-  btFloat : Result.Value.Float := read_float;
-  btString: Result.Value.Str   := CopyStringToPChar(read_string);
+  ptBool          : Result.Value.Bool  := Boolean(read_uint8);
+  ptChar          : Result.Value.Char  := chr(read_uint8);
+  ptInt           : Result.Value.Int   := read_int64;
+  ptFloat         : Result.Value.Float := read_float;
+  ptString        : Result.Value.Str   := CopyStringToPChar(read_string);
+  ptConstantMemRef: Result.MemAddr     := read_int64;
 
   else
    Result.Value.Int := read_int32;
  End;
 
- if (Typ = btStackval) Then // stackval?
+ Result.isStackval := (Typ = ptStackval);
+ Result.isMemRef   := (Typ = ptConstantMemRef);
+
+ if (Result.isStackval) Then // if stackval
  Begin
-  Result.Stackval   := @Stack[StackPos^+Result.Value.Int-1];
-  Result.Typ        := Result.Stackval^.Typ;
-  Result.Value      := Result.Stackval^.Value;
-  Result.isStackval := True;
- End Else
-  Result.isStackval := False;
+  Result.Stackval := @Stack[StackPos^+Result.Value.Int];
+  Result.Typ      := Result.Stackval^.Typ;
+  Result.Value    := Result.Stackval^.Value;
+ End;
+
+ if (Result.isMemRef) Then // if memory reference
+ Begin
+  Result.MemAddr += uint32(@CodeData[0]); // make absolute address
+ End;
 End;
 
 (* TVM.ThrowException *)
@@ -731,13 +756,16 @@ Begin
     LastException := Exception;
     StopReason    := srException;
     Stop          := True;
-    Exit;
+
+    raise SysUtils.Exception.Create('Bytecode has raised an exception!');
    End;
 
    LastException := Exception;
 
    if (JITCode = nil) Then
-    SetPosition(ExceptionHandler) Else
+    setPosition(ExceptionHandler);
+
+   if (ExceptionHandler = -1) Then
     raise SysUtils.Exception.Create('Bytecode has raised an exception!');
   End;
  End;
@@ -773,7 +801,7 @@ End;
 
 (* TVM.isValidObject *)
 {
- Similar to @TVM.CheckObject, but doesn't throw any exception, just returns true/false.
+ Similar to @TVM.CheckObject but doesn't throw any exception, just returns true/false.
 }
 Function TVM.isValidObject(const Obj: Pointer): Boolean;
 Begin

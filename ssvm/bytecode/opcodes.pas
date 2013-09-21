@@ -30,7 +30,7 @@ Unit Opcodes;
                                                     3, 3, 3, 3, 2,
                                                     1, 1, 1);
 
- Type TOpcodeArgType = (ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg, ptBool, ptChar, ptInt, ptFloat, ptString, ptStackval);
+ Type TOpcodeArgType = (ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg, ptBool, ptChar, ptInt, ptFloat, ptString, ptStackval, ptConstantMemRef);
 
  { TOpcodeArg }
  Type TOpcodeArg = Record

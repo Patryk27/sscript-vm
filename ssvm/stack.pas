@@ -227,6 +227,10 @@ End;
 Function getBool(MV: TMixedValue): Boolean;
 Begin
  With MV do
+ Begin
+  if (isMemRef) Then
+   Exit(PBoolean(MemAddr)^);
+
   Case Typ of
    { bool }
    mvBool: Exit(Value.Bool);
@@ -234,6 +238,7 @@ Begin
    { int }
    mvInt: Exit(Boolean(Value.Int));
   End;
+ End;
 
  raise Exception.Create('Invalid casting: '+MixedValueTypeNames[MV.Typ]+' -> bool');
 End;

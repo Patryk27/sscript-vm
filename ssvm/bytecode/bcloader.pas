@@ -3,7 +3,7 @@
  All rights reserved.
 
  -------------------
- Bytecode loader class for version 0.41.
+ Bytecode loader class.
 *)
 {$H+}
 Unit BCLoader;

@@ -164,7 +164,7 @@ Begin
  End;
 End;
 
-{ ADD (register, value) }
+{ ADD (lvalue, value) }
 Procedure op_ADD(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -173,9 +173,21 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''add'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''add'' requires the first parameter to be an L-value.');
 
+  if (reg.isMemRef) Then
+  Begin
+   { ADD (memory reference, value) }
+   Case param.Typ of
+    mvChar : PByte(reg.MemAddr)^     += getInt(param); { char }
+    mvInt  : PInt64(reg.MemAddr)^    += getInt(param); { int }
+    mvFloat: PExtended(reg.MemAddr)^ += getFloat(param); { float }
+
+    else
+     raise eInvalidOpcode.Create('''add'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
    { ADD (register, value) }
@@ -203,7 +215,7 @@ Begin
  End;
 End;
 
-{ SUB (register, value) }
+{ SUB (lvalue, value) }
 Procedure op_SUB(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -212,9 +224,21 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''sub'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''sub'' requires the first parameter to be an L-value.');
 
+  if (reg.isMemRef) Then
+  Begin
+   { SUB (memory reference, value) }
+   Case param.Typ of
+    mvChar : PByte(reg.MemAddr)^     -= getInt(param); { char }
+    mvInt  : PInt64(reg.MemAddr)^    -= getInt(param); { int }
+    mvFloat: PExtended(reg.MemAddr)^ -= getFloat(param); { float }
+
+    else
+     raise eInvalidOpcode.Create('''sub'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
    { SUB (register, value) }
@@ -242,7 +266,7 @@ Begin
  End;
 End;
 
-{ MUL (register, value) }
+{ MUL (lvalue, value) }
 Procedure op_MUL(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -251,12 +275,24 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''mul'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''mul'' requires the first parameter to be an L-value.');
 
+  if (reg.isMemRef) Then
+  Begin
+   { MUL (memory reference, value) }
+   Case param.Typ of
+    mvChar : PByte(reg.MemAddr)^     *= getInt(param); { char }
+    mvInt  : PInt64(reg.MemAddr)^    *= getInt(param); { int }
+    mvFloat: PExtended(reg.MemAddr)^ *= getFloat(param); { float }
+
+    else
+     raise eInvalidOpcode.Create('''mul'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
-   { SUB (register, value) }
+   { MUL (register, value) }
    Case reg.Typ of
     mvChar : Regs.c[reg.RegIndex] := chr(ord(Regs.c[reg.RegIndex])*getInt(param)); { char }
     mvInt  : Regs.i[reg.RegIndex] *= getInt(param); { int }
@@ -267,7 +303,7 @@ Begin
    End;
   End Else
   Begin
-   { SUB (stackval, value) }
+   { MUL (stackval, value) }
    With reg.Stackval^ do
     Case reg.Typ of
      mvChar : Value.Char := chr(ord(Value.Char)*getInt(param)); { char }
@@ -281,7 +317,7 @@ Begin
  End;
 End;
 
-{ DIV (register, value) }
+{ DIV (lvalue, value) }
 Procedure op_DIV(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -290,12 +326,24 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''div'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''div'' requires the first parameter to be an L-value.');
 
- // if (getFloat(param) = 0) Then
+ // if (getFloat(param) = 0) Then @TODO
  //  div_by_zero();
 
+  if (reg.isMemRef) Then
+  Begin
+   { DIV (memory reference, value) }
+   Case param.Typ of
+    mvChar : PByte(reg.MemAddr)^     := PByte(reg.MemAddr)^ div getInt(param); { char }
+    mvInt  : PInt64(reg.MemAddr)^    := PInt64(reg.MemAddr)^ div getInt(param); { int }
+    mvFloat: PExtended(reg.MemAddr)^ /= getFloat(param); { float }
+
+    else
+     raise eInvalidOpcode.Create('''div'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
    { DIV (register, value) }
@@ -323,7 +371,7 @@ Begin
  End;
 End;
 
-{ NEG (register) }
+{ NEG (register/stackval) }
 Procedure op_NEG(VM: PVM);
 Var reg: TMixedValue;
 Begin
@@ -331,7 +379,7 @@ Begin
  Begin
   reg := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
+  if (not (reg.isReg or reg.isStackval)) Then
    raise eInvalidOpcode.Create('''neg'' requires the first parameter to be a register or a stackval.');
 
   if (reg.isReg) Then
@@ -356,7 +404,7 @@ Begin
  End;
 End;
 
-{ MOV (register, value) }
+{ MOV (lvalue, value) }
 Procedure op_MOV(VM: PVM);
 Var reg, val: TMixedValue;
 Begin
@@ -365,9 +413,25 @@ Begin
   reg := read_param;
   val := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''mov'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''mov'' requires the first parameter to be an L-value.');
 
+  if (reg.isMemRef) Then
+  Begin
+   { MOV (memory reference, value) }
+   Case val.Typ of
+    mvBool     : PBoolean(reg.MemAddr)^  := getBool(val); { bool }
+    mvChar     : PChar(reg.MemAddr)^     := getChar(val); { char }
+    mvInt      : PInt64(reg.MemAddr)^    := getInt(val); { int }
+    mvFloat    : PExtended(reg.MemAddr)^ := getFloat(val); { float }
+    mvString   : PPChar(reg.MemAddr)^    := getString(val); { string }
+    mvReference: PPointer(reg.MemAddr)^  := getReference(val); { reference }
+
+    else
+     raise eInvalidOpcode.Create('''mov'' called with arguments: '+getTypeName(reg)+', '+getTypeName(val));
+   End;
+
+  End Else
   if (reg.isReg) Then
   Begin
    { MOV (register, value) }
@@ -390,7 +454,7 @@ Begin
  End;
 End;
 
-{ JMP (int) }
+{ JMP (const int) }
 Procedure op_JMP(VM: PVM);
 Var NewAddr: uint32;
 Begin
@@ -402,7 +466,7 @@ Begin
  End;
 End;
 
-{ TJMP (int) }
+{ TJMP (const int) }
 Procedure op_TJMP(VM: PVM);
 Var NewAddr: uint32;
 Begin
@@ -415,7 +479,7 @@ Begin
  End;
 End;
 
-{ FJMP (int) }
+{ FJMP (const int) }
 Procedure op_FJMP(VM: PVM);
 Var NewAddr: uint32;
 Begin
@@ -428,7 +492,7 @@ Begin
  End;
 End;
 
-{ CALL (int) }
+{ CALL (const int) }
 Procedure op_CALL(VM: PVM);
 Var NewAddr: uint32;
     Elem   : TStackElement;
@@ -438,6 +502,7 @@ Begin
   NewAddr := getPosition;
   NewAddr += getInt(read_param)-1;
 
+  Elem.Reset;
   Elem.Typ       := mvCallstackRef;
   Elem.Value.Int := getPosition;
   StackPush(Elem); // push the old position onto the stack
@@ -446,7 +511,7 @@ Begin
  End;
 End;
 
-{ ICALL (string) }
+{ ICALL (const string) }
 Procedure op_ICALL(VM: PVM);
 Var Name  : String;
     Call  : PCall;
@@ -664,7 +729,7 @@ Begin
  End;
 End;
 
-{ STRJOIN (register, string) }
+{ STRJOIN (lvalue, char/string) }
 Procedure op_STRJOIN(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -673,13 +738,25 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''strjoin'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''strjoin'' requires the first parameter to be an L-value.');
 
+  if (reg.isMemRef) Then
+  Begin
+   { STRJOIN (memory reference, char/string) }
+   Case param.Typ of
+    mvChar  : PPChar(reg.MemAddr)^ := CopyStringToPChar(String(PPChar(reg.MemAddr)^)+getChar(param)); { char } // @TODO: possibly memleak(!)
+    mvString: PPChar(reg.MemAddr)^ := CopyStringToPChar(String(PPChar(reg.MemAddr)^)+getString(param)); { string } // @TODO: possibly memleak(!)
+
+    else
+     raise eInvalidOpcode.Create('''strjoin'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
-   { STRJOIN (register, string) }
+   { STRJOIN (register, char/string) }
    Case reg.Typ of
+    mvChar  : Regs.s[reg.RegIndex] += getChar(param); { char }
     mvString: Regs.s[reg.RegIndex] += getString(param); { string }
 
     else
@@ -687,10 +764,11 @@ Begin
    End;
   End Else
   Begin
-   { STRJOIN (stackval, string) }
+   { STRJOIN (stackval, char/string) }
    With reg.Stackval^ do
     Case reg.Typ of
-     mvString: Value.Str := CopyStringToPChar(AnsiString(Value.Str)+getString(param));
+     mvChar  : Value.Str := CopyStringToPChar(AnsiString(Value.Str)+getChar(param)); { char } // @TODO: possibly memleak
+     mvString: Value.Str := CopyStringToPChar(AnsiString(Value.Str)+getString(param)); { string } // @TODO: possibly memleak
 
      else
       raise eInvalidOpcode.Create('''strjoin'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
@@ -699,7 +777,7 @@ Begin
  End;
 End;
 
-{ NOT (register) }
+{ NOT (register/stackval) }
 Procedure op_NOT(VM: PVM);
 Var reg: TMixedValue;
 Begin
@@ -735,7 +813,7 @@ Begin
  End;
 End;
 
-{ OR (register, value) }
+{ OR (lvalue, value) }
 Procedure op_OR(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -744,9 +822,20 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''or'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''or'' requires the first parameter to be an L-value.');
 
+  if (reg.isMemRef) THen
+  Begin
+   { OR (memory reference, value) }
+   Case param.Typ of
+    mvBool: PBoolean(reg.MemAddr)^ := PBoolean(reg.MemAddr)^ or getBool(param); { bool }
+    mvInt : PInt64(reg.MemAddr)^   := PInt64(reg.MemAddr)^ or getInt(Param); { int }
+
+    else
+     raise eInvalidOpcode.Create('''or'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
    { OR (register, value) }
@@ -772,7 +861,7 @@ Begin
  End;
 End;
 
-{ XOR (register, value) }
+{ XOR (lvalue, value) }
 Procedure op_XOR(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -781,9 +870,20 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''xor'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''xor'' requires the first parameter to be an L-value.');
 
+  if (reg.isMemRef) THen
+  Begin
+   { XOR (memory reference, value) }
+   Case param.Typ of
+    mvBool: PBoolean(reg.MemAddr)^ := PBoolean(reg.MemAddr)^ xor getBool(param); { bool }
+    mvInt : PInt64(reg.MemAddr)^   := PInt64(reg.MemAddr)^ xor getInt(Param); { int }
+
+    else
+     raise eInvalidOpcode.Create('''xor'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
    { XOR (register, value) }
@@ -809,7 +909,7 @@ Begin
  End;
 End;
 
-{ AND (register, value) }
+{ AND (lvalue, value) }
 Procedure op_AND(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -818,9 +918,20 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''and'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''and'' requires the first parameter to be an L-value.');
 
+  if (reg.isMemRef) THen
+  Begin
+   { AND (memory reference, value) }
+   Case param.Typ of
+    mvBool: PBoolean(reg.MemAddr)^ := PBoolean(reg.MemAddr)^ and getBool(param); { bool }
+    mvInt : PInt64(reg.MemAddr)^   := PInt64(reg.MemAddr)^ and getInt(Param); { int }
+
+    else
+     raise eInvalidOpcode.Create('''and'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
    { AND (register, value) }
@@ -846,7 +957,7 @@ Begin
  End;
 End;
 
-{ SHL (register, value) }
+{ SHL (lvalue, value) }
 Procedure op_SHL(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -855,9 +966,19 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''shl'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''shl'' requires the first parameter to be an L-value.');
 
+  if (reg.isMemRef) THen
+  Begin
+   { OR (memory reference, value) }
+   Case param.Typ of
+    mvInt: PInt64(reg.MemAddr)^ := PInt64(reg.MemAddr)^ shl getInt(Param); { int }
+
+    else
+     raise eInvalidOpcode.Create('''shl'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
    { SHL (register, value) }
@@ -881,7 +1002,7 @@ Begin
  End;
 End;
 
-{ SHR (register, value) }
+{ SHR (lvalue, value) }
 Procedure op_SHR(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -890,9 +1011,19 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''shr'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''shr'' requires the first parameter to be an L-value.');
 
+  if (reg.isMemRef) THen
+  Begin
+   { OR (memory reference, value) }
+   Case param.Typ of
+    mvInt: PInt64(reg.MemAddr)^ := PInt64(reg.MemAddr)^ shr getInt(Param); { int }
+
+    else
+     raise eInvalidOpcode.Create('''shr'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
    { SHr (register, value) }
@@ -916,7 +1047,7 @@ Begin
  End;
 End;
 
-{ MOD (register, value) }
+{ MOD (lvalue, value) }
 Procedure op_MOD(VM: PVM);
 Var reg, param: TMixedValue;
 Begin
@@ -925,12 +1056,22 @@ Begin
   reg   := read_param;
   param := read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   raise eInvalidOpcode.Create('''mod'' requires the first parameter to be a register or a stackval.');
+  if (not reg.isLValue) Then
+   raise eInvalidOpcode.Create('''mod'' requires the first parameter to be an L-value.');
 
   // if (getInt(param) = 0) Then
   //  div_by_zero(); // @TODO
 
+  if (reg.isMemRef) THen
+  Begin
+   { OR (memory reference, value) }
+   Case param.Typ of
+    mvInt: PInt64(reg.MemAddr)^ := PInt64(reg.MemAddr)^ mod getInt(Param); { int }
+
+    else
+     raise eInvalidOpcode.Create('''mod'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+   End;
+  End Else
   if (reg.isReg) Then
   Begin
    { MOD (register, value) }
@@ -1037,6 +1178,8 @@ Label Fail;
 Begin
  With VM^ do
  Begin
+  AValue.Reset;
+
   refreg      := read_param;
   index_count := read_param;
   outreg      := read_param;

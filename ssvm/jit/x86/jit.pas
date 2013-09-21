@@ -996,7 +996,7 @@ End;
 (* TJITCompiler.Compile *)
 Procedure TJITCompiler.Compile;
 Const SpecialMarker64: uint64 = $C0A0F0E0B0A0B0E;
-      StackSizes     : Array[TOpcodeArgType] of uint8 = (0, 0, 0, 0, 0, 0, 4, 4, 8, 0, 4, 0);
+      StackSizes     : Array[TOpcodeArgType] of uint8 = (0, 0, 0, 0, 0, 0, 4, 4, 8, 0, 4, 0, 0);
 Var Opcode: TOpcode_E;
     Args  : TOpcodeArgArray;
 

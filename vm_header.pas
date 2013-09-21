@@ -28,7 +28,7 @@ Unit vm_header;
        ERR_INVALID_PROGRAM = 2;
 
  (* ========== types ========== *)
- // TMixedValue
+ { TMixedValue }
  Type TMixedValueType = (mvNone=-1, mvBool, mvChar, mvInt, mvFloat, mvString, mvReference);
  Type PMixedValue = ^TMixedValue;
       TMixedValue = Record
@@ -41,7 +41,7 @@ Unit vm_header;
                              Str  : PChar;
                             End;
 
-                     VMInternalUse: Array[1..6] of uint8;
+                     VMInternalUse: Array[1..11] of uint8;
                     End;
       TMixedValueArray = Array of TMixedValue;
 
@@ -49,7 +49,7 @@ Unit vm_header;
   {$FATAL Size of TMixedValue structure must be exactly 64 bytes!}
  {$ENDIF}
 
- // TExceptionBlock
+ { TExceptionBlock }
  Type TExceptionType = (etByObject, etByMessage);
  Type PExceptionBlock = ^TExceptionBlock;
       TExceptionBlock = Record
@@ -57,13 +57,13 @@ Unit vm_header;
                          Data: Pointer; 
                         End;
 
- // TCallHandler
+ { TCallHandler }
  Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
 
- // TStopReason
+ { TStopReason }
  Type TStopReason = (srNormal, srException);
 
- // TJITCompiledState
+ { TJITCompiledState }
  Type TJITCompiledState = (csInvalidBytecode, csJITFailed, csJITUnsupported, csDisabled, csDone);
 
  (* ========== constants ========== *)
@@ -129,7 +129,7 @@ Unit vm_header;
 
  Implementation
 
-// CopyStringToPChar
+{ CopyStringToPChar }
 Function CopyStringToPChar(const S: String): PChar;
 Var I: uint32;
 Begin

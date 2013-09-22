@@ -31,7 +31,7 @@ Unit vm_header;
  { TMixedValue }
  Type TMixedValueType = (mvNone=-1, mvBool, mvChar, mvInt, mvFloat, mvString, mvReference);
  Type PMixedValue = ^TMixedValue;
-      TMixedValue = Record
+      TMixedValue = Packed Record
                      Typ  : TMixedValueType;
                      Value: Record
                              Bool : Boolean;
@@ -41,13 +41,9 @@ Unit vm_header;
                              Str  : PChar;
                             End;
 
-                     VMInternalUse: Array[1..11] of uint8;
+                     VMInternalUse: Array[1..12] of uint8;
                     End;
       TMixedValueArray = Array of TMixedValue;
-
- {$IF sizeof(TMixedValue) <> 64}
-  {$FATAL Size of TMixedValue structure must be exactly 64 bytes!}
- {$ENDIF}
 
  { TExceptionBlock }
  Type TExceptionType = (etByObject, etByMessage);
@@ -143,6 +139,7 @@ End;
 (* TMixedValue := Boolean *)
 Operator := (Value: Boolean): TMixedValue;
 Begin
+ FillByte(Result, sizeof(Result), 0);
  Result.Typ        := mvBool;
  Result.Value.Bool := Value;
 End;
@@ -150,6 +147,7 @@ End;
 (* TMixedValue := Char *)
 Operator := (Value: Char): TMixedValue;
 Begin
+ FillByte(Result, sizeof(Result), 0);
  Result.Typ        := mvChar;
  Result.Value.Char := Value;
 End;
@@ -157,6 +155,7 @@ End;
 (* TMixedValue := Int64 *)
 Operator := (Value: Int64): TMixedValue;
 Begin
+ FillByte(Result, sizeof(Result), 0);
  Result.Typ       := mvInt;
  Result.Value.Int := Value;
 End;
@@ -164,6 +163,7 @@ End;
 (* TMixedValue := Extended *)
 Operator := (Value: Extended): TMixedValue;
 Begin
+ FillByte(Result, sizeof(Result), 0);
  Result.Typ         := mvFloat;
  Result.Value.Float := Value;
 End;
@@ -171,6 +171,7 @@ End;
 (* TMixedValue := String *)
 Operator := (Value: String): TMixedValue;
 Begin
+ FillByte(Result, sizeof(Result), 0);
  Result.Typ       := mvString;
  Result.Value.Str := CopyStringToPChar(Value);
 End;

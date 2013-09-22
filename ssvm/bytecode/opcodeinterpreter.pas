@@ -610,7 +610,7 @@ Begin
      Params[I] := StackPop;
 
     New(Result);
-    Result^.Typ := mvNone;
+    Result^.Reset;
 
     Call^.Handler(VM, @Params[0], Result); // call handler
 

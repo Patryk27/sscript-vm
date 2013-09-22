@@ -16,7 +16,7 @@ Unit Stack;
 
       PMixedValue = ^TMixedValue;
       TMixedValue =
-      Record
+      Packed Record
        Typ  : TMixedValueType;
        Value: Record
                Bool : Boolean;
@@ -39,10 +39,6 @@ Unit Stack;
       End;
 
       TStackElement = TMixedValue;
-
- {$IF sizeof(TMixedValue) <> 64}
-  {$FATAL Size of TMixedValue structure must be exactly 64 bytes!}
- {$ENDIF}
 
  Const MixedValueTypeNames: Array[TMixedValueType] of String = ('none', 'bool', 'char', 'int', 'float', 'string', 'reference', 'callstack reference');
 

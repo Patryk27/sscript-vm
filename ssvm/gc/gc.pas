@@ -9,45 +9,49 @@ Unit GC;
  Interface
  Uses Classes, SysUtils, FGL, VM, Objects;
 
- Const ObjectListCount = 1; // Number of object allocation lists; keep in mind, that the higher number you put here, the higher amount of threads will be executed during the GC's mark stage (1 object list = 1 thread) and that doesn't mean it will be any faster. In fact, more than 2 sweeping-threads will most likely just slow down everything.
+ Const ObjectListCount = 1; // Number of object allocation lists; keep in mind that the higher number you put here, the higher amount of threads will be executed during the GC's mark stage (1 object list = 1 thread) and that doesn't mean it will be any faster. In fact, more than 2 sweeping-threads will most likely just slow down everything.
 
  Type TObjectList = specialize TFPGList<TMObject>;
 
- Type TGarbageCollector = Class
-                           Private
-                            ObjectLists: Array[1..ObjectListCount] of TObjectList;
+ { TGarbageCollector }
+ Type TGarbageCollector =
+      Class
+       Private
+        ObjectLists: Array[1..ObjectListCount] of TObjectList;
 
-                            VM         : PVM;
-                            MemoryLimit: uint32;
+        VM         : PVM;
+        MemoryLimit: uint32;
 
-                            Procedure Mark(const ObjectList: TObjectList);
-                            Procedure Sweep;
+       Private
+        Procedure Mark(const ObjectList: TObjectList);
+        Procedure Sweep;
 
-                           Public
-                            Constructor Create(const fVM: PVM; const fMemoryLimit: uint32);
-                            Destructor Destroy; override;
+       Public
+        Constructor Create(const fVM: PVM; const fMemoryLimit: uint32);
+        Destructor Destroy; override;
 
-                            Procedure PutObject(const Obj: TMObject);
-                            Function findObject(const Obj: TMObject): Boolean;
+        Procedure PutObject(const Obj: TMObject);
+        Function FindObject(const Obj: TMObject): Boolean;
 
-                            Procedure DoGarbageCollection;
-                           End;
+        Procedure DoGarbageCollection;
+       End;
 
  Implementation
 Uses Stack;
 
 { TGCSweepWorker }
-Type TGCSweepWorker = Class(TThread)
-                       Private
-                        ObjectList: TObjectList;
-                        isWorking : Boolean;
+Type TGCSweepWorker =
+     Class(TThread)
+      Private
+      ObjectList: TObjectList;
+      isWorking : Boolean;
 
-                       Public
-                        Constructor Create(const fObjectList: TObjectList);
+      Public
+       Constructor Create(const fObjectList: TObjectList);
 
-                       Protected
-                        Procedure Execute; override;
-                       End;
+      Protected
+       Procedure Execute; override;
+      End;
 
 (* TGCSweepWorker.Create *)
 Constructor TGCSweepWorker.Create(const fObjectList: TObjectList);
@@ -194,8 +198,8 @@ Begin
  List.Add(Obj);
 End;
 
-(* TGarbageCollector.findObject *)
-Function TGarbageCollector.findObject(const Obj: TMObject): Boolean;
+(* TGarbageCollector.FindObject *)
+Function TGarbageCollector.FindObject(const Obj: TMObject): Boolean;
 Var List: TObjectList;
 Begin
  Result := False;

@@ -11,33 +11,35 @@ Unit JIT_Base;
  Type TIntList = specialize TFPGList<uint32>;
 
  { TJITCompilerBase }
- Type TJITCompilerBase = Class
-                          Protected
-                           VM: PVM;
+ Type TJITCompilerBase =
+      Class
+       Protected
+        VM: PVM;
 
-                           BCReader     : TBCReader;
-                           CompiledData : TStream;
-                           CompiledState: TJITCompiledState;
+        BCReader     : TBCReader;
+        CompiledData : TStream;
+        CompiledState: TJITCompiledState;
 
-                           AllocatedDataBlocks: TIntList;
+        AllocatedDataBlocks: TIntList;
 
-                           Function getRegMemAddr(const Arg: TOpcodeArg): uint32;
-                           Function getIFRegMemAddr: uint32;
-                           Function getSTPRegMemAddr: uint32;
+       Protected
+        Function getRegMemAddr(const Arg: TOpcodeArg): uint32;
+        Function getIFRegMemAddr: uint32;
+        Function getSTPRegMemAddr: uint32;
 
-                           Function AllocateFloat(const Value: Extended): uint32;
-                           Function AllocateInt64(const Value: int64): uint32;
-                           Function AllocateString(const Value: String): uint32;
+        Function AllocateFloat(const Value: Extended): uint32;
+        Function AllocateInt64(const Value: int64): uint32;
+        Function AllocateString(const Value: String): uint32;
 
-                          Public
-                           Constructor Create(const fVM: PVM; const BytecodeData: Pointer);
-                           Destructor Destroy; override;
+       Public
+        Constructor Create(const fVM: PVM; const BytecodeData: Pointer);
+        Destructor Destroy; override;
 
-                           Procedure Compile; virtual;
+        Procedure Compile; virtual; abstract;
 
-                           Property getCompiledData: TStream read CompiledData;
-                           Property getCompiledState: TJITCompiledState read CompiledState;
-                          End;
+        Property getCompiledData: TStream read CompiledData;
+        Property getCompiledState: TJITCompiledState read CompiledState;
+       End;
 
  Implementation
 Uses mStrings;
@@ -119,11 +121,5 @@ Begin
  AllocatedDataBlocks.Free;
  CompiledData.Free;
  BCReader.Free;
-End;
-
-(* TJITCompilerBase.Compile *)
-Procedure TJITCompilerBase.Compile;
-Begin
- CompiledState := csJITFailed;
 End;
 End.

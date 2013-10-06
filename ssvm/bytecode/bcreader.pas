@@ -10,32 +10,34 @@ Unit BCReader;
  Interface
  Uses Stream, Opcodes, MTypes;
 
- Type TBCReader = Class
-                   Private
-                    BytecodeData: TStream;
+ { TBytecodeReader }
+ Type TBytecodeReader =
+      Class
+       Private
+        BytecodeData: TStream;
 
-                   Public
-                    Constructor Create(const fBytecodeData: Pointer);
-                    Destructor Destroy; override;
+       Public
+        Constructor Create(const fBytecodeData: Pointer);
+        Destructor Destroy; override;
 
-                    Function FetchOpcode: TOpcode_E;
-                    Function FetchArgument: TOpcodeArg;
-                    Function FetchArguments(const Opcode: TOpcode_E): TOpcodeArgArray;
+        Function FetchOpcode: TOpcode_E;
+        Function FetchArgument: TOpcodeArg;
+        Function FetchArguments(const Opcode: TOpcode_E): TOpcodeArgArray;
 
-                    Function AnyOpcodeLeft: Boolean;
+        Function AnyOpcodeLeft: Boolean;
 
-                    Property getBytecodeData: TStream read BytecodeData;
-                   End;
+        Property getBytecodeData: TStream read BytecodeData;
+       End;
 
  Implementation
 Uses SysUtils;
 
-(* TBCReader.Create *)
-Constructor TBCReader.Create(const fBytecodeData: Pointer);
+(* TBytecodeReader.Create *)
+Constructor TBytecodeReader.Create(const fBytecodeData: Pointer);
 Var I: uint32;
 Begin
  if (MemSize(fBytecodeData) = 0) Then
-  raise Exception.Create('Cannot create TBCReader instance: MemSize(fBytecodeData) = 0');
+  raise Exception.Create('Cannot create TBytecodeReader instance: MemSize(fBytecodeData) = 0');
 
  BytecodeData := TStream.Create(True);
  For I := 0 To MemSize(fBytecodeData)-1 Do
@@ -43,22 +45,22 @@ Begin
  BytecodeData.Position := 0;
 End;
 
-(* TBCReader.Destroy *)
-Destructor TBCReader.Destroy;
+(* TBytecodeReader.Destroy *)
+Destructor TBytecodeReader.Destroy;
 Begin
  BytecodeData.Free;
 
  inherited;
 End;
 
-(* TBCReader.FetchOpcode *)
-Function TBCReader.FetchOpcode: TOpcode_E;
+(* TBytecodeReader.FetchOpcode *)
+Function TBytecodeReader.FetchOpcode: TOpcode_E;
 Begin
  Result := TOpcode_E(BytecodeData.read_uint8);
 End;
 
-(* TBCReader.FetchArgument *)
-Function TBCReader.FetchArgument: TOpcodeArg;
+(* TBytecodeReader.FetchArgument *)
+Function TBytecodeReader.FetchArgument: TOpcodeArg;
 Begin
  Result.ArgType := TOpcodeArgType(BytecodeData.read_uint8);
 
@@ -72,12 +74,12 @@ Begin
   ptStackval               : Result.StackvalPos := BytecodeData.read_int32;
 
   else
-   BytecodeData.read_int32;
+   Result.ImmInt := BytecodeData.read_int32;
  End;
 End;
 
-(* TBCReader.FetchArguments *)
-Function TBCReader.FetchArguments(const Opcode: TOpcode_E): TOpcodeArgArray;
+(* TBytecodeReader.FetchArguments *)
+Function TBytecodeReader.FetchArguments(const Opcode: TOpcode_E): TOpcodeArgArray;
 Var I: Integer;
 Begin
  SetLength(Result, OpcodeArgCount[Opcode]);
@@ -86,8 +88,8 @@ Begin
   Result[I] := FetchArgument;
 End;
 
-(* TBCReader.AnyOpcodeLeft *)
-Function TBCReader.AnyOpcodeLeft: Boolean;
+(* TBytecodeReader.AnyOpcodeLeft *)
+Function TBytecodeReader.AnyOpcodeLeft: Boolean;
 Begin
  Result := BytecodeData.Can;
 End;

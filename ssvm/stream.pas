@@ -9,39 +9,40 @@ Unit Stream;
  Uses SysUtils, Classes;
 
  { TStream }
- Type TStream = Class (Classes.TMemoryStream)
-                 Private
-                  Enable_NtoBE: Boolean;
+ Type TStream =
+      Class (Classes.TMemoryStream)
+       Private
+        Enable_NtoBE: Boolean;
 
-                 Public
-                  Constructor Create(const _Enable_NtoBE: Boolean);
+       Public
+        Constructor Create(const _Enable_NtoBE: Boolean);
 
-                  // `write` functions
-                  Procedure write_uint8(const V: uint8);
-                  Procedure write_uint16(const V: uint16);
-                  Procedure write_uint32(const V: uint32);
-                  Procedure write_uint64(const V: uint64);
-                  Procedure write_int8(const V: int8);
-                  Procedure write_int16(const V: int16);
-                  Procedure write_int32(const V: int32);
-                  Procedure write_int64(const V: int64);
-                  Procedure write_float(const V: Extended);
+        // `write` functions
+        Procedure write_uint8(const V: uint8);
+        Procedure write_uint16(const V: uint16);
+        Procedure write_uint32(const V: uint32);
+        Procedure write_uint64(const V: uint64);
+        Procedure write_int8(const V: int8);
+        Procedure write_int16(const V: int16);
+        Procedure write_int32(const V: int32);
+        Procedure write_int64(const V: int64);
+        Procedure write_float(const V: Extended);
 
-                  // `read` functions
-                  Function read_uint8: uint8;
-                  Function read_uint16: uint16;
-                  Function read_uint32: uint32;
-                  Function read_uint64: uint64;
-                  Function read_int8: int8;
-                  Function read_int16: int16;
-                  Function read_int32: int32;
-                  Function read_int64: int64;
-                  Function read_float: Extended;
-                  Function read_string: String;
+        // `read` functions
+        Function read_uint8: uint8;
+        Function read_uint16: uint16;
+        Function read_uint32: uint32;
+        Function read_uint64: uint64;
+        Function read_int8: int8;
+        Function read_int16: int16;
+        Function read_int32: int32;
+        Function read_int64: int64;
+        Function read_float: Extended;
+        Function read_string: String;
 
-                  // other functions
-                  Function Can: Boolean;
-                 End;
+        // other functions
+        Function Can: Boolean;
+       End;
 
  Implementation
 

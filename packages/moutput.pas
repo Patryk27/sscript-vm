@@ -24,7 +24,7 @@ Begin
 End;
 
 { output.print }
-Procedure _print(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
+Procedure _print(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Var Str: String;
 Begin
  Case Params[0].Typ of
@@ -44,7 +44,7 @@ Begin
 End;
 
 { output.clear }
-Procedure _clear(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
+Procedure _clear(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
  if (isBuffered) Then
   BufferData := '' Else
@@ -52,32 +52,32 @@ Begin
 End;
 
 { output.set_size }
-Procedure _set_size(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
+Procedure _set_size(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
  SetConsoleSize(getInt(Params[0]), getInt(Params[1]), getInt(Params[2]), getInt(Params[3]));
 End;
 
 { output.set_buffered }
-Procedure _set_buffered(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
+Procedure _set_buffered(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
  isBuffered := getBool(Params[0]);
 End;
 
 { output.flush }
-Procedure _flush(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
+Procedure _flush(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
  strdisplay(BufferData);
  BufferData := '';
 End;
 
 { output.cursor_hide }
-Procedure _cursor_hide(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
+Procedure _cursor_hide(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
  CRT.CursorOff;
 End;
 
 { output.cursor_show }
-Procedure _cursor_show(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
+Procedure _cursor_show(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
  CRT.CursorOn;
 End;

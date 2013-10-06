@@ -54,7 +54,7 @@ Unit vm_header;
                         End;
 
  { TCallHandler }
- Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
+ Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 
  { TStopReason }
  Type TStopReason = (srNormal, srException);

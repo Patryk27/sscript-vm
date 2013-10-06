@@ -28,9 +28,9 @@ Unit VM;
        TypeSizes: Array[TYPE_BOOL_id..TYPE_STRING_id] of Byte = (1, 1, 8, 10, 4);
 
  // -- internal calls -- //
- Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall; // single icall handler
+ Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue); register; // single icall handler
 
- Type PCall = ^TCall;
+ Type PCall = ^TCall; // @TODO: TInternalCall/PInternalCall?
       TCall = Record
                PackageName, FunctionName, FullName: String; // package name, function name, full name ('package_name.function_name')
                ParamCount                         : uint8; // amount of params needed by function
@@ -155,7 +155,9 @@ Unit VM;
  Implementation
 Uses SysUtils, Opcodes, Objects, mStrings,
      GC, OpcodeInterpreter
-{$IFDEF ENABLE_JIT}, JIT {$ENDIF};
+{$IFDEF ENABLE_JIT}
+ , JIT_Compiler
+{$ENDIF};
 
 (* VM_Create *)
 {
@@ -222,10 +224,10 @@ Begin
    StackPos  := @Regs.i[5];
    StackPos^ := 0;
 
-   For I := Low(Stack) To High(Stack) Do // reset stack
+   For I := Low(Stack) To High(Stack) Do // clear stack
     Stack[I].isMemRef := False;
 
-   if (JITCode <> nil) Then // if possible, execute the JIT code
+   if (JITCode <> nil) Then // if possible, execute the JIT compiled code instead of running slow opcode interpreter
    Begin
     TProcedure(JITCode)();
     Exit;
@@ -270,8 +272,8 @@ Begin
    LastJITError := #0;
 
    Try
-    Compiler := TJITCompiler.Create(VM, CodeData); // create compiler instance, load bytecode...
-    Compiler.Compile; // ...and compile it! :)
+    Compiler := TJITCompiler.Create(VM); // create compiler instance, load bytecode...
+    Result   := Compiler.Compile; // ...and compile it! :)
    Except
     On E: Exception Do
     Begin
@@ -281,13 +283,12 @@ Begin
     End;
    End;
 
-   JITCode     := Compiler.getCompiledData.Memory;
-   JITCodeSize := Compiler.getCompiledData.Size;
+   JITCode     := Compiler.getCPU.getCompiledData.Memory;
+   JITCodeSize := Compiler.getCPU.getCompiledData.Size;
    JITCompiler := Compiler;
-   Result      := Compiler.getCompiledState;
   End;
  {$ELSE}
-  PVM(VM)^.LastJITError := CopyStringToPChar('This library has been compiled without a JIT support.');
+  PVM(VM)^.LastJITError := CopyStringToPChar('This library has been compiled without a JIT compiler support.');
   Exit(csJITDisabled);
  {$ENDIF}
 End;

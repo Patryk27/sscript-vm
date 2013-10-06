@@ -19,32 +19,35 @@ Unit BCLoader;
 
  { TBCLoaderData }
  Type PBCLoaderData = ^TBCLoaderData;
-      TBCLoaderData = Record
-                       State: TLoadState;
+      TBCLoaderData =
+      Record
+       State: TLoadState;
 
-                       CodeData: PByte;
+       CodeData: PByte;
 
-                       MagicNumber               : uint32;
-                       isRunnable                : Boolean;
-                       VersionMajor, VersionMinor: uint8;
-                      End;
+       MagicNumber               : uint32;
+       isRunnable                : Boolean;
+       VersionMajor, VersionMinor: uint8;
+      End;
 
  { TBCLoader }
- Type TBCLoader = Class
-                   Private
-                    FileName  : String;
-                    LoaderData: PBCLoaderData;
+ Type TBCLoader =
+      Class
+       Private
+        FileName  : String;
+        LoaderData: PBCLoaderData;
 
-                    Procedure OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
-                    Procedure OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+       Private
+        Procedure OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+        Procedure OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 
-                    Procedure ParseHeader(AStream: TStream);
-                    Procedure ParseBytecode(AStream: TStream);
+        Procedure ParseHeader(AStream: TStream);
+        Procedure ParseBytecode(AStream: TStream);
 
-                   Public
-                    Constructor Create(const fFileName: String);
-                    Function Load: PBCLoaderData;
-                   End;
+       Public
+        Constructor Create(const fFileName: String);
+        Function Load: PBCLoaderData;
+       End;
 
  Implementation
 

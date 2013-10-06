@@ -14,7 +14,7 @@ Unit mTime;
 Uses os_functions;
 
 { time.get_milliseconds }
-Procedure _get_milliseconds(VM: Pointer; Params: PMixedValue; Result: PMixedValue); stdcall;
+Procedure _get_milliseconds(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
  Result^ := GetMilliseconds;
 End;

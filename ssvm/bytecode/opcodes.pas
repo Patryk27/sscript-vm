@@ -19,6 +19,7 @@ Unit Opcodes;
                    o_arset, o_arget, o_arcrt, o_arlen, o_strlen,
                    o_loc_file, o_loc_func, o_loc_line);
 
+ { OpcodeArgCount }
  Const OpcodeArgCount: Array[TOpcode_E] of uint8 = (0, 0,
                                                     1, 1,
                                                     2, 2, 2, 2, 1, 2,
@@ -30,21 +31,25 @@ Unit Opcodes;
                                                     3, 3, 3, 3, 2,
                                                     1, 1, 1);
 
- Type TOpcodeArgType = (ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg, ptBool, ptChar, ptInt, ptFloat, ptString, ptStackval, ptConstantMemRef);
+ Type TOpcodeArgType = (ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg, ptBool, ptChar, ptInt, ptFloat, ptString, ptStackval, ptConstantMemRef); // when adding a new item, don't forget to modify 'JIT_Compiler::InvalidOpcodeException'!
 
  { TOpcodeArg }
- Type TOpcodeArg = Record
-                    Case ArgType: TOpcodeArgType of
-                     ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg: (RegID: uint8); // @TODO: 'ptBoolReg..ptReferenceReg' (but it makes Lazarus's code completion not working :/)
+ Type TOpcodeArg =
+      Record
+       Case ArgType: TOpcodeArgType of
+        ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg: (RegID: uint8); // @TODO: 'ptBoolReg..ptReferenceReg' (but it makes Lazarus's code completion not working :/)
 
-                     ptBool    : (ImmBool: Boolean);
-                     ptChar    : (ImmChar: Char);
-                     ptInt     : (ImmInt: Int64);
-                     ptFloat   : (ImmFloat: Extended);
-                     ptString  : (ImmString: {Short}String);
-                     ptStackval: (StackvalPos: int32);
-                    End;
+        ptBool    : (ImmBool: Boolean);
+        ptChar    : (ImmChar: Char);
+        ptInt     : (ImmInt: Int64);
+        ptFloat   : (ImmFloat: Extended);
+        ptString  : (ImmString: {Short}String);
+        ptStackval: (StackvalPos: int32);
 
+        ptConstantMemRef: (MemoryAddress: uint64);
+       End;
+
+ { TOpcodeArgArray }
  Type TOpcodeArgArray = Array of TOpcodeArg;
 
  // ------------------------------------------------------------------------- //

@@ -65,10 +65,10 @@
     <Version Value="11"/>
     <PathDelim Value="\"/>
     <Target>
-      <Filename Value="ssvm"/>
+      <Filename Value="../ssvm"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="$(ProjOutDir)"/>
+      <IncludeFiles Value="$(ProjOutDir);jit"/>
       <OtherUnitFiles Value="bytecode;gc;jit;jit\x86"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
@@ -78,10 +78,6 @@
     <CodeGeneration>
       <SmartLinkUnit Value="True"/>
       <RelocatableUnit Value="True"/>
-      <Optimizations>
-        <VariablesInRegisters Value="True"/>
-        <UncertainOptimizations Value="True"/>
-      </Optimizations>
     </CodeGeneration>
     <Linking>
       <Options>

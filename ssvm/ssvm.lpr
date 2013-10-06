@@ -121,4 +121,5 @@ Exports
  VM_GetStopReason name 'GetStopReason';
 
 Begin
+ DefaultFormatSettings.DecimalSeparator := '.';
 End.

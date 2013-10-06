@@ -205,7 +205,7 @@ Begin
     Begin
      // pop(reg int)
      if (CheckArgs(ptIntReg)) Then
-      CPU.bcpop_int_reg(getRegisterAddress(Args[0])) Else
+      CPU.bcpop_reg(reg_ei, getRegisterAddress(Args[0])) Else
 
      // pop(invalid)
       InvalidOpcodeException;
@@ -215,10 +215,10 @@ Begin
     o_add, o_sub, o_mul, o_div:
     Begin
      Case Opcode of
-      o_add: ArithmeticOperation := aoAdd;
-      o_sub: ArithmeticOperation := aoSub;
-      o_mul: ArithmeticOperation := aoMul;
-      o_div: ArithmeticOperation := aoDiv;
+      o_add: ArithmeticOperation := ao_add;
+      o_sub: ArithmeticOperation := ao_sub;
+      o_mul: ArithmeticOperation := ao_mul;
+      o_div: ArithmeticOperation := ao_div;
      End;
 
      // opcode(reg int, imm int)
@@ -342,9 +342,9 @@ Begin
     o_or, o_xor, o_and:
     Begin
      Case Opcode of
-      o_or : BitwiseOperation := boOr;
-      o_xor: BitwiseOperation := boXor;
-      o_and: BitwiseOperation := boAnd;
+      o_or : BitwiseOperation := bo_or;
+      o_xor: BitwiseOperation := bo_xor;
+      o_and: BitwiseOperation := bo_and;
      End;
 
      // opcode(reg bool, imm bool)
@@ -354,6 +354,26 @@ Begin
      // opcode(reg bool, reg bool)
      if (CheckArgs(ptBoolReg, ptBoolReg)) Then
       CPU.bitwise_membool_membool(BitwiseOperation, getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
+     // opcode(reg int, imm int)
+     if (CheckArgs(ptIntReg, ptInt)) Then
+      CPU.bitwise_memint_immint(BitwiseOperation, getRegisterAddress(Args[0]), Args[1].ImmInt) Else
+
+     // opcode(reg int, reg int)
+     if (CheckArgs(ptIntReg, ptIntReg)) Then
+      CPU.bitwise_memint_memint(BitwiseOperation, getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
+     // opcode(invalid)
+      InvalidOpcodeException;
+    End;
+
+    { shl, shr }
+    o_shl, o_shr:
+    Begin
+     Case Opcode of
+      o_shl: BitwiseOperation := bo_shl;
+      o_shr: BitwiseOperation := bo_shr;
+     End;
 
      // opcode(reg int, imm int)
      if (CheckArgs(ptIntReg, ptInt)) Then

@@ -14,10 +14,13 @@ Unit JIT_Abstract_CPU;
  Type Float = Extended;
 
  { TArithmeticOperation }
- Type TArithmeticOperation = (aoAdd, aoSub, aoMul, aoDiv);
+ Type TArithmeticOperation = (ao_add, ao_sub, ao_mul, ao_div);
 
  { TBitwiseOperation }
- Type TBitwiseOperation = (boOr, boXor, boAnd, boShl, boShr);
+ Type TBitwiseOperation = (bo_or, bo_xor, bo_and, bo_shl, bo_shr);
+
+ { TBytecodeRegister }
+ Type TBytecodeRegister = (reg_eb, reg_ec, reg_ei, reg_ef, reg_es, reg_er);
 
  { TPointerList }
  Type TPointerList = specialize TFPGList<Pointer>;
@@ -78,7 +81,7 @@ Unit JIT_Abstract_CPU;
         Procedure bcpush_float_memfloat(const MemAddr: uint64); va;
 
         // bcpop
-        Procedure bcpop_int_reg(const RegAddr: uint64); va;
+        Procedure bcpop_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); va;
 
         // icall
         Procedure do_icall(const icall: PCall; const ParamsMV, ResultMV: PMixedValue); va;

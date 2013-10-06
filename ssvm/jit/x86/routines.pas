@@ -71,5 +71,17 @@ End;
 (* r__div_memint_immint *)
 Procedure r__div_memint_immint(const Pnt: pint64; const Value_lo, Value_hi: int32); register;
 Begin
- Pnt^ := Pnt^ div int64(int64(Value_hi) << 32 + Value_lo);
+ Pnt^ := Pnt^ div (int64(Value_hi) << 32 + Value_lo);
+End;
+
+(* r__shl_memint_immint *)
+Procedure r__shl_memint_immint(const Pnt: pint64; const Value_lo, Value_hi: int32); register;
+Begin
+ Pnt^ := Pnt^ << (int64(Value_hi) << 32 + Value_lo);
+End;
+
+(* r__shr_memint_immint *)
+Procedure r__shr_memint_immint(const Pnt: pint64; const Value_lo, Value_hi: int32); register;
+Begin
+ Pnt^ := Pnt^ >> (int64(Value_hi) << 32 + Value_lo);
 End;

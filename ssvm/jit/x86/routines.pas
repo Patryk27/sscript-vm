@@ -37,10 +37,45 @@ Begin
  VM^.StackPush(MV);
 End;
 
+(* r__pop_bool_reg *)
+Procedure r__pop_bool_reg(const VM: PVM; const RegAddr: PBoolean); register;
+Begin
+ RegAddr^ := getBool(VM^.Stack[VM^.Regs.i[5]]);
+ Dec(VM^.Regs.i[5]);
+End;
+
+(* r__pop_char_reg *)
+Procedure r__pop_char_reg(const VM: PVM; const RegAddr: PChar); register;
+Begin
+ RegAddr^ := getChar(VM^.Stack[VM^.Regs.i[5]]);
+ Dec(VM^.Regs.i[5]);
+End;
+
 (* r__pop_int_reg *)
 Procedure r__pop_int_reg(const VM: PVM; const RegAddr: pint64); register;
 Begin
  RegAddr^ := getInt(VM^.Stack[VM^.Regs.i[5]]);
+ Dec(VM^.Regs.i[5]);
+End;
+
+(* r__pop_float_reg *)
+Procedure r__pop_float_reg(const VM: PVM; const RegAddr: PExtended); register;
+Begin
+ RegAddr^ := getFloat(VM^.Stack[VM^.Regs.i[5]]);
+ Dec(VM^.Regs.i[5]);
+End;
+
+(* r__pop_string_reg *)
+Procedure r__pop_string_reg(const VM: PVM; const RegAddr: PPChar); register;
+Begin
+ RegAddr^ := getString(VM^.Stack[VM^.Regs.i[5]]);
+ Dec(VM^.Regs.i[5]);
+End;
+
+(* r__pop_reference_reg *)
+Procedure r__pop_reference_reg(const VM: PVM; const RegAddr: PPointer); register;
+Begin
+ RegAddr^ := getReference(VM^.Stack[VM^.Regs.i[5]]);
  Dec(VM^.Regs.i[5]);
 End;
 

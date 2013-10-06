@@ -203,9 +203,29 @@ Begin
     { pop }
     o_pop:
     Begin
+     // pop(reg bool)
+     if (CheckArgs(ptBoolReg)) Then
+      CPU.bcpop_reg(reg_eb, getRegisterAddress(Args[0])) Else
+
+     // pop(reg char)
+     if (CheckArgs(ptCharReg)) Then
+      CPU.bcpop_reg(reg_ec, getRegisterAddress(Args[0])) Else
+
      // pop(reg int)
      if (CheckArgs(ptIntReg)) Then
       CPU.bcpop_reg(reg_ei, getRegisterAddress(Args[0])) Else
+
+     // pop(reg float)
+     if (CheckArgs(ptFloatReg)) Then
+      CPU.bcpop_reg(reg_ef, getRegisterAddress(Args[0])) Else
+
+     // pop(reg string)
+     if (CheckArgs(ptStringReg)) Then
+      CPU.bcpop_reg(reg_es, getRegisterAddress(Args[0])) Else
+
+     // pop(reg reference)
+     if (CheckArgs(ptReferenceReg)) Then
+      CPU.bcpop_reg(reg_er, getRegisterAddress(Args[0])) Else
 
      // pop(invalid)
       InvalidOpcodeException;

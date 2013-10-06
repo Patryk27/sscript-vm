@@ -1504,7 +1504,15 @@ Begin
  asm_mov_reg32_imm32(reg_edx, RegAddr);
 
  Case RegType of
+  reg_eb: asm_call_internalproc(@r__pop_bool_reg, reg_ecx);
+  reg_ec: asm_call_internalproc(@r__pop_char_reg, reg_ecx);
   reg_ei: asm_call_internalproc(@r__pop_int_reg, reg_ecx);
+  reg_ef: asm_call_internalproc(@r__pop_float_reg, reg_ecx);
+  reg_es: asm_call_internalproc(@r__pop_string_reg, reg_ecx);
+  reg_er: asm_call_internalproc(@r__pop_reference_reg, reg_ecx);
+
+  else
+   raise Exception.CreateFmt('TJITCPU.bcpop_reg() -> invalid `RegType` = %d', [ord(RegType)]);
  End;
 End;
 

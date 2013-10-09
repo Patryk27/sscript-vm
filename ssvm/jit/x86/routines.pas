@@ -7,7 +7,8 @@
 *)
 {$ASMMODE INTEL}
 
-(* r__push_bool *)
+(* ------------------ PUSH ------------------ *)
+{ r__push_bool }
 Procedure r__push_bool(const VM: PVM; const Value: Boolean); register;
 Var MV: TMixedValue;
 Begin
@@ -17,7 +18,7 @@ Begin
  VM^.StackPush(MV);
 End;
 
-(* r__push_int *)
+{ r__push_int }
 Procedure r__push_int(const VM: PVM; const Value_lo, Value_hi: int32); register;
 Var MV: TMixedValue;
 Begin
@@ -27,7 +28,7 @@ Begin
  VM^.StackPush(MV);
 End;
 
-(* r__push_float_mem *)
+{ r__push_float_mem }
 Procedure r__push_float_mem(const VM: PVM; const Addr: PExtended); register;
 Var MV: TMixedValue;
 Begin
@@ -37,49 +38,78 @@ Begin
  VM^.StackPush(MV);
 End;
 
-(* r__pop_bool_reg *)
+{ r__push_reference }
+Procedure r__push_reference(const VM: PVM; const Value: uint32); register;
+Var MV: TMixedValue;
+Begin
+ MV.Reset;
+ MV.Typ       := mvReference;
+ MV.Value.Int := Value;
+ VM^.StackPush(MV);
+End;
+
+(* ------------------ POP (functions) ------------------ *)
+{ PopCheck }
+Procedure PopCheck(const VM: PVM); register;
+Begin
+ if (VM^.Regs.i[5] <= 0) Then
+  raise Exception.Create('Cannot do ''pop'' - there''s nothing on the stack!');
+End;
+
+{ r__pop_reference }
+Function r__pop_reference(const VM: PVM): Pointer; register;
+Begin
+ PopCheck(VM);
+
+ Result := getReference(VM^.Stack[VM^.Regs.i[5]]);
+ Dec(VM^.Regs.i[5]);
+End;
+
+(* ------------------ POP (procedures) ------------------ *)
+
+{ r__pop_bool_reg }
 Procedure r__pop_bool_reg(const VM: PVM; const RegAddr: PBoolean); register;
 Begin
  RegAddr^ := getBool(VM^.Stack[VM^.Regs.i[5]]);
  Dec(VM^.Regs.i[5]);
 End;
 
-(* r__pop_char_reg *)
+{ r__pop_char_reg }
 Procedure r__pop_char_reg(const VM: PVM; const RegAddr: PChar); register;
 Begin
  RegAddr^ := getChar(VM^.Stack[VM^.Regs.i[5]]);
  Dec(VM^.Regs.i[5]);
 End;
 
-(* r__pop_int_reg *)
+{ r__pop_int_reg }
 Procedure r__pop_int_reg(const VM: PVM; const RegAddr: pint64); register;
 Begin
  RegAddr^ := getInt(VM^.Stack[VM^.Regs.i[5]]);
  Dec(VM^.Regs.i[5]);
 End;
 
-(* r__pop_float_reg *)
+{ r__pop_float_reg }
 Procedure r__pop_float_reg(const VM: PVM; const RegAddr: PExtended); register;
 Begin
  RegAddr^ := getFloat(VM^.Stack[VM^.Regs.i[5]]);
  Dec(VM^.Regs.i[5]);
 End;
 
-(* r__pop_string_reg *)
+{ r__pop_string_reg }
 Procedure r__pop_string_reg(const VM: PVM; const RegAddr: PPChar); register;
 Begin
  RegAddr^ := getString(VM^.Stack[VM^.Regs.i[5]]);
  Dec(VM^.Regs.i[5]);
 End;
 
-(* r__pop_reference_reg *)
+{ r__pop_reference_reg }
 Procedure r__pop_reference_reg(const VM: PVM; const RegAddr: PPointer); register;
 Begin
- RegAddr^ := getReference(VM^.Stack[VM^.Regs.i[5]]);
- Dec(VM^.Regs.i[5]);
+ RegAddr^ := r__pop_reference(VM);
 End;
 
-(* r__create_icall_parameter_list *)
+(* ------------------ internal calls ------------------ *)
+{ r__create_icall_parameter_list }
 Procedure r__create_icall_parameter_list(const VM: PVM; const icall: PCall; const ParamsMV: PMixedValue); register;
 Var I: int8;
 Begin
@@ -90,32 +120,34 @@ Begin
  End;
 End;
 
-(* r__clean_mixedvalue *)
+(* ------------------ mixed-values ------------------ *)
+{ r__clean_mixedvalue }
 Procedure r__clean_mixedvalue(const MV: PMixedValue); register;
 Begin
  MV^.Reset;
 End;
 
-(* r__apply_mixedvalue *)
+{ r__apply_mixedvalue }
 Procedure r__apply_mixedvalue(const VM: PVM; const MV: PMixedValue); register;
 Begin
  if (MV^.Typ <> mvNone) Then
   VM^.StackPush(MV^);
 End;
 
-(* r__div_memint_immint *)
+(* ------------------ int operations ------------------ *)
+{ r__div_memint_immint }
 Procedure r__div_memint_immint(const Pnt: pint64; const Value_lo, Value_hi: int32); register;
 Begin
  Pnt^ := Pnt^ div (int64(Value_hi) << 32 + Value_lo);
 End;
 
-(* r__shl_memint_immint *)
+{ r__shl_memint_immint }
 Procedure r__shl_memint_immint(const Pnt: pint64; const Value_lo, Value_hi: int32); register;
 Begin
  Pnt^ := Pnt^ << (int64(Value_hi) << 32 + Value_lo);
 End;
 
-(* r__shr_memint_immint *)
+{ r__shr_memint_immint }
 Procedure r__shr_memint_immint(const Pnt: pint64; const Value_lo, Value_hi: int32); register;
 Begin
  Pnt^ := Pnt^ >> (int64(Value_hi) << 32 + Value_lo);

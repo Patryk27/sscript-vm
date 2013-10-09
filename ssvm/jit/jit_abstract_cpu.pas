@@ -71,14 +71,11 @@ Unit JIT_Abstract_CPU;
         Procedure bitwise_memint_memint(const Operation: TBitwiseOperation; const MemAddrDst, MemAddrSrc: uint64); va;
 
         // bcpush
-        Procedure bcpush_bool_immbool(const Value: Boolean); va;
-        Procedure bcpush_bool_regbool(const MemAddr: uint64); va;
+        Procedure bcpush_immbool(const Value: Boolean); va;
+        Procedure bcpush_immint(const Value: uint64); va;
+        Procedure bcpush_immfloat(const Value: Float); va;
 
-        Procedure bcpush_int_immint(const Value: uint64); va;
-        Procedure bcpush_int_memint(const MemAddr: uint64); va;
-
-        Procedure bcpush_float_immfloat(const Value: Float); va;
-        Procedure bcpush_float_memfloat(const MemAddr: uint64); va;
+        Procedure bcpush_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); va;
 
         // bcpop
         Procedure bcpop_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); va;
@@ -86,11 +83,21 @@ Unit JIT_Abstract_CPU;
         // icall
         Procedure do_icall(const icall: PCall; const ParamsMV, ResultMV: PMixedValue); va;
 
+        // jumps and calls
+        Procedure do_relative_jump(const Address: uint64); va;
+        Procedure do_bccall(const Address: uint64); va;
+        Procedure do_bcret; va;
+
         // other
-        procedure do_stop; va;
+        Procedure do_nop; va;
+        Procedure do_stop; va;
 
         Procedure pre_compilation; va;
         Procedure post_compilation; va;
+
+        // half-properties
+        Function get_bccall_size: uint8; va;
+        Function get_bcconditionaljump_size: uint8; va;
 
        Public
         Constructor Create(const fVM: PVM);

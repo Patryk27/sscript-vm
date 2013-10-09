@@ -46,6 +46,8 @@ Type TModRM =
         Procedure write_modrm(const Value: TModRM);
 
        Private
+    { >> CPU << }
+
         // mov [mem], ...
         Procedure asm_mov_mem8_imm8(const Mem: uint32; const Value: int8);
 
@@ -97,6 +99,9 @@ Type TModRM =
         // ret
         Procedure asm_ret;
 
+        // nop
+        Procedure asm_nop;
+
         // or
         Procedure asm_or_mem8_imm8(const Mem: uint32; const Value: int8);
         Procedure asm_or_mem8_reg8(const Mem: uint32; const Reg: TRegister8);
@@ -117,6 +122,12 @@ Type TModRM =
 
         Procedure asm_and_mem32_imm32(const Mem: uint32; const Value: int32);
         Procedure asm_and_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
+
+        // jmp
+        Procedure asm_jmp(const Address: int32);
+        Procedure asm_jmp(const Reg: TRegister32);
+
+    { >> FPU << }
 
         // fld
         Procedure asm_fld_memfloat(const Mem: uint32);
@@ -166,14 +177,11 @@ Type TModRM =
         Procedure bitwise_memint_memint(const Operation: TBitwiseOperation; const MemAddrDst, MemAddrSrc: uint64); ov;
 
         // bcpush
-        Procedure bcpush_bool_immbool(const Value: Boolean); ov;
-        Procedure bcpush_bool_regbool(const MemAddr: uint64); ov;
+        Procedure bcpush_immbool(const Value: Boolean); ov;
+        Procedure bcpush_immint(const Value: uint64); ov;
+        Procedure bcpush_immfloat(const Value: Float); ov;
 
-        Procedure bcpush_int_immint(const Value: uint64); ov;
-        Procedure bcpush_int_memint(const MemAddr: uint64); ov;
-
-        Procedure bcpush_float_immfloat(const Value: Float); ov;
-        Procedure bcpush_float_memfloat(const MemAddr: uint64); ov;
+        Procedure bcpush_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); ov;
 
         // bcpop
         Procedure bcpop_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); ov;
@@ -181,11 +189,20 @@ Type TModRM =
         // icall
         Procedure do_icall(const icall: PCall; const ParamsMV, ResultMV: PMixedValue); ov;
 
+        // jumps
+        Procedure do_relative_jump(const Address: uint64); ov;
+        Procedure do_bccall(const Address: uint64); ov;
+        Procedure do_bcret; ov;
+
         // other
+        Procedure do_nop; ov;
         Procedure do_stop; ov;
 
         Procedure pre_compilation; ov;
         Procedure post_compilation; ov;
+
+        // half-properties
+        Function get_bccall_size: uint8; ov;
        End;
 
  Implementation
@@ -594,6 +611,15 @@ Begin
  write_uint8($C3);
 End;
 
+(* TJITCPU.asm_nop *)
+{
+ nop
+}
+Procedure TJITCPU.asm_nop;
+Begin
+ write_uint8($90);
+End;
+
 (* TJITCPU.asm_or_mem8_imm8 *)
 {
  or byte [mem], imm
@@ -760,6 +786,31 @@ Begin
  write_uint8($21);
  write_modrm(ModRM);
  write_uint32(Mem);
+End;
+
+(* TJITCPU.asm_jmp *)
+{
+ jmp address
+}
+Procedure TJITCPU.asm_jmp(const Address: int32);
+Begin
+ write_uint8($E9);
+ write_int32(Address);
+End;
+
+(* TJITCPU.asm_jmp *)
+{
+ jmp reg
+}
+Procedure TJITCPU.asm_jmp(const Reg: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := 4;
+ ModRM.RM   := ord(Reg);
+
+ write_uint8($FF);
+ write_modrm(ModRM);
 End;
 
 (* TJITCPU.asm_fld_memfloat *)
@@ -1401,37 +1452,21 @@ Begin
  End;
 End;
 
-(* TJITCPU.bcpush_bool_immbool *)
+(* TJITCPU.bcpush_immbool *)
 {
  mov eax, <VM instance address>
  mov edx, Value
  mov ebx, r__push_bool
  call ebx
 }
-Procedure TJITCPU.bcpush_bool_immbool(const Value: Boolean);
+Procedure TJITCPU.bcpush_immbool(const Value: Boolean);
 Begin
  asm_mov_reg32_imm32(reg_eax, uint32(getVM));
  asm_mov_reg32_imm32(reg_edx, ord(Value));
  asm_call_internalproc(@r__push_bool, reg_ebx);
 End;
 
-(* TJITCPU.bcpush_bool_regbool *)
-{
- mov eax, <VM instance address>
- mov edx, 0
- mov dl, byte [MemAddr]
- mov ebx, r__push_bool
- call ebx
-}
-Procedure TJITCPU.bcpush_bool_regbool(const MemAddr: uint64);
-Begin
- asm_mov_reg32_imm32(reg_eax, uint32(getVM));
- asm_mov_reg32_imm32(reg_edx, 0);
- asm_mov_reg8_mem8(reg_dl, MemAddr);
- asm_call_internalproc(@r__push_bool, reg_ebx);
-End;
-
-(* TJITCPU.bcpush_int_immint *)
+(* TJITCPU.bcpush_immint *)
 {
  mov eax, <VM instance address>
  mov edx, lo(Value)
@@ -1439,7 +1474,7 @@ End;
  mov ebx, r__push_int
  call ebx
 }
-Procedure TJITCPU.bcpush_int_immint(const Value: uint64);
+Procedure TJITCPU.bcpush_immint(const Value: uint64);
 Begin
  asm_mov_reg32_imm32(reg_eax, uint32(getVM));
  asm_mov_reg32_imm32(reg_edx, lo(Value));
@@ -1447,48 +1482,91 @@ Begin
  asm_call_internalproc(@r__push_int, reg_ebx);
 End;
 
-(* TJITCPU.bcpush_int_memint *)
-{
- mov eax, <VM instance address>
- mov edx, [MemAddr+0]
- mov ecx, [MemAddr+4]
- mov ebx, r__push_int_mem
- call ebx
-}
-Procedure TJITCPU.bcpush_int_memint(const MemAddr: uint64);
-Begin
- asm_mov_reg32_imm32(reg_eax, uint32(getVM));
- asm_mov_reg32_mem32(reg_edx, MemAddr+0);
- asm_mov_reg32_mem32(reg_ecx, MemAddr+4);
- asm_call_internalproc(@r__push_int, reg_ebx);
-End;
-
-(* TJITCPU.bcpush_float_immfloat *)
+(* TJITCPU.bcpush_immfloat *)
 {
  mov eax, <VM instance address>
  mov edx, <Value>
  mov ebx, r__push_float_mem
  call ebx
 }
-Procedure TJITCPU.bcpush_float_immfloat(const Value: Float);
+Procedure TJITCPU.bcpush_immfloat(const Value: Float);
 Begin
  asm_mov_reg32_imm32(reg_eax, uint32(getVM));
  asm_mov_reg32_imm32(reg_edx, AllocateFloat(Value));
  asm_call_internalproc(@r__push_float_mem, reg_ebx);
 End;
 
-(* TJITCPU.bcpush_float_memfloat *)
+(* TJITCPU.bcpush_reg *)
 {
  mov eax, <VM instance address>
- mov edx, MemAddr
- mov ebx, r__push_float_mem
- call ebx
+
+ reg_eb:
+ > mov edx, 0
+ > mov dl, byte [RegAddr]
+ > mov ebx, r__push_bool
+ > call ebx
+
+ reg_ec:
+ > @TODO
+
+ reg_ei:
+ > mov edx, dword [RegAddr+0]
+ > mov ecx, dword [RegAddr+4]
+ > mov ebx, r__push_int
+ > call ebx
+
+ reg_ef:
+ > mov edx, RegAddr
+ > mov ecx, r__push_float_mem
+ > call ecx
+
+ reg_es:
+ > @TODO
+
+ reg_er:
+ > mov edx, dword [RegAddr]
+ > mov ecx, r__push_reference
+ > call ebx
 }
-Procedure TJITCPU.bcpush_float_memfloat(const MemAddr: uint64);
+Procedure TJITCPU.bcpush_reg(const RegType: TBytecodeRegister; const RegAddr: uint64);
 Begin
  asm_mov_reg32_imm32(reg_eax, uint32(getVM));
- asm_mov_reg32_imm32(reg_edx, MemAddr);
- asm_call_internalproc(@r__push_float_mem, reg_ebx);
+
+ Case RegType of
+  { eb* }
+  reg_eb:
+  Begin
+   asm_mov_reg32_imm32(reg_edx, 0);
+   asm_mov_reg8_mem8(reg_dl, RegAddr);
+   asm_call_internalproc(@r__push_bool, reg_ebx);
+  End;
+
+  { ei* }
+  reg_ei:
+  Begin
+   asm_mov_reg32_mem32(reg_edx, RegAddr+0);
+   asm_mov_reg32_mem32(reg_ecx, RegAddr+4);
+   asm_call_internalproc(@r__push_int, reg_ebx);
+  End;
+
+  { ef* }
+  reg_ef:
+  Begin
+   asm_mov_reg32_imm32(reg_edx, RegAddr);
+   asm_call_internalproc(@r__push_float_mem, reg_ecx);
+  End;
+
+  { er* }
+  reg_er:
+  Begin
+   asm_mov_reg32_mem32(reg_edx, RegAddr);
+   asm_call_internalproc(@r__push_reference, reg_ecx);
+  End;
+
+  { invalid register type }
+  else
+   raise Exception.CreateFmt('TJITCPU.bcpush_reg() -> invalid ''RegType'' = ''%d''', [ord(RegType)]);
+ End;
 End;
 
 (* TJITCPU.bcpop_reg *)
@@ -1563,7 +1641,53 @@ Begin
  asm_call_internalproc(@r__apply_mixedvalue, reg_ebx);
 End;
 
+(* TJITCPU.do_relative_jump *)
+Procedure TJITCPU.do_relative_jump(const Address: uint64);
+Begin
+ asm_jmp(Address - getCompiledData.Position - 5);
+End;
+
+(* TJITCPU.do_bccall *)
+Procedure TJITCPU.do_bccall(const Address: uint64);
+Var RetEIP: uint32;
+Begin
+ RetEIP := uint32(getCompiledData.Memory) + getCompiledData.Position + 22;
+
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM));
+ asm_mov_reg32_imm32(reg_edx, RetEIP);
+ asm_call_internalproc(@r__push_reference, reg_ecx);
+
+ do_relative_jump(Address);
+End;
+
+(* TJITCPU.do_bcret *)
+{
+ mov eax, <VM instance address>
+ mov edx, r__pop_reference
+ call edx
+
+ jmp eax
+}
+Procedure TJITCPU.do_bcret;
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM));
+ asm_call_internalproc(@r__pop_reference, reg_edx);
+ asm_jmp(reg_eax);
+End;
+
+(* TJITCPu.do_nop *)
+{
+ nop
+}
+Procedure TJITCPU.do_nop;
+Begin
+ asm_nop;
+End;
+
 (* TJITCPU.do_stop *)
+{
+ ret
+}
 Procedure TJITCPU.do_stop;
 Begin
  asm_ret;
@@ -1578,6 +1702,12 @@ End;
 (* TJITCPU.post_compilation *)
 Procedure TJITCPU.post_compilation;
 Begin
- // ResolveJumps();
+ // nothing here //
+End;
+
+(* TJITCPU.get_bccall_size *)
+Function TJITCPU.get_bccall_size: uint8;
+Begin
+ Result := 13;
 End;
 End.

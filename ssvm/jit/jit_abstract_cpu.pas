@@ -73,13 +73,26 @@ Unit JIT_Abstract_CPU;
         Procedure bitwise_memint_immint(const Operation: TBitwiseOperation; const MemAddrDst: uint64; const Value: int64); va;
         Procedure bitwise_memint_memint(const Operation: TBitwiseOperation; const MemAddrDst, MemAddrSrc: uint64); va;
 
-        // comparing
+        // compare
+        Procedure compare_immint_immint(const Operation: TCompareOperation; const Value0, Value1: int64); va;
+        Procedure compare_immint_immfloat(const Operation: TCompareOperation; const Value0: int64; const Value1: Float); va;
+        Procedure compare_immint_memint(const Operation: TCompareOperation; const Value0: int64; const NumberPnt1: uint64); va;
+        Procedure compare_immint_memfloat(const Operation: TCompareOperation; const Value0: int64; const NumberPnt1: uint64); va;
+
         Procedure compare_memint_immint(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: int64); va;
+        Procedure compare_memint_immfloat(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: Float); va;
         Procedure compare_memint_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
-        Procedure compare_memfloat_immfloat(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: Float); va;
-        Procedure compare_memfloat_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
+        Procedure compare_memint_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
+
+        Procedure compare_immfloat_immint(const Operation: TCompareOperation; const Value0: Float; const Value1: int64); va;
+        Procedure compare_immfloat_immfloat(const Operation: TCompareOperation; const Value0, Value1: Float); va;
+        Procedure compare_immfloat_memfloat(const Operation: TCompareOperation; const Value0: Float; const NumberPnt1: uint64); va;
+        Procedure compare_immfloat_memint(const Operation: TCompareOperation; const Value0: Float; const NumberPnt1: uint64); va;
+
         Procedure compare_memfloat_immint(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: int64); va;
         Procedure compare_memfloat_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
+        Procedure compare_memfloat_immfloat(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: Float); va;
+        Procedure compare_memfloat_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
 
         // bcpush
         Procedure bcpush_immbool(const Value: Boolean); va;

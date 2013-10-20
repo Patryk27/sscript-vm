@@ -94,6 +94,8 @@ Type TModRM =
         Procedure asm_imul_reg32_reg32(const RegA, RegB: TRegister32);
 
         // cmp
+        Procedure asm_cmp_reg32_imm32(const Reg: TRegister32; const Value: int32);
+        Procedure asm_cmp_reg32_mem32(const Reg: TRegister32; const Mem: uint32);
         Procedure asm_cmp_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
 
         // call
@@ -162,6 +164,10 @@ Type TModRM =
         // fdivp
         Procedure asm_fdivp_st0(const Reg: TRegisterFPU);
 
+        // compare
+        Procedure generic_int_compare(const Operation: TCompareOperation; const Number0, Number1: int64; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant: Boolean);
+//        Procedure generic_float_compare;
+
        Public
         // move
         Procedure move_membool_immbool(const MemAddr: uint64; const Value: Boolean); ov;
@@ -188,7 +194,11 @@ Type TModRM =
         Procedure bitwise_memint_immint(const Operation: TBitwiseOperation; const MemAddrDst: uint64; const Value: int64); ov;
         Procedure bitwise_memint_memint(const Operation: TBitwiseOperation; const MemAddrDst, MemAddrSrc: uint64); ov;
 
-        // comparing
+        // compare
+        Procedure compare_immint_immint(const Operation: TCompareOperation; const Value0, Value1: int64); ov;
+        Procedure compare_immint_memint(const Operation: TCompareOperation; const Value0: int64; const NumberPnt1: uint64); ov;
+
+        Procedure compare_memint_immint(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: int64); ov;
         Procedure compare_memint_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); ov;
 
         // bcpush
@@ -597,6 +607,45 @@ Begin
  emit_uint8($0F);
  emit_uint8($AF);
  emit_modrm(ModRM);
+End;
+
+(* TJITCPU.asm_cmp_reg32_imm32 *)
+{
+ cmp reg, value
+}
+Procedure TJITCPU.asm_cmp_reg32_imm32(const Reg: TRegister32; const Value: int32);
+Var ModRM: TModRM;
+Begin
+ if (Reg = reg_eax) Then
+ Begin
+  emit_uint8($3D);
+  emit_int32(Value);
+ End Else
+ Begin
+  ModRM.Mode := 3;
+  ModRM.Reg  := 7;
+  ModRM.RM   := ord(Reg);
+
+  emit_uint8($81);
+  emit_modrm(ModRM);
+  emit_int32(Value);
+ End;
+End;
+
+(* TJITCPU.asm_cmp_reg32_mem32 *)
+{
+ cmp reg, dword [mem]
+}
+Procedure TJITCPU.asm_cmp_reg32_mem32(const Reg: TRegister32; const Mem: uint32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := ord(Reg);
+ ModRM.RM   := 5;
+
+ emit_uint8($3B);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_cmp_mem32_reg32 *)
@@ -1030,6 +1079,189 @@ Procedure TJITCPU.asm_fdivp_st0(const Reg: TRegisterFPU);
 Begin
  emit_uint8($DE);
  emit_uint8($F8 + ord(Reg));
+End;
+
+(* TJITCPU.generic_int_compare *)
+Procedure TJITCPU.generic_int_compare(const Operation: TCompareOperation; const Number0, Number1: int64; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant: Boolean);
+Var LabelTrue, LabelFalse, LabelOut   : uint32;
+    TrueChange, FalseChange, OutChange: Array[0..2] of uint32;
+    Tmp, TmpPos                       : uint32;
+    CData                             : TStream;
+    CompareMode                       : (cmConstConst, cmConstMem, cmMemConst, cmMemMem);
+Begin
+ CData := getCompiledData;
+
+ For Tmp := Low(FalseChange) To High(FalseChange) Do
+ Begin
+  TrueChange[Tmp]  := 0;
+  FalseChange[Tmp] := 0;
+  OutChange[Tmp]   := 0;
+ End;
+
+ if (isFirstConstant) Then
+ Begin
+  if (isSecondConstant) Then
+   CompareMode := cmConstConst Else
+   CompareMode := cmConstMem;
+ End Else
+ Begin
+  if (isSecondConstant) Then
+   CompareMode := cmMemConst Else
+   CompareMode := cmMemMem;
+ End;
+
+ if (CompareMode = cmConstConst) Then // special optimization case: as both numbers are constant known here, we can compare them right here
+ Begin
+  Case Operation of
+   co_equal        : Tmp := ord(Number0 = Number1);
+   co_different    : Tmp := ord(Number0 <> Number1);
+   co_greater      : Tmp := ord(Number0 > Number1);
+   co_greater_equal: Tmp := ord(Number0 >= Number1);
+   co_lower        : Tmp := ord(Number0 < Number1);
+   co_lower_equal  : Tmp := ord(Number0 <= Number1);
+  End;
+
+  asm_mov_mem8_imm8(uint32(@getVM^.Regs.b[5]), Tmp);
+  Exit;
+ End;
+
+ if (CompareMode = cmMemMem) and (Addr0 = Addr1) Then // special optimization case: both addresses are the same (comparing the same number with itself)
+ Begin
+  Tmp := ord(Operation in [co_equal, co_greater_equal, co_lower_equal]);
+
+  asm_mov_mem8_imm8(uint32(@getVM^.Regs.b[5]), Tmp);
+  Exit;
+ End;
+
+ Case CompareMode of
+  // const, const
+  cmConstConst:
+  Begin
+   asm_mov_reg32_imm32(reg_eax, lo(Number0)); // mov eax, lo(Number0)
+   asm_cmp_reg32_imm32(reg_eax, lo(Number1)); // cmp eax, lo(Number1)
+  End;
+
+  // const, mem
+  cmConstMem:
+  Begin
+   asm_mov_reg32_imm32(reg_eax, lo(Number0)); // mov eax, lo(Number0)
+   asm_cmp_reg32_mem32(reg_eax, Addr1+0); // cmp eax, dword [Addr1+0]
+  End;
+
+  // mem, const
+  cmMemConst:
+  Begin
+   asm_mov_reg32_mem32(reg_eax, Addr0+0); // mov eax, [Addr0+0]
+   asm_cmp_reg32_imm32(reg_eax, lo(Number1)); // cmp eax, lo(Number1)
+  End;
+
+  // mem, mem
+  cmMemMem:
+  Begin
+   asm_mov_reg32_mem32(reg_eax, Addr1+0); // mov eax, [Addr1+0]
+   asm_cmp_mem32_reg32(Addr0+0, reg_eax); // cmp [Addr0+0], eax
+  End;
+ End;
+
+ Case Operation of // first branch
+  co_equal    : FalseChange[0] := asm_jne(0); // jne @false
+  co_different: TrueChange[0] := asm_jne(0); // jne @true
+
+  co_greater, co_greater_equal:
+  Begin
+   TrueChange[0]  := asm_jg(0); // jg @true
+   FalseChange[0] := asm_jl(0); // jl @false
+  End;
+
+  co_lower, co_lower_equal:
+  Begin
+   TrueChange[0]  := asm_jl(0); // jl @true
+   FalseChange[0] := asm_jg(0); // jg @false
+  End;
+
+  else
+   raise Exception.CreateFmt('TJITCPU.compare_memint_memint() -> unknown operation: %d', [ord(Operation)]);
+ End;
+
+ Case CompareMode of
+  // const, const
+  cmConstConst:
+  Begin
+   asm_mov_reg32_imm32(reg_eax, hi(Number0)); // mov eax, hi(Number0)
+   asm_cmp_reg32_imm32(reg_eax, hi(Number1)); // cmp eax, hi(Number1)
+  End;
+
+  // const, mem
+  cmConstMem:
+  Begin
+   asm_mov_reg32_imm32(reg_eax, hi(Number0)); // mov eax, hi(Number0)
+   asm_cmp_reg32_mem32(reg_eax, Addr1+4); // cmp eax, dword [Addr1+4]
+  End;
+
+  // mem, const
+  cmMemConst:
+  Begin
+   asm_mov_reg32_mem32(reg_eax, Addr0+4); // mov eax, [Addr0+4]
+   asm_cmp_reg32_imm32(reg_eax, hi(Number1)); // cmp eax, hi(Number1)
+  End;
+
+  // mem, mem
+  cmMemMem:
+  Begin
+   asm_mov_reg32_mem32(reg_eax, Addr1+4); // mov eax, [Addr1+0]
+   asm_cmp_mem32_reg32(Addr0+4, reg_eax); // cmp [Addr0+4], eax
+  End;
+ End;
+
+ Case Operation of // second branch
+  co_equal        : FalseChange[1] := asm_jne(0); // jne @false
+  co_different    : FalseChange[1] := asm_je(0); // je @false
+  co_greater      : FalseChange[1] := asm_jna(0); // jna @false
+  co_greater_equal: FalseChange[1] := asm_jnae(0); // jnae @false
+  co_lower        : FalseChange[1] := asm_jnb(0); // jnb @false
+  co_lower_equal  : FalseChange[1] := asm_jnbe(0); // jnbe @false
+ End;
+
+ // @true:
+ LabelTrue := CData.Position;
+ asm_mov_mem8_imm8(uint32(@getVM^.Regs.b[5]), 1); // mov byte [IF-register-address], 1
+ OutChange[2] := asm_jmp(0); // jmp @out
+
+ // @false:
+ LabelFalse := CData.Position;
+ asm_mov_mem8_imm8(uint32(@getVM^.Regs.b[5]), 0); // mov byte [IF-register-address], 0
+
+ // @out:
+ LabelOut := CData.Position;
+
+ { replace dummy address with their real values }
+ TmpPos := CData.Position;
+
+ // replace @true
+ For Tmp in TrueChange Do
+  if (Tmp > 0) Then
+  Begin
+   CData.Position := Tmp;
+   CData.write_int32(LabelTrue - Tmp - 4);
+  End;
+
+ // replace @false
+ For Tmp in FalseChange Do
+  if (Tmp > 0) Then
+  Begin
+   CData.Position := Tmp;
+   CData.write_int32(LabelFalse - Tmp - 4);
+  End;
+
+ // replace @out
+ For Tmp in OutChange Do
+  if (Tmp > 0) Then
+  Begin
+   CData.Position := Tmp;
+   CData.write_uint32(LabelOut - Tmp - 4);
+  End;
+
+ CData.Position := TmpPos;
 End;
 
 // -------------------------------------------------------------------------- //
@@ -1598,97 +1830,28 @@ Begin
  End;
 End;
 
+(* TJITCPU.compare_immint_immint *)
+Procedure TJITCPU.compare_immint_immint(const Operation: TCompareOperation; const Value0, Value1: int64);
+Begin
+ generic_int_compare(Operation, Value0, Value1, 0, 0, True, True);
+End;
+
+(* TJITCPU.compare_immint_memint *)
+Procedure TJITCPU.compare_immint_memint(const Operation: TCompareOperation; const Value0: int64; const NumberPnt1: uint64);
+Begin
+ generic_int_compare(Operation, Value0, 0, 0, NumberPnt1, True, False);
+End;
+
+(* TJITCPU.compare_memint_immint *)
+Procedure TJITCPU.compare_memint_immint(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: int64);
+Begin
+ generic_int_compare(Operation, 0, Value1, NumberPnt0, 0, False, True);
+End;
+
 (* TJITCPU.compare_memint_memint *)
 Procedure TJITCPU.compare_memint_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64);
-Var LabelTrue, LabelFalse, LabelOut   : uint32;
-    TrueChange, FalseChange, OutChange: Array[0..2] of uint32;
-    Tmp, TmpPos                       : uint32;
-    CData                             : TStream;
 Begin
- CData := getCompiledData;
-
- For Tmp := Low(FalseChange) To High(FalseChange) Do
- Begin
-  TrueChange[Tmp]  := 0;
-  FalseChange[Tmp] := 0;
-  OutChange[Tmp]   := 0;
- End;
-
- asm_mov_reg32_mem32(reg_eax, NumberPnt1+0); // mov eax, [NumberPnt1+0]
- asm_cmp_mem32_reg32(NumberPnt0+0, reg_eax); // cmp [NumberPnt0+0], eax
-
- Case Operation of // first branch
-  co_equal    : FalseChange[0] := asm_jne(0); // jne @false
-  co_different: TrueChange[0] := asm_jne(0); // jne @true
-
-  co_greater, co_greater_equal:
-  Begin
-   TrueChange[0]  := asm_jg(0); // jg @true
-   FalseChange[0] := asm_jl(0); // jl @false
-  End;
-
-  co_lower, co_lower_equal:
-  Begin
-   TrueChange[0]  := asm_jl(0); // jl @true
-   FalseChange[0] := asm_jg(0); // jg @false
-  End;
-
-  else
-   raise Exception.CreateFmt('TJITCPU.compare_memint_memint() -> unknown operation: %d', [ord(Operation)]);
- End;
-
- asm_mov_reg32_mem32(reg_eax, NumberPnt1+4); // mov eax, [NumberPnt1+0]
- asm_cmp_mem32_reg32(NumberPnt0+4, reg_eax); // cmp [NumberPnt0+4], eax
-
- Case Operation of // second branch
-  co_equal        : FalseChange[1] := asm_jne(0); // jne @false
-  co_different    : FalseChange[1] := asm_je(0); // je @false
-  co_greater      : FalseChange[1] := asm_jna(0); // jna @false
-  co_greater_equal: FalseChange[1] := asm_jnae(0); // jnae @false
-  co_lower        : FalseChange[1] := asm_jnb(0); // jnb @false
-  co_lower_equal  : FalseChange[1] := asm_jnbe(0); // jnbe @false
- End;
-
- // @true:
- LabelTrue := CData.Position;
- asm_mov_mem8_imm8(uint32(@getVM^.Regs.b[5]), 1); // mov byte [IF-register-address], 1
- OutChange[2] := asm_jmp(0); // jmp @out
-
- // @false:
- LabelFalse := CData.Position;
- asm_mov_mem8_imm8(uint32(@getVM^.Regs.b[5]), 0); // mov byte [IF-register-address], 0
-
- // @out:
- LabelOut := CData.Position;
-
- { replace dummy address with their real values }
- TmpPos := CData.Position;
-
- // replace @true
- For Tmp in TrueChange Do
-  if (Tmp > 0) Then
-  Begin
-   CData.Position := Tmp;
-   CData.write_int32(LabelTrue - Tmp - 4);
-  End;
-
- // replace @false
- For Tmp in FalseChange Do
-  if (Tmp > 0) Then
-  Begin
-   CData.Position := Tmp;
-   CData.write_int32(LabelFalse - Tmp - 4);
-  End;
-
- // replace @out
- For Tmp in OutChange Do
-  if (Tmp > 0) Then
-  Begin
-   CData.Position := Tmp;
-   CData.write_uint32(LabelOut - Tmp - 4);
-  End;
-
- CData.Position := TmpPos;
+ generic_int_compare(Operation, 0, 0, NumberPnt0, NumberPnt1, False, False);
 End;
 
 (* TJITCPU.bcpush_immbool *)

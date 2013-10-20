@@ -442,6 +442,38 @@ Begin
       o_if_le: CompareOperation := co_lower_equal;
      End;
 
+     // opcode(imm int, imm int)
+     if (CheckArgs(ptInt, ptInt)) Then
+      CPU.compare_immint_immint(CompareOperation, Args[0].ImmInt, Args[1].ImmInt) Else
+
+     // opcode(imm int, reg int)
+     if (CheckArgs(ptInt, ptIntReg)) Then
+      CPU.compare_immint_memint(CompareOperation, Args[0].ImmInt, getRegisterAddress(Args[1])) Else
+
+     // opcode(imm int, imm float)
+     if (CheckArgs(ptInt, ptFloat)) Then
+      CPU.compare_immint_immfloat(CompareOperation, Args[0].ImmInt, Args[1].ImmFloat) Else
+
+     // opcode(imm int, reg float)
+     if (CheckArgs(ptInt, ptFloatReg)) Then
+      CPU.compare_immint_memfloat(CompareOperation, Args[0].ImmInt, getRegisterAddress(Args[1])) Else
+
+     // opcode(imm float, imm float)
+     if (CheckArgs(ptFloat, ptFloat)) Then
+      CPU.compare_immfloat_immfloat(CompareOperation, Args[0].ImmFloat, Args[1].ImmFloat) Else
+
+     // opcode(imm float, reg float)
+     if (CheckArgs(ptFloat, ptFloatReg)) Then
+      CPU.compare_immfloat_memfloat(CompareOperation, Args[0].ImmFloat, getRegisterAddress(Args[1])) Else
+
+     // opcode(imm float, imm int)
+     if (CheckArgs(ptFloat, ptInt)) Then
+      CPU.compare_immfloat_immint(CompareOperation, Args[0].ImmFloat, Args[1].ImmInt) Else
+
+     // opcode(imm float, reg int)
+     if (CheckArgs(ptFloat, ptIntReg)) Then
+      CPU.compare_immfloat_memint(CompareOperation, Args[0].ImmFloat, getRegisterAddress(Args[1])) Else
+
      // opcode(reg int, imm int)
      if (CheckArgs(ptIntReg, ptInt)) Then
       CPU.compare_memint_immint(CompareOperation, getRegisterAddress(Args[0]), Args[1].ImmInt) Else
@@ -449,6 +481,14 @@ Begin
      // opcode(reg int, reg int)
      if (CheckArgs(ptIntReg, ptIntReg)) Then
       CPU.compare_memint_memint(CompareOperation, getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
+     // opcode(reg int, imm float)
+     if (CheckArgs(ptIntReg, ptFloat)) Then
+      CPU.compare_memint_immfloat(CompareOperation, getRegisterAddress(Args[0]), Args[1].ImmFloat) Else
+
+     // opcode(reg int, reg float)
+     if (CheckArgs(ptIntReg, ptFloatReg)) Then
+      CPU.compare_memint_memfloat(CompareOperation, getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
 
      // opcode(reg float, imm float)
      if (CheckArgs(ptFloatReg, ptFloat)) Then

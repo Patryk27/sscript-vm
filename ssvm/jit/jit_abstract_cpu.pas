@@ -19,6 +19,9 @@ Unit JIT_Abstract_CPU;
  { TBitwiseOperation }
  Type TBitwiseOperation = (bo_or, bo_xor, bo_and, bo_shl, bo_shr);
 
+ { TCompareOperation }
+ Type TCompareOperation = (co_equal, co_different, co_greater, co_greater_equal, co_lower, co_lower_equal);
+
  { TBytecodeRegister }
  Type TBytecodeRegister = (reg_eb, reg_ec, reg_ei, reg_ef, reg_es, reg_er);
 
@@ -37,9 +40,9 @@ Unit JIT_Abstract_CPU;
         Property getVM: PVM read VM;
 
        Protected
-        Procedure write_uint8(const Value: uint8);
-        Procedure write_uint32(const Value: uint32);
-        Procedure write_int32(const Value: int32);
+        Procedure emit_uint8(const Value: uint8);
+        Procedure emit_uint32(const Value: uint32);
+        Procedure emit_int32(const Value: int32);
 
         Function AllocateInt(const Value: int64): uint64;
         Function AllocateFloat(const Value: Float): uint64;
@@ -64,11 +67,19 @@ Unit JIT_Abstract_CPU;
         Procedure arithmetic_memfloat_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); va;
         Procedure arithmetic_memfloat_memint(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); va;
 
-        // binary
+        // bitwise
         Procedure bitwise_membool_immbool(const Operation: TBitwiseOperation; const MemAddrDst: uint64; const Value: Boolean); va;
         Procedure bitwise_membool_membool(const Operation: TBitwiseOperation; const MemAddrDst, MemAddrSrc: uint64); va;
         Procedure bitwise_memint_immint(const Operation: TBitwiseOperation; const MemAddrDst: uint64; const Value: int64); va;
         Procedure bitwise_memint_memint(const Operation: TBitwiseOperation; const MemAddrDst, MemAddrSrc: uint64); va;
+
+        // comparing
+        Procedure compare_memint_immint(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: int64); va;
+        Procedure compare_memint_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
+        Procedure compare_memfloat_immfloat(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: Float); va;
+        Procedure compare_memfloat_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
+        Procedure compare_memfloat_immint(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: int64); va;
+        Procedure compare_memfloat_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
 
         // bcpush
         Procedure bcpush_immbool(const Value: Boolean); va;
@@ -108,20 +119,20 @@ Unit JIT_Abstract_CPU;
 
  Implementation
 
-(* TJITAbstractCPU.write_uint8 *)
-Procedure TJITAbstractCPU.write_uint8(const Value: uint8);
+(* TJITAbstractCPU.emit_uint8 *)
+Procedure TJITAbstractCPU.emit_uint8(const Value: uint8);
 Begin
  CompiledData.write_uint8(Value);
 End;
 
-(* TJITABstractCPU.write_uint32 *)
-Procedure TJITAbstractCPU.write_uint32(const Value: uint32);
+(* TJITABstractCPU.emit_uint32 *)
+Procedure TJITAbstractCPU.emit_uint32(const Value: uint32);
 Begin
  CompiledData.write_uint32(Value);
 End;
 
-(* TJITAbstractCPU.write_int32 *)
-Procedure TJITAbstractCPU.write_int32(const Value: int32);
+(* TJITAbstractCPU.emit_int32 *)
+Procedure TJITAbstractCPU.emit_int32(const Value: int32);
 Begin
  CompiledData.write_int32(Value);
 End;

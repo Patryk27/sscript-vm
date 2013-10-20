@@ -43,7 +43,7 @@ Type TModRM =
  Type TJITCPU =
       Class(TJITAbstractCPU)
        Private
-        Procedure write_modrm(const Value: TModRM);
+        Procedure emit_modrm(const Value: TModRM);
 
        Private
     { >> CPU << }
@@ -93,6 +93,9 @@ Type TModRM =
         Procedure asm_imul_reg32_mem32(const Reg: TRegister32; const Mem: uint32);
         Procedure asm_imul_reg32_reg32(const RegA, RegB: TRegister32);
 
+        // cmp
+        Procedure asm_cmp_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
+
         // call
         Procedure asm_call_internalproc(const Proc: Pointer; const TrashedRegister: TRegister32 = reg_eax);
 
@@ -123,9 +126,18 @@ Type TModRM =
         Procedure asm_and_mem32_imm32(const Mem: uint32; const Value: int32);
         Procedure asm_and_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
 
-        // jmp
-        Procedure asm_jmp(const Address: int32);
+        // jumps
+        Function asm_jmp(const Address: int32): uint32;
         Procedure asm_jmp(const Reg: TRegister32);
+
+        Function asm_jne(const Address: int32): uint32;
+        Function asm_jna(const Address: int32): uint32;
+        Function asm_jnae(const Address: int32): uint32;
+        Function asm_jnb(const Address: int32): uint32;
+        Function asm_jnbe(const Address: int32): uint32;
+        Function asm_je(const Address: int32): uint32;
+        Function asm_jg(const Address: int32): uint32;
+        Function asm_jl(const Address: int32): uint32;
 
     { >> FPU << }
 
@@ -170,11 +182,14 @@ Type TModRM =
         Procedure arithmetic_memfloat_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); ov;
         Procedure arithmetic_memfloat_memint(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); ov;
 
-        // binary
+        // bitwise
         Procedure bitwise_membool_immbool(const Operation: TBitwiseOperation; const MemAddrDst: uint64; const Value: Boolean); ov;
         Procedure bitwise_membool_membool(const Operation: TBitwiseOperation; const MemAddrDst, MemAddrSrc: uint64); ov;
         Procedure bitwise_memint_immint(const Operation: TBitwiseOperation; const MemAddrDst: uint64; const Value: int64); ov;
         Procedure bitwise_memint_memint(const Operation: TBitwiseOperation; const MemAddrDst, MemAddrSrc: uint64); ov;
+
+        // comparing
+        Procedure compare_memint_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); ov;
 
         // bcpush
         Procedure bcpush_immbool(const Value: Boolean); ov;
@@ -206,16 +221,16 @@ Type TModRM =
        End;
 
  Implementation
-Uses SysUtils;
+Uses SysUtils, Stream;
 
 // -------------------------------------------------------------------------- //
 {$I routines.pas}
 // -------------------------------------------------------------------------- //
 
-(* TJITCPU.write_modrm *)
-Procedure TJITCPU.write_modrm(const Value: TModRM);
+(* TJITCPU.emit_modrm *)
+Procedure TJITCPU.emit_modrm(const Value: TModRM);
 Begin
- write_uint8(puint8(@Value)^);
+ emit_uint8(puint8(@Value)^);
 End;
 
 (* TJITCPU.asm_mov_mem8_imm8 *)
@@ -224,10 +239,10 @@ End;
 }
 Procedure TJITCPU.asm_mov_mem8_imm8(const Mem: uint32; const Value: int8);
 Begin
- write_uint8($C6);
- write_uint8($05);
- write_uint32(Mem);
- write_uint8(Value);
+ emit_uint8($C6);
+ emit_uint8($05);
+ emit_uint32(Mem);
+ emit_uint8(Value);
 End;
 
 (* TJITCPU.asm_mov_mem16_imm16 *)
@@ -236,11 +251,11 @@ End;
 }
 Procedure TJITCPU.asm_mov_mem16_imm16(const Mem: uint32; const Value: int16);
 Begin
- write_uint8($66);
- write_uint8($C7);
- write_uint8($05);
- write_uint32(Mem);
- write_int32(Value);
+ emit_uint8($66);
+ emit_uint8($C7);
+ emit_uint8($05);
+ emit_uint32(Mem);
+ emit_int32(Value);
 End;
 
 (* TJITCPU.asm_mov_mem16_reg16 *)
@@ -250,21 +265,21 @@ End;
 Procedure TJITCPU.asm_mov_mem16_reg16(const Mem: uint32; const Reg: TRegister16);
 Var ModRM: TModRM;
 Begin
- write_uint8($66);
+ emit_uint8($66);
 
  if (Reg = reg_ax) Then
  Begin
-  write_uint8($A3);
-  write_uint32(Mem);
+  emit_uint8($A3);
+  emit_uint32(Mem);
  End Else
  Begin
   ModRM.Mode := 0;
   ModRM.Reg  := ord(Reg);
   ModRM.RM   := 5;
 
-  write_uint8($89);
-  write_modrm(ModRM);
-  write_int32(Mem);
+  emit_uint8($89);
+  emit_modrm(ModRM);
+  emit_int32(Mem);
  End;
 End;
 
@@ -274,10 +289,10 @@ End;
 }
 Procedure TJITCPU.asm_mov_mem32_imm32(const Mem: uint32; const Value: int32);
 Begin
- write_uint8($C7);
- write_uint8($05);
- write_uint32(Mem);
- write_int32(Value);
+ emit_uint8($C7);
+ emit_uint8($05);
+ emit_uint32(Mem);
+ emit_int32(Value);
 End;
 
 (* TJITCPU.asm_mov_mem32_reg32 *)
@@ -289,17 +304,17 @@ Var ModRM: TModRM;
 Begin
  if (Reg = reg_eax) Then
  Begin
-  write_uint8($A3);
-  write_uint32(Mem);
+  emit_uint8($A3);
+  emit_uint32(Mem);
  End Else
  Begin
   ModRM.Mode := 0;
   ModRM.Reg  := ord(Reg);
   ModRM.RM   := 5;
 
-  write_uint8($89);
-  write_modrm(ModRM);
-  write_int32(Mem);
+  emit_uint8($89);
+  emit_modrm(ModRM);
+  emit_int32(Mem);
  End;
 End;
 
@@ -312,17 +327,17 @@ Var ModRM: TModRM;
 Begin
  if (Reg = reg_al) Then
  Begin
-  write_uint8($A0);
-  write_uint32(Mem);
+  emit_uint8($A0);
+  emit_uint32(Mem);
  End Else
  Begin
   ModRM.Mode := 0;
   ModRM.Reg  := ord(Reg);
   ModRM.RM   := 5;
 
-  write_uint8($8A);
-  write_modrm(ModRM);
-  write_uint32(Mem);
+  emit_uint8($8A);
+  emit_modrm(ModRM);
+  emit_uint32(Mem);
  End;
 End;
 
@@ -333,21 +348,21 @@ End;
 Procedure TJITCPU.asm_mov_reg16_mem16(const Reg: TRegister16; const Mem: uint32);
 Var ModRM: TModRM;
 Begin
- write_uint8($66);
+ emit_uint8($66);
 
  if (Reg = reg_ax) Then
  Begin
-  write_uint8($A1);
-  write_uint32(Mem);
+  emit_uint8($A1);
+  emit_uint32(Mem);
  End Else
  Begin
   ModRM.Mode := 0;
   ModRM.Reg  := ord(Reg);
   ModRM.RM   := 5;
 
-  write_uint8($8B);
-  write_modrm(ModRM);
-  write_int32(Mem);
+  emit_uint8($8B);
+  emit_modrm(ModRM);
+  emit_int32(Mem);
  End;
 End;
 
@@ -357,8 +372,8 @@ End;
 }
 Procedure TJITCPU.asm_mov_reg32_imm32(const Reg: TRegister32; const Value: int32);
 Begin
- write_uint8($B8+ord(Reg));
- write_int32(Value);
+ emit_uint8($B8+ord(Reg));
+ emit_int32(Value);
 End;
 
 (* TJITCPU.asm_mov_reg32_reg32 *)
@@ -372,8 +387,8 @@ Begin
  ModRM.Reg  := ord(RegB);
  ModRM.RM   := ord(RegA);
 
- write_uint8($89);
- write_modrm(ModRM);
+ emit_uint8($89);
+ emit_modrm(ModRM);
 End;
 
 (* TJITCPU.asm_mov_reg32_mem32 *)
@@ -385,17 +400,17 @@ Var ModRM: TModRM;
 Begin
  if (Reg = reg_eax) Then
  Begin
-  write_uint8($A1);
-  write_uint32(Mem);
+  emit_uint8($A1);
+  emit_uint32(Mem);
  End Else
  Begin
   ModRM.Mode := 0;
   ModRM.Reg  := ord(Reg);
   ModRM.RM   := 5;
 
-  write_uint8($8B);
-  write_modrm(ModRM);
-  write_int32(Mem);
+  emit_uint8($8B);
+  emit_modrm(ModRM);
+  emit_int32(Mem);
  End;
 End;
 
@@ -410,8 +425,8 @@ Begin
  ModRM.Reg  := ord(RegA);
  ModRM.RM   := ord(RegB);
 
- write_uint8($87);
- write_modrm(ModRM);
+ emit_uint8($87);
+ emit_modrm(ModRM);
 End;
 
 (* TJITCPU.asm_add_reg32_reg32 *)
@@ -425,8 +440,8 @@ Begin
  ModRM.Reg  := ord(RegB);
  ModRM.RM   := ord(RegA);
 
- write_uint8($01);
- write_modrm(ModRM);
+ emit_uint8($01);
+ emit_modrm(ModRM);
 End;
 
 (* TJITCPU.asm_add_mem32_imm32 *)
@@ -435,10 +450,10 @@ End;
 }
 Procedure TJITCPU.asm_add_mem32_imm32(const Mem: uint32; const Value: int32);
 Begin
- write_uint8($81);
- write_uint8($05);
- write_uint32(Mem);
- write_int32(Value);
+ emit_uint8($81);
+ emit_uint8($05);
+ emit_uint32(Mem);
+ emit_int32(Value);
 End;
 
 (* TJITCPU.asm_add_mem32_reg32 *)
@@ -452,9 +467,9 @@ Begin
  ModRM.RM   := 5;
  ModRM.Reg  := ord(Reg);
 
- write_uint8($01);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($01);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_add_mem32_imm32 *)
@@ -463,10 +478,10 @@ End;
 }
 Procedure TJITCPU.asm_adc_mem32_imm32(const Mem: uint32; const Value: int32);
 Begin
- write_uint8($81);
- write_uint8($15);
- write_uint32(Mem);
- write_int32(Value);
+ emit_uint8($81);
+ emit_uint8($15);
+ emit_uint32(Mem);
+ emit_int32(Value);
 End;
 
 (* TJITCPU.asm_adc_mem32_reg32 *)
@@ -480,9 +495,9 @@ Begin
  ModRM.RM   := 5;
  ModRM.Reg  := ord(Reg);
 
- write_uint8($11);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($11);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_sub_mem32_imm32 *)
@@ -491,10 +506,10 @@ End;
 }
 Procedure TJITCPU.asm_sub_mem32_imm32(const Mem: uint32; const Value: int32);
 Begin
- write_uint8($81);
- write_uint8($2D);
- write_uint32(Mem);
- write_int32(Value);
+ emit_uint8($81);
+ emit_uint8($2D);
+ emit_uint32(Mem);
+ emit_int32(Value);
 End;
 
 (* TJITCPU.asm_sub_mem32_reg32 *)
@@ -508,9 +523,9 @@ Begin
  ModRM.RM   := 5;
  ModRM.Reg  := ord(Reg);
 
- write_uint8($29);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($29);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_sbb_mem32_imm32 *)
@@ -519,10 +534,10 @@ End;
 }
 Procedure TJITCPU.asm_sbb_mem32_imm32(const Mem: uint32; const Value: int32);
 Begin
- write_uint8($81);
- write_uint8($1D);
- write_uint32(Mem);
- write_int32(Value);
+ emit_uint8($81);
+ emit_uint8($1D);
+ emit_uint32(Mem);
+ emit_int32(Value);
 End;
 
 (* TJITCPU.asm_sbb_mem32_reg32 *)
@@ -536,9 +551,9 @@ Begin
  ModRM.RM   := 5;
  ModRM.Reg  := ord(Reg);
 
- write_uint8($19);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($19);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_mul_reg32 *)
@@ -547,8 +562,8 @@ End;
 }
 Procedure TJITCPU.asm_mul_reg32(const Reg: TRegister32);
 Begin
- write_uint8($F7);
- write_uint8($E0+ord(Reg));
+ emit_uint8($F7);
+ emit_uint8($E0+ord(Reg));
 End;
 
 (* TJITCPU.asm_imul_reg32_mem32 *)
@@ -562,10 +577,10 @@ Begin
  ModRM.Reg  := ord(Reg);
  ModRM.RM   := 5;
 
- write_uint8($0F);
- write_uint8($AF);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($0F);
+ emit_uint8($AF);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_imul_reg32_reg32 *)
@@ -579,9 +594,25 @@ Begin
  ModRM.Reg  := ord(RegA);
  ModRM.RM   := ord(RegB);
 
- write_uint8($0F);
- write_uint8($AF);
- write_modrm(ModRM);
+ emit_uint8($0F);
+ emit_uint8($AF);
+ emit_modrm(ModRM);
+End;
+
+(* TJITCPU.asm_cmp_mem32_reg32 *)
+{
+ cmp dword [mem], reg
+}
+Procedure TJITCPU.asm_cmp_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := ord(Reg);
+ ModRM.RM   := 5;
+
+ emit_uint8($39);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_call_internalproc *)
@@ -598,8 +629,8 @@ Begin
 
  asm_mov_reg32_imm32(TrashedRegister, uint32(Proc));
 
- write_uint8($FF);
- write_modrm(ModRM);
+ emit_uint8($FF);
+ emit_modrm(ModRM);
 End;
 
 (* TJITCPU.asm_ret *)
@@ -608,7 +639,7 @@ End;
 }
 Procedure TJITCPU.asm_ret;
 Begin
- write_uint8($C3);
+ emit_uint8($C3);
 End;
 
 (* TJITCPU.asm_nop *)
@@ -617,7 +648,7 @@ End;
 }
 Procedure TJITCPU.asm_nop;
 Begin
- write_uint8($90);
+ emit_uint8($90);
 End;
 
 (* TJITCPU.asm_or_mem8_imm8 *)
@@ -626,10 +657,10 @@ End;
 }
 Procedure TJITCPU.asm_or_mem8_imm8(const Mem: uint32; const Value: int8);
 Begin
- write_uint8($80);
- write_uint8($0D);
- write_uint32(Mem);
- write_uint8(Value);
+ emit_uint8($80);
+ emit_uint8($0D);
+ emit_uint32(Mem);
+ emit_uint8(Value);
 End;
 
 (* TJITCPU.asm_or_mem8_reg8 *)
@@ -643,9 +674,9 @@ Begin
  ModRM.Reg  := ord(Reg);
  ModRM.RM   := 5;
 
- write_uint8($08);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($08);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPu.asm_or_mem32_imm32 *)
@@ -654,10 +685,10 @@ End;
 }
 Procedure TJITCPU.asm_or_mem32_imm32(const Mem: uint32; const Value: int32);
 Begin
- write_uint8($81);
- write_uint8($0D);
- write_uint32(Mem);
- write_uint32(Value);
+ emit_uint8($81);
+ emit_uint8($0D);
+ emit_uint32(Mem);
+ emit_uint32(Value);
 End;
 
 (* TJITCPU.asm_or_mem32_reg32 *)
@@ -671,9 +702,9 @@ Begin
  ModRM.Reg  := ord(Reg);
  ModRM.RM   := 5;
 
- write_uint8($09);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($09);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_xor_mem8_imm *)
@@ -682,10 +713,10 @@ End;
 }
 Procedure TJITCPU.asm_xor_mem8_imm8(const Mem: uint32; const Value: int8);
 Begin
- write_uint8($80);
- write_uint8($35);
- write_uint32(Mem);
- write_uint8(Value);
+ emit_uint8($80);
+ emit_uint8($35);
+ emit_uint32(Mem);
+ emit_uint8(Value);
 End;
 
 (* TJITCPU.asm_xor_mem8_reg8 *)
@@ -699,9 +730,9 @@ Begin
  ModRM.Reg  := ord(Reg);
  ModRM.RM   := 5;
 
- write_uint8($30);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($30);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_xor_mem32_imm32 *)
@@ -710,10 +741,10 @@ End;
 }
 Procedure TJITCPU.asm_xor_mem32_imm32(const Mem: uint32; const Value: int32);
 Begin
- write_uint8($81);
- write_uint8($35);
- write_uint32(Mem);
- write_uint32(Value);
+ emit_uint8($81);
+ emit_uint8($35);
+ emit_uint32(Mem);
+ emit_uint32(Value);
 End;
 
 (* TJITCPU.asm_xor_mem32_reg32 *)
@@ -727,9 +758,9 @@ Begin
  ModRM.Reg  := ord(Reg);
  ModRM.RM   := 5;
 
- write_uint8($31);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($31);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_and_mem8_imm8 *)
@@ -738,10 +769,10 @@ End;
 }
 Procedure TJITCPU.asm_and_mem8_imm8(const Mem: uint32; const Value: int8);
 Begin
- write_uint8($80);
- write_uint8($25);
- write_uint32(Mem);
- write_uint8(Value);
+ emit_uint8($80);
+ emit_uint8($25);
+ emit_uint32(Mem);
+ emit_uint8(Value);
 End;
 
 (* TJITCPU.asm_and_mem8_reg8 *)
@@ -755,9 +786,9 @@ Begin
  ModRM.Reg  := ord(Reg);
  ModRM.RM   := 5;
 
- write_uint8($20);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($20);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_and_mem32_imm32 *)
@@ -766,10 +797,10 @@ End;
 }
 Procedure TJITCPU.asm_and_mem32_imm32(const Mem: uint32; const Value: int32);
 Begin
- write_uint8($81);
- write_uint8($25);
- write_uint32(Mem);
- write_uint32(Value);
+ emit_uint8($81);
+ emit_uint8($25);
+ emit_uint32(Mem);
+ emit_uint32(Value);
 End;
 
 (* TJITCPU.asm_and_mem32_reg32 *)
@@ -783,19 +814,22 @@ Begin
  ModRM.Reg  := ord(Reg);
  ModRM.RM   := 5;
 
- write_uint8($21);
- write_modrm(ModRM);
- write_uint32(Mem);
+ emit_uint8($21);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_jmp *)
 {
  jmp address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
 }
-Procedure TJITCPU.asm_jmp(const Address: int32);
+Function TJITCPU.asm_jmp(const Address: int32): uint32;
 Begin
- write_uint8($E9);
- write_int32(Address);
+ emit_uint8($E9);
+ Result := getCompiledData.Position;
+ emit_int32(Address);
 End;
 
 (* TJITCPU.asm_jmp *)
@@ -809,8 +843,120 @@ Begin
  ModRM.Reg  := 4;
  ModRM.RM   := ord(Reg);
 
- write_uint8($FF);
- write_modrm(ModRM);
+ emit_uint8($FF);
+ emit_modrm(ModRM);
+End;
+
+(* TJITCPU.asm_jne *)
+{
+ jne address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITCPU.asm_jne(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($85);
+ Result := getCompiledData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITCPU.asm_jna *)
+{
+ jna address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITCPU.asm_jna(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($86);
+ Result := getCompiledData.Position;
+ emit_int32(Address);
+End;
+
+(* JITCPU.asm_jnae *)
+{
+ jnae address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITCPU.asm_jnae(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($82);
+ Result := getCompiledData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITCPU.asm_jnb *)
+{
+ jnb address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITCPU.asm_jnb(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($83);
+ Result := getCompiledData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITCPU.asm_jnbe *)
+{
+ jnbe address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITCPU.asm_jnbe(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($87);
+ Result := getCompiledData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITCPU.asm_je *)
+{
+ je address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITCPU.asm_je(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($84);
+ Result := getCompiledData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITCPU.asm_jg *)
+{
+ jg address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITCPU.asm_jg(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($8F);
+ Result := getCompiledData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITCPU.asm_jl *)
+{
+ jl address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITCPU.asm_jl(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($8C);
+ Result := getCompiledData.Position;
+ emit_int32(Address);
 End;
 
 (* TJITCPU.asm_fld_memfloat *)
@@ -819,9 +965,9 @@ End;
 }
 Procedure TJITCPU.asm_fld_memfloat(const Mem: uint32);
 Begin
- write_uint8($DB);
- write_uint8($2D);
- write_uint32(Mem);
+ emit_uint8($DB);
+ emit_uint8($2D);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_fild_memint *)
@@ -830,9 +976,9 @@ End;
 }
 Procedure TJITCPU.asm_fild_memint(const Mem: uint32);
 Begin
- write_uint8($DF);
- write_uint8($2D);
- write_uint32(Mem);
+ emit_uint8($DF);
+ emit_uint8($2D);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_fstp_memfloat *)
@@ -841,9 +987,9 @@ End;
 }
 Procedure TJITCPU.asm_fstp_memfloat(const Mem: uint32);
 Begin
- write_uint8($DB);
- write_uint8($3D);
- write_uint32(Mem);
+ emit_uint8($DB);
+ emit_uint8($3D);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_faddp_st0 *)
@@ -852,8 +998,8 @@ End;
 }
 Procedure TJITCPU.asm_faddp_st0(const Reg: TRegisterFPU);
 Begin
- write_uint8($DE);
- write_uint8($C0 + ord(Reg));
+ emit_uint8($DE);
+ emit_uint8($C0 + ord(Reg));
 End;
 
 (* TJITCPU.asm_fsubp_st0 *)
@@ -862,8 +1008,8 @@ End;
 }
 Procedure TJITCPU.asm_fsubp_st0(const Reg: TRegisterFPU);
 Begin
- write_uint8($DE);
- write_uint8($E8 + ord(Reg));
+ emit_uint8($DE);
+ emit_uint8($E8 + ord(Reg));
 End;
 
 (* TJITCPU.asm_fmulp_st0 *)
@@ -872,8 +1018,8 @@ End;
 }
 Procedure TJITCPU.asm_fmulp_st0(const Reg: TRegisterFPU);
 Begin
- write_uint8($DE);
- write_uint8($C8 + ord(Reg));
+ emit_uint8($DE);
+ emit_uint8($C8 + ord(Reg));
 End;
 
 (* TJITCPU.asm_fdivp_st0 *)
@@ -882,8 +1028,8 @@ End;
 }
 Procedure TJITCPU.asm_fdivp_st0(const Reg: TRegisterFPU);
 Begin
- write_uint8($DE);
- write_uint8($F8 + ord(Reg));
+ emit_uint8($DE);
+ emit_uint8($F8 + ord(Reg));
 End;
 
 // -------------------------------------------------------------------------- //
@@ -1452,6 +1598,99 @@ Begin
  End;
 End;
 
+(* TJITCPU.compare_memint_memint *)
+Procedure TJITCPU.compare_memint_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64);
+Var LabelTrue, LabelFalse, LabelOut   : uint32;
+    TrueChange, FalseChange, OutChange: Array[0..2] of uint32;
+    Tmp, TmpPos                       : uint32;
+    CData                             : TStream;
+Begin
+ CData := getCompiledData;
+
+ For Tmp := Low(FalseChange) To High(FalseChange) Do
+ Begin
+  TrueChange[Tmp]  := 0;
+  FalseChange[Tmp] := 0;
+  OutChange[Tmp]   := 0;
+ End;
+
+ asm_mov_reg32_mem32(reg_eax, NumberPnt1+0); // mov eax, [NumberPnt1+0]
+ asm_cmp_mem32_reg32(NumberPnt0+0, reg_eax); // cmp [NumberPnt0+0], eax
+
+ Case Operation of // first branch
+  co_equal    : FalseChange[0] := asm_jne(0); // jne @false
+  co_different: TrueChange[0] := asm_jne(0); // jne @true
+
+  co_greater, co_greater_equal:
+  Begin
+   TrueChange[0]  := asm_jg(0); // jg @true
+   FalseChange[0] := asm_jl(0); // jl @false
+  End;
+
+  co_lower, co_lower_equal:
+  Begin
+   TrueChange[0]  := asm_jl(0); // jl @true
+   FalseChange[0] := asm_jg(0); // jg @false
+  End;
+
+  else
+   raise Exception.CreateFmt('TJITCPU.compare_memint_memint() -> unknown operation: %d', [ord(Operation)]);
+ End;
+
+ asm_mov_reg32_mem32(reg_eax, NumberPnt1+4); // mov eax, [NumberPnt1+0]
+ asm_cmp_mem32_reg32(NumberPnt0+4, reg_eax); // cmp [NumberPnt0+4], eax
+
+ Case Operation of // second branch
+  co_equal        : FalseChange[1] := asm_jne(0); // jne @false
+  co_different    : FalseChange[1] := asm_je(0); // je @false
+  co_greater      : FalseChange[1] := asm_jna(0); // jna @false
+  co_greater_equal: FalseChange[1] := asm_jnae(0); // jnae @false
+  co_lower        : FalseChange[1] := asm_jnb(0); // jnb @false
+  co_lower_equal  : FalseChange[1] := asm_jnbe(0); // jnbe @false
+ End;
+
+ // @true:
+ LabelTrue := CData.Position;
+ asm_mov_mem8_imm8(uint32(@getVM^.Regs.b[5]), 1); // mov byte [IF-register-address], 1
+ OutChange[2] := asm_jmp(0); // jmp @out
+
+ // @false:
+ LabelFalse := CData.Position;
+ asm_mov_mem8_imm8(uint32(@getVM^.Regs.b[5]), 0); // mov byte [IF-register-address], 0
+
+ // @out:
+ LabelOut := CData.Position;
+
+ { replace dummy address with their real values }
+ TmpPos := CData.Position;
+
+ // replace @true
+ For Tmp in TrueChange Do
+  if (Tmp > 0) Then
+  Begin
+   CData.Position := Tmp;
+   CData.write_int32(LabelTrue - Tmp - 4);
+  End;
+
+ // replace @false
+ For Tmp in FalseChange Do
+  if (Tmp > 0) Then
+  Begin
+   CData.Position := Tmp;
+   CData.write_int32(LabelFalse - Tmp - 4);
+  End;
+
+ // replace @out
+ For Tmp in OutChange Do
+  if (Tmp > 0) Then
+  Begin
+   CData.Position := Tmp;
+   CData.write_uint32(LabelOut - Tmp - 4);
+  End;
+
+ CData.Position := TmpPos;
+End;
+
 (* TJITCPU.bcpush_immbool *)
 {
  mov eax, <VM instance address>
@@ -1541,6 +1780,12 @@ Begin
    asm_call_internalproc(@r__push_bool, reg_ebx);
   End;
 
+  { ec* }
+  reg_ec:
+  Begin
+   raise Exception.Create('TJITCPU.bcpush_reg() -> unimplemented!');
+  End;
+
   { ei* }
   reg_ei:
   Begin
@@ -1554,6 +1799,12 @@ Begin
   Begin
    asm_mov_reg32_imm32(reg_edx, RegAddr);
    asm_call_internalproc(@r__push_float_mem, reg_ecx);
+  End;
+
+  { es* }
+  reg_es:
+  Begin
+   raise Exception.Create('TJITCPU.bcpush_reg() -> unimplemented!');
   End;
 
   { er* }

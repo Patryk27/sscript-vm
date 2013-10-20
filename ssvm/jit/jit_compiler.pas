@@ -148,6 +148,7 @@ Var Reader: TBytecodeReader;
 
 Var ArithmeticOperation: TArithmeticOperation;
     BitwiseOperation   : TBitwiseOperation;
+    CompareOperation   : TCompareOperation;
 
     CurrentBytecodePosition: uint32;
 
@@ -427,6 +428,46 @@ Begin
     o_ret:
     Begin
      CPU.do_bcret;
+    End;
+
+    { if_e, if_ne, if_g, if_l, if_ge, if_le }
+    o_if_e, o_if_ne, o_if_g, o_if_l, o_if_ge, o_if_le:
+    Begin
+     Case Opcode of
+      o_if_e : CompareOperation := co_equal;
+      o_if_ne: CompareOperation := co_different;
+      o_if_g : CompareOperation := co_greater;
+      o_if_l : CompareOperation := co_lower;
+      o_if_ge: CompareOperation := co_greater_equal;
+      o_if_le: CompareOperation := co_lower_equal;
+     End;
+
+     // opcode(reg int, imm int)
+     if (CheckArgs(ptIntReg, ptInt)) Then
+      CPU.compare_memint_immint(CompareOperation, getRegisterAddress(Args[0]), Args[1].ImmInt) Else
+
+     // opcode(reg int, reg int)
+     if (CheckArgs(ptIntReg, ptIntReg)) Then
+      CPU.compare_memint_memint(CompareOperation, getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
+     // opcode(reg float, imm float)
+     if (CheckArgs(ptFloatReg, ptFloat)) Then
+      CPU.compare_memfloat_immfloat(CompareOperation, getRegisterAddress(Args[0]), Args[1].ImmFloat) Else
+
+     // opcode(reg float, reg float)
+     if (CheckArgs(ptFloatReg, ptFloatReg)) Then
+      CPU.compare_memfloat_memfloat(CompareOperation, getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
+     // opcode(reg float, imm int)
+     if (CheckArgs(ptFloatReg, ptInt)) Then
+      CPU.compare_memfloat_immint(CompareOperation, getRegisterAddress(Args[0]), Args[1].ImmInt) Else
+
+     // opcode(reg float, reg int)
+     if (CheckArgs(ptFloatReg, ptIntReg)) Then
+      CPU.compare_memfloat_memint(CompareOperation, getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
+     // opcode(invalid)
+      InvalidOpcodeException;
     End;
 
     { or, xor, and }

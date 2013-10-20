@@ -17,7 +17,7 @@
 Unit CPU_x86;
 
  Interface
- Uses VM, Stack, MTypes, JIT_Abstract_CPU;
+ Uses VM, Stack, MTypes, Opcodes, JIT_Abstract_CPU;
 
  Type TRegister32  = (reg_eax=0, reg_ecx, reg_edx, reg_ebx, reg_esp, reg_ebp, reg_esi, reg_edi);
  Type TRegister16  = (reg_ax=0, reg_cx, reg_dx, reg_bx, reg_sp, reg_bp, reg_si, reg_di);
@@ -94,6 +94,8 @@ Type TModRM =
         Procedure asm_imul_reg32_reg32(const RegA, RegB: TRegister32);
 
         // cmp
+        Procedure asm_cmp_mem8_imm8(const Mem: uint32; const Value: int8);
+
         Procedure asm_cmp_reg32_imm32(const Reg: TRegister32; const Value: int32);
         Procedure asm_cmp_reg32_mem32(const Reg: TRegister32; const Mem: uint32);
         Procedure asm_cmp_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
@@ -215,7 +217,8 @@ Type TModRM =
         Procedure do_icall(const icall: PCall; const ParamsMV, ResultMV: PMixedValue); ov;
 
         // jumps
-        Procedure do_relative_jump(const Address: uint64); ov;
+        Procedure do_bcjump(const Address: uint64); ov;
+        Procedure do_bccondjump(const Address: uint64; const Opcode: TOpcode_E); ov;
         Procedure do_bccall(const Address: uint64); ov;
         Procedure do_bcret; ov;
 
@@ -228,6 +231,7 @@ Type TModRM =
 
         // half-properties
         Function get_bccall_size: uint8; ov;
+        Function get_bcconditionaljump_size: uint8; ov;
        End;
 
  Implementation
@@ -607,6 +611,18 @@ Begin
  emit_uint8($0F);
  emit_uint8($AF);
  emit_modrm(ModRM);
+End;
+
+(* TJITCPU.asm_cmp_mem8_imm8 *)
+{
+ cmp byte [mem], value
+}
+Procedure TJITCPU.asm_cmp_mem8_imm8(const Mem: uint32; const Value: int8);
+Begin
+ emit_uint8($80);
+ emit_uint8($3D);
+ emit_uint32(Mem);
+ emit_int8(Value);
 End;
 
 (* TJITCPU.asm_cmp_reg32_imm32 *)
@@ -2056,9 +2072,28 @@ Begin
 End;
 
 (* TJITCPU.do_relative_jump *)
-Procedure TJITCPU.do_relative_jump(const Address: uint64);
+Procedure TJITCPU.do_bcjump(const Address: uint64);
 Begin
  asm_jmp(Address - getCompiledData.Position - 5);
+End;
+
+(* TJITCPU.do_bccond_jump *)
+Procedure TJITCPU.do_bccondjump(const Address: uint64; const Opcode: TOpcode_E);
+Begin
+ asm_cmp_mem8_imm8(uint32(@getVM^.Regs.b[5]), ord(Opcode = o_tjmp)); // cmp [IF-register-address], /1 or 0/
+
+ asm_jne(5); // `5` is the size of `jmp`
+ do_bcjump(Address);
+
+ {
+  @Note: we're using here a simple far-conditonal-jump trick:
+
+  jne dont
+  jmp Address
+
+  dont:
+  ...
+ }
 End;
 
 (* TJITCPU.do_bccall *)
@@ -2071,7 +2106,7 @@ Begin
  asm_mov_reg32_imm32(reg_edx, RetEIP);
  asm_call_internalproc(@r__push_reference, reg_ecx);
 
- do_relative_jump(Address);
+ do_bcjump(Address);
 End;
 
 (* TJITCPU.do_bcret *)
@@ -2123,5 +2158,11 @@ End;
 Function TJITCPU.get_bccall_size: uint8;
 Begin
  Result := 13;
+End;
+
+(* TJITCPU.get_bcconditionaljump_size *)
+Function TJITCPU.get_bcconditionaljump_size: uint8;
+Begin
+ Result := 9;
 End;
 End.

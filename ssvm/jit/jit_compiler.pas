@@ -584,7 +584,14 @@ Begin
     // unconditional jump (i.e. always taken)
     if (Opcode = o_jmp) Then
     Begin
-     CPU.do_relative_jump(Jump^.JumpAddress);
+     CPU.do_bcjump(Jump^.JumpAddress);
+    End Else
+
+    // conditional jump
+    if (Opcode in [o_tjmp, o_fjmp]) Then
+    Begin
+     Inc(JumpPos, CPU.get_bcconditionaljump_size);
+     CPU.do_bccondjump(Jump^.JumpAddress, Opcode);
     End Else
 
     // call (always taken)
@@ -598,7 +605,7 @@ Begin
      raise Exception.CreateFmt('This was not supposed to happen: invalid opcode in jump resolver (opcode = 0x%x)', [ord(Opcode)]);
 
     if (CompiledData.Position > JumpPos) Then
-     raise Exception.CreateFmt('This was not supposed to happen: ''CompiledData.Position > JumpPos'' (the JIT CPU generated %d bytes too much)', [CompiledData.Position-JumpPos]);
+     raise Exception.CreateFmt('This was not supposed to happen: ''CompiledData.Position > JumpPos'' (the JIT CPU generated %d byte(s) too much)', [CompiledData.Position-JumpPos]);
 
     // fill left space with NOP-s
     While (CompiledData.Position < JumpPos) Do

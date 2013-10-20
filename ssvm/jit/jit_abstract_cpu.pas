@@ -6,7 +6,7 @@
 Unit JIT_Abstract_CPU;
 
  Interface
- Uses VM, Stack, Stream, FGL;
+ Uses VM, Stack, Stream, Opcodes, FGL;
 
  {$DEFINE va := virtual abstract}
 
@@ -40,6 +40,7 @@ Unit JIT_Abstract_CPU;
         Property getVM: PVM read VM;
 
        Protected
+        Procedure emit_int8(const Value: int8);
         Procedure emit_uint8(const Value: uint8);
         Procedure emit_uint32(const Value: uint32);
         Procedure emit_int32(const Value: int32);
@@ -108,7 +109,8 @@ Unit JIT_Abstract_CPU;
         Procedure do_icall(const icall: PCall; const ParamsMV, ResultMV: PMixedValue); va;
 
         // jumps and calls
-        Procedure do_relative_jump(const Address: uint64); va;
+        Procedure do_bcjump(const Address: uint64); va;
+        Procedure do_bccondjump(const Address: uint64; const Opcode: TOpcode_E); va;
         Procedure do_bccall(const Address: uint64); va;
         Procedure do_bcret; va;
 
@@ -131,6 +133,12 @@ Unit JIT_Abstract_CPU;
        End;
 
  Implementation
+
+(* TJITAbstractCPU.emit_int8 *)
+Procedure TJITAbstractCPU.emit_int8(const Value: int8);
+Begin
+ CompiledData.write_int8(Value);
+End;
 
 (* TJITAbstractCPU.emit_uint8 *)
 Procedure TJITAbstractCPU.emit_uint8(const Value: uint8);

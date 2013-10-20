@@ -38,6 +38,16 @@ Begin
  VM^.StackPush(MV);
 End;
 
+{ r__push_string }
+Procedure r__push_string(const VM: PVM; const Value: TVMString); register;
+Var MV: TMixedValue;
+Begin
+ MV.Reset;
+ MV.Typ       := mvString;
+ MV.Value.Str := Value.Data;
+ VM^.StackPush(MV);
+End;
+
 { r__push_reference }
 Procedure r__push_reference(const VM: PVM; const Value: uint32); register;
 Var MV: TMixedValue;

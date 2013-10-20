@@ -17,7 +17,7 @@
 Unit CPU_x86;
 
  Interface
- Uses VM, Stack, MTypes, Opcodes, JIT_Abstract_CPU;
+ Uses VM, Stack, VMTypes, VMStrings, Opcodes, JIT_Abstract_CPU;
 
  Type TRegister32  = (reg_eax=0, reg_ecx, reg_edx, reg_ebx, reg_esp, reg_ebp, reg_esi, reg_edi);
  Type TRegister16  = (reg_ax=0, reg_cx, reg_dx, reg_bx, reg_sp, reg_bp, reg_si, reg_di);
@@ -207,6 +207,7 @@ Type TModRM =
         Procedure bcpush_immbool(const Value: Boolean); ov;
         Procedure bcpush_immint(const Value: uint64); ov;
         Procedure bcpush_immfloat(const Value: Float); ov;
+        Procedure bcpush_immstring(const Value: String); ov;
 
         Procedure bcpush_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); ov;
 
@@ -1901,17 +1902,19 @@ Begin
 End;
 
 (* TJITCPU.bcpush_immfloat *)
-{
- mov eax, <VM instance address>
- mov edx, <Value>
- mov ebx, r__push_float_mem
- call ebx
-}
 Procedure TJITCPU.bcpush_immfloat(const Value: Float);
 Begin
- asm_mov_reg32_imm32(reg_eax, uint32(getVM));
- asm_mov_reg32_imm32(reg_edx, AllocateFloat(Value));
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, AllocateFloat(Value)); // mov edx, <Value>
  asm_call_internalproc(@r__push_float_mem, reg_ebx);
+End;
+
+(* TJITCPU.bcpush_immstring *)
+Procedure TJITCPU.bcpush_immstring(const Value: String);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, AllocateString(Value)); // mov edx, <Value>
+ asm_call_internalproc(@r__push_string, reg_ebx);
 End;
 
 (* TJITCPU.bcpush_reg *)

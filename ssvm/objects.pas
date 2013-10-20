@@ -47,7 +47,7 @@ Unit Objects;
                  End;
 
  Implementation
-Uses GC, mStrings;
+Uses GC, VMStrings;
 
 (* ========== TMObject ========== *)
 
@@ -108,14 +108,12 @@ Begin
  if (MemSize = 0) Then
   MemSize := 1;
 
- Data := GetMem(MemSize);
- For I := 0 To MemSize-1 Do
-  PByte(Data+I)^ := 0;
+ Data := AllocMem(MemSize);
 End;
 
 (* TMArray.Destroy *)
 Destructor TMArray.Destroy;
-Var Mem, MemEnd: Pointer;
+Var Mem, MemEnd: PPointer;
 Begin
  if (Typ = TYPE_STRING_id) Then // strings need a special freeing
  Begin
@@ -124,8 +122,10 @@ Begin
 
   While (Mem < MemEnd) Do
   Begin
-   ReleaseStringData(Mem);
-   Inc(Mem, sizeof(uint32));
+   if (Mem^ <> nil) Then
+    ReleaseString(Mem^);
+
+   Inc(Mem);
   End;
  End;
 
@@ -158,6 +158,7 @@ End;
 (* TMArray.setValue *)
 Procedure TMArray.setValue(const Position: uint32Array; NewValue: TMixedValue);
 Var DataPos: Pointer;
+    VMStr  : PVMString;
     Str    : String;
 Begin
  DataPos := getElementMemory(Position);
@@ -166,7 +167,7 @@ Begin
  Begin
   if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING_id) Then // special 'feature': immediate string's char reading
   Begin
-   Str                           := LoadString(DataPos);
+   Str                           := FetchString(DataPos);
    Str[Position[High(Position)]] := getChar(NewValue);
    Value.Str                     := PChar(Str);
   End;
@@ -176,7 +177,12 @@ Begin
    TYPE_CHAR_id  : PChar(DataPos)^ := Value.Char;
    TYPE_INT_id   : Pint64(DataPos)^ := Value.Int;
    TYPE_FLOAT_id : PExtended(DataPos)^ := getFloat(NewValue);
-   TYPE_STRING_id: SaveString(DataPos, getString(NewValue));
+   TYPE_STRING_id:
+   Begin
+    New(VMStr);
+    SaveString(VMStr, getString(NewValue));
+    PPointer(DataPos)^ := VMStr;
+   End;
 
    else
     raise Exception.CreateFmt('Invalid internal array type: %d', [ord(Typ)]);
@@ -210,7 +216,7 @@ Begin
    mvChar  : Value.Char  := PChar(DataPos)^;
    mvInt   : Value.Int   := Pint64(DataPos)^;
    mvFloat : Value.Float := PExtended(DataPos)^;
-   mvString: Value.Str   := CopyStringToPChar(LoadString(DataPos));
+   mvString: Value.Str   := CopyStringToPChar(FetchString(PPointer(DataPos)^));
   End;
 
   if (Length(Position)-1 = Length(Sizes)) and (self.Typ = TYPE_STRING_id) Then

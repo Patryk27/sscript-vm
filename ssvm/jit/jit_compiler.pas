@@ -205,6 +205,8 @@ Begin
      if (CheckArgs(ptBool)) Then
       CPU.bcpush_immbool(Args[0].ImmBool) Else
 
+     // push(imm char) @TODO
+
      // push(imm int)
      if (CheckArgs(ptInt)) Then
       CPU.bcpush_immint(Args[0].ImmInt) Else
@@ -212,6 +214,10 @@ Begin
      // push(imm float)
      if (CheckArgs(ptFloat)) Then
       CPU.bcpush_immfloat(Args[0].ImmFloat) Else
+
+     // push(imm string)
+     if (CheckArgs(ptString)) Then
+      CPU.bcpush_immstring(Args[0].ImmString) Else
 
      // push(reg bool)
      if (CheckArgs(ptBoolReg)) Then
@@ -224,8 +230,6 @@ Begin
      // push(reg float)
      if (CheckArgs(ptFloatReg)) Then
       CPU.bcpush_reg(reg_ef, getRegisterAddress(Args[0])) Else
-
-     // push(imm string) @TODO
 
      // push(reg string) @TODO
 

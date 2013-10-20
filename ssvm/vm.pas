@@ -10,7 +10,7 @@
 Unit VM;
 
  Interface
- Uses Stack, MTypes, BCLoader, FGL;
+ Uses Stack, VMTypes, BCLoader, FGL;
 
  Const VMVersion = '0.3.4 nightly';
 
@@ -153,7 +153,7 @@ Unit VM;
  Function VM_GetStopReason(VM: Pointer): TStopReason; stdcall;
 
  Implementation
-Uses SysUtils, Opcodes, Objects, mStrings,
+Uses SysUtils, Opcodes, Objects, VMStrings,
      GC, OpcodeInterpreter
 {$IFDEF ENABLE_JIT}
  , JIT_Compiler

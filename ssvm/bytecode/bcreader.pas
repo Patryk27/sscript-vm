@@ -8,7 +8,7 @@
 Unit BCReader;
 
  Interface
- Uses Stream, Opcodes, MTypes;
+ Uses Stream, Opcodes, VMTypes;
 
  { TBytecodeReader }
  Type TBytecodeReader =

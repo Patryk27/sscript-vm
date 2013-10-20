@@ -23,7 +23,7 @@ Unit Stack;
                Char : Char;
                Int  : Int64;
                Float: Extended;
-               Str  : PChar;
+               Str  : PChar; // @TODO: TVMString?
               End;
 
        isStackval: Boolean;
@@ -66,7 +66,7 @@ Unit Stack;
  Function getTypeName(MV: TMixedValue): String;
 
  Implementation
-Uses mStrings, SysUtils;
+Uses VMStrings, SysUtils;
 
 (* = *)
 Operator = (P1, P2: TMixedValue): Boolean;

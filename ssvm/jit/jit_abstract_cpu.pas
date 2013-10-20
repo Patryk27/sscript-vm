@@ -47,6 +47,7 @@ Unit JIT_Abstract_CPU;
 
         Function AllocateInt(const Value: int64): uint64;
         Function AllocateFloat(const Value: Float): uint64;
+        Function AllocateString(const Value: String): uint64;
 
        Public
         // move
@@ -99,6 +100,7 @@ Unit JIT_Abstract_CPU;
         Procedure bcpush_immbool(const Value: Boolean); va;
         Procedure bcpush_immint(const Value: uint64); va;
         Procedure bcpush_immfloat(const Value: Float); va;
+        Procedure bcpush_immstring(const Value: String); va;
 
         Procedure bcpush_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); va;
 
@@ -133,6 +135,7 @@ Unit JIT_Abstract_CPU;
        End;
 
  Implementation
+Uses VMStrings;
 
 (* TJITAbstractCPU.emit_int8 *)
 Procedure TJITAbstractCPU.emit_int8(const Value: int8);
@@ -174,6 +177,17 @@ Begin
 
  Result             := uint64(AllocatedData.Last);
  PExtended(Result)^ := Value;
+End;
+
+(* TJITAbstractCPU.AllocateString *)
+Function TJITAbstractCPU.AllocateString(const Value: String): uint64;
+Var SData: PVMString;
+Begin
+ New(SData);
+ SaveString(SData, Value);
+
+ AllocatedData.Add(SData);
+ Result := uint64(SData);
 End;
 
 (* TJITAbstractCPU.Create *)

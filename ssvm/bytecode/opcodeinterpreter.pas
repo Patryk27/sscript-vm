@@ -94,7 +94,7 @@ Unit OpcodeInterpreter;
  );
 
  Implementation
-Uses Objects, Stack, mStrings;
+Uses Objects, Stack, VMStrings;
 
 Type eInvalidOpcode = Class(Exception);
 

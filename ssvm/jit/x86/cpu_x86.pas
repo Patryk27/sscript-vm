@@ -174,6 +174,7 @@ Type TModRM =
        Public
         // move
         Procedure move_membool_immbool(const MemAddr: uint64; const Value: Boolean); ov;
+        Procedure move_membool_membool(const MemAddrDst, MemAddrSrc: uint64); ov;
 
         Procedure move_memchar_immchar(const MemAddr: uint64; const Value: Char); ov;
         Procedure move_memchar_memchar(const MemAddrDst, MemAddrSrc: uint64); ov;
@@ -1313,6 +1314,13 @@ End;
 Procedure TJITCPU.move_membool_immbool(const MemAddr: uint64; const Value: Boolean);
 Begin
  asm_mov_mem8_imm8(MemAddr, ord(Value)); // mov byte [MemAddr], Value
+End;
+
+(* TJITCPU.move_membool_membool *)
+Procedure TJITCPU.move_membool_membool(const MemAddrDst, MemAddrSrc: uint64);
+Begin
+ asm_mov_reg8_mem8(reg_al, MemAddrSrc); // mov al, byte [MemAddrSrc]
+ asm_mov_mem8_reg8(MemAddrDst, reg_al); // mov byte [MemAddrDst], al
 End;
 
 (* TJITCPU.move_memchar_immchar *)

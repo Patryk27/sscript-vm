@@ -52,6 +52,7 @@ Unit JIT_Abstract_CPU;
        Public
         // move
         Procedure move_membool_immbool(const MemAddr: uint64; const Value: Boolean); va;
+        Procedure move_membool_membool(const MemAddrDst, MemAddrSrc: uint64); va;
 
         Procedure move_memchar_immchar(const MemAddr: uint64; const Value: Char); va;
         Procedure move_memchar_memchar(const MemAddrDst, MemAddrSrc: uint64); va;

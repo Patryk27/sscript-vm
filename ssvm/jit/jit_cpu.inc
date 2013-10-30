@@ -1,6 +1,6 @@
 {$MACRO ON}
 
-// enable console log?
+// enable console log? (debug only)
 {.$DEFINE JIT_CONSOLE_LOG}
 
 // define target CPU

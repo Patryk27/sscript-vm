@@ -101,7 +101,7 @@ Var Reader: TBytecodeReader;
     ResultMV, ParamsMV: PMixedValue;
 
     { InvalidOpcodeException }
-    Procedure InvalidOpcodeException;
+    Procedure InvalidOpcodeException; // @TODO: separate this procedure to TBytecodeReader?
     Const BoolRegsNames: Array[1..5] of String = ('eb1', 'eb2', 'eb3', 'eb4', 'if');
           IntRegsNames : Array[1..5] of String = ('ei1', 'ei2', 'ei3', 'ei4', 'stp');
           BoolTable    : Array[Boolean] of String = ('false', 'true');
@@ -110,7 +110,7 @@ Var Reader: TBytecodeReader;
     Begin
      jit_debug('InvalidOpcodeException()');
 
-     Msg := 'Invalid opcode: '+Copy(GetEnumName(TypeInfo(Opcode), ord(Opcode)), 3, 50)+'(';
+     Msg := 'Invalid opcode: [0x'+IntToHex(Reader.getBytecodeData.Position, 8)+'] '+Copy(GetEnumName(TypeInfo(Opcode), ord(Opcode)), 3, 50)+'(';
 
      For I := Low(Args) To High(Args) Do
      Begin
@@ -345,7 +345,9 @@ Begin
      if (CheckArgs(ptBoolReg, ptBool)) Then
       CPU.move_membool_immbool(getRegisterAddress(Args[0]), Args[1].ImmBool) Else
 
-     // @TODO: mov(reg bool, reg bool)
+     // mov(reg bool, reg bool)
+     if (CheckArgs(ptBoolReg, ptBoolReg)) Then
+      CPU.move_membool_membool(getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
 
      // mov(reg char, imm char)
      if (CheckArgs(ptCharReg, ptChar)) Then

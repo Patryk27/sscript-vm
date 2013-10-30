@@ -50,6 +50,7 @@ Type TModRM =
 
         // mov [mem], ...
         Procedure asm_mov_mem8_imm8(const Mem: uint32; const Value: int8);
+        Procedure asm_mov_mem8_reg8(const Mem: uint32; const Reg: TRegister8);
 
         Procedure asm_mov_mem16_imm16(const Mem: uint32; const Value: int16);
         Procedure asm_mov_mem16_reg16(const Mem: uint32; const Reg: TRegister16);
@@ -174,6 +175,9 @@ Type TModRM =
         // move
         Procedure move_membool_immbool(const MemAddr: uint64; const Value: Boolean); ov;
 
+        Procedure move_memchar_immchar(const MemAddr: uint64; const Value: Char); ov;
+        Procedure move_memchar_memchar(const MemAddrDst, MemAddrSrc: uint64); ov;
+
         Procedure move_memint_immint(const MemAddr: uint64; const Value: int64); ov;
         Procedure move_memint_memint(const MemAddrDst, MemAddrSrc: uint64); ov;
 
@@ -211,6 +215,7 @@ Type TModRM =
 
         // bcpush
         Procedure bcpush_immbool(const Value: Boolean); ov;
+        Procedure bcpush_immchar(const Value: Char); ov;
         Procedure bcpush_immint(const Value: uint64); ov;
         Procedure bcpush_immfloat(const Value: Float); ov;
         Procedure bcpush_immstring(const Value: String); ov;
@@ -256,7 +261,7 @@ End;
 
 (* TJITCPU.asm_mov_mem8_imm8 *)
 {
- mv byte [mem], value
+ mov byte [mem], value
 }
 Procedure TJITCPU.asm_mov_mem8_imm8(const Mem: uint32; const Value: int8);
 Begin
@@ -264,6 +269,22 @@ Begin
  emit_uint8($05);
  emit_uint32(Mem);
  emit_uint8(Value);
+End;
+
+(* TJITCPU.asm_mov_mem8_reg *)
+{
+ mov byte [mem], reg
+}
+Procedure TJITCPU.asm_mov_mem8_reg8(const Mem: uint32; const Reg: TRegister8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := ord(Reg);
+ ModRM.RM   := 5;
+
+ emit_uint8($88);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITCPU.asm_mov_mem16_imm16 *)
@@ -1289,67 +1310,55 @@ End;
 
 // -------------------------------------------------------------------------- //
 (* TJITCPU.move_membool_immbool *)
-{
- mov byte [MemAddr], Value
-}
 Procedure TJITCPU.move_membool_immbool(const MemAddr: uint64; const Value: Boolean);
 Begin
- asm_mov_mem8_imm8(MemAddr, ord(Value));
+ asm_mov_mem8_imm8(MemAddr, ord(Value)); // mov byte [MemAddr], Value
+End;
+
+(* TJITCPU.move_memchar_immchar *)
+Procedure TJITCPU.move_memchar_immchar(const MemAddr: uint64; const Value: Char);
+Begin
+ asm_mov_mem8_imm8(MemAddr, ord(Value)); // mov byte [MemAddr], Value
+End;
+
+(* TJITCPU.move_memchar_memchar *)
+Procedure TJITCPU.move_memchar_memchar(const MemAddrDst, MemAddrSrc: uint64);
+Begin
+ asm_mov_reg8_mem8(reg_al, MemAddrSrc); // mov al, byte [MemAddrSrc]
+ asm_mov_mem8_reg8(MemAddrDst, reg_al); // mov byte [MemAddrDst], al
 End;
 
 (* TJITCPU.move_memint_immint *)
-{
- mov int32 [MemAddr+0], lo(Value)
- mov int32 [MemAddr+4], hi(Value)
-}
 Procedure TJITCPU.move_memint_immint(const MemAddr: uint64; const Value: int64);
 Begin
- asm_mov_mem32_imm32(MemAddr+0, lo(Value));
- asm_mov_mem32_imm32(MemAddr+4, hi(Value));
+ asm_mov_mem32_imm32(MemAddr+0, lo(Value)); // mov dword [MemAddr+0], lo(Value)
+ asm_mov_mem32_imm32(MemAddr+4, hi(Value)); // mov dword [MemAddr+4], hi(Value)
 End;
 
 (* TJITCPU.move_memint_memint *)
-{
- mov eax, [MemAddressSrc+0]
- mov ebx, [MemAddressSrc+4]
- mov [MemAddressDst+0], eax
- mov [MemAddressDst+4], ebx
-}
 Procedure TJITCPU.move_memint_memint(const MemAddrDst, MemAddrSrc: uint64);
 Begin
- asm_mov_reg32_mem32(reg_eax, MemAddrSrc+0);
- asm_mov_reg32_mem32(reg_ebx, MemAddrSrc+4);
- asm_mov_mem32_reg32(MemAddrDst+0, reg_eax);
- asm_mov_mem32_reg32(MemAddrDst+4, reg_ebx);
+ asm_mov_reg32_mem32(reg_eax, MemAddrSrc+0); // mov eax, dword [MemAddressSrc+0]
+ asm_mov_reg32_mem32(reg_ebx, MemAddrSrc+4); // mov ebx, dword [MemAddressSrc+4]
+ asm_mov_mem32_reg32(MemAddrDst+0, reg_eax); // mov dword [MemAddressDst+0], eax
+ asm_mov_mem32_reg32(MemAddrDst+4, reg_ebx); // mov dword [MemAddressDst+4], ebx
 End;
 
 (* TJITCPU.move_memfloat_immfloat *)
-{
- fld tword [Value]
- fstp tword [MemAddr]
-}
 Procedure TJITCPU.move_memfloat_immfloat(const MemAddr: uint64; const Value: Float);
 Begin
  move_memfloat_memfloat(MemAddr, AllocateFloat(Value));
 End;
 
 (* TJITCPU.move_memfloat_memfloat *)
-{
- mov eax, dword [MemAddrSrc+0]
- mov ebx, dword [MemAddrSrc+4]
- mov cx, word [MemAddrSrc+8]
- mov dword [MemAddrDst+0], eax
- mov dword [MemAddrDst+4], ebx
- mov word [MemAddrDst+8], cx
-}
 Procedure TJITCPU.move_memfloat_memfloat(const MemAddrDst, MemAddrSrc: uint64);
 Begin
- asm_mov_reg32_mem32(reg_eax, MemAddrSrc+0);
- asm_mov_reg32_mem32(reg_ebx, MemAddrSrc+4);
- asm_mov_reg16_mem16(reg_cx, MemAddrSrc+8);
- asm_mov_mem32_reg32(MemAddrDst+0, reg_eax);
- asm_mov_mem32_reg32(MemAddrDst+4, reg_ebx);
- asm_mov_mem16_reg16(MemAddrDst+8, reg_cx);
+ asm_mov_reg32_mem32(reg_eax, MemAddrSrc+0); // mov eax, dword [MemAddrSrc+0]
+ asm_mov_reg32_mem32(reg_ebx, MemAddrSrc+4); // mov ebx, dword [MemAddrSrc+4]
+ asm_mov_reg16_mem16(reg_cx, MemAddrSrc+8); // mov cx, word [MemAddrSrc+8]
+ asm_mov_mem32_reg32(MemAddrDst+0, reg_eax); // mov dword [MemAddrDst+0], eax
+ asm_mov_mem32_reg32(MemAddrDst+4, reg_ebx); // mov dword [MemAddrDst+4], ebx
+ asm_mov_mem16_reg16(MemAddrDst+8, reg_cx); // mov word [MemAddrDst+8], cx
 End;
 
 (* TJITCPU.move_memfloat_immint *)
@@ -1913,6 +1922,14 @@ Begin
  asm_call_internalproc(@r__push_bool, reg_ebx);
 End;
 
+(* TJITCPU.bcpush_immchar *)
+Procedure TJITCPU.bcpush_immchar(const Value: Char);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, ord(Value)); // mov edx, Value
+ asm_call_internalproc(@r__push_char, reg_ebx);
+End;
+
 (* TJITCPU.bcpush_immint *)
 Procedure TJITCPU.bcpush_immint(const Value: uint64);
 Begin
@@ -1955,7 +1972,9 @@ Begin
   { ec* }
   reg_ec:
   Begin
-   raise Exception.Create('TJITCPU.bcpush_reg() -> unimplemented!');
+   asm_mov_reg32_imm32(reg_edx, 0); // mov edx, 0
+   asm_mov_reg8_mem8(reg_dl, RegAddr); // mov dl, byte [RegAddr]
+   asm_call_internalproc(@r__push_char, reg_ebx);
   End;
 
   { ei* }

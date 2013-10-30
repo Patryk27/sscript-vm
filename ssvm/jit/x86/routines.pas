@@ -18,6 +18,16 @@ Begin
  VM^.StackPush(MV);
 End;
 
+{ r__push_char }
+Procedure r__push_char(const VM: PVM; const Value: Char); register;
+Var MV: TMixedValue;
+Begin
+ MV.Reset;
+ MV.Typ        := mvChar;
+ MV.Value.Char := Value;
+ VM^.StackPush(MV);
+End;
+
 { r__push_int }
 Procedure r__push_int(const VM: PVM; const Value_lo, Value_hi: int32); register;
 Var MV: TMixedValue;

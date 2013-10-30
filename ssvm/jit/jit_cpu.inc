@@ -1,5 +1,8 @@
 {$MACRO ON}
 
+// enable console log?
+{.$DEFINE JIT_CONSOLE_LOG}
+
 // define target CPU
 {$DEFINE CPU := CPU_unknown}
 

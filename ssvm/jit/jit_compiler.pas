@@ -39,6 +39,21 @@ Unit JIT_Compiler;
  Implementation
 Uses SysUtils, TypInfo, Stream;
 
+(* jit_debug *)
+Procedure jit_debug(const Text: String);
+Begin
+ {$IFDEF JIT_CONSOLE_LOG}
+  Writeln('[JIT debug] ', Text);
+ {$ENDIF}
+End;
+
+(* jit_debug *)
+Procedure jit_debug(const Format: String; const Args: Array of Const);
+Begin
+ jit_debug(SysUtils.Format(Format, Args));
+End;
+
+// -------------------------------------------------------------------------- //
 (* TJITCompiler.getRegisterAddress *)
 Function TJITCompiler.getRegisterAddress(const Arg: TOpcodeArg): uint64;
 Begin
@@ -93,6 +108,8 @@ Var Reader: TBytecodeReader;
     Var Msg: String = '';
         I  : uint8;
     Begin
+     jit_debug('InvalidOpcodeException()');
+
      Msg := 'Invalid opcode: '+Copy(GetEnumName(TypeInfo(Opcode), ord(Opcode)), 3, 50)+'(';
 
      For I := Low(Args) To High(Args) Do
@@ -131,6 +148,8 @@ Var Reader: TBytecodeReader;
     { UnknownOpcodeException }
     Procedure UnknownOpcodeException;
     Begin
+     jit_debug('UnknownOpcodeException()');
+
      raise Exception.CreateFmt('Unknown opcode: 0x%x', [ord(Opcode)]);
     End;
 
@@ -171,6 +190,7 @@ Begin
 
  Try
   (* Phase 1: compilation *)
+  jit_debug('Phase 1: compilation...');
 
   While (Reader.AnyOpcodeLeft) Do
   Begin
@@ -205,7 +225,9 @@ Begin
      if (CheckArgs(ptBool)) Then
       CPU.bcpush_immbool(Args[0].ImmBool) Else
 
-     // push(imm char) @TODO
+     // push(imm char)
+     if (CheckArgs(ptChar)) Then
+      CPU.bcpush_immchar(Args[0].ImmChar) Else
 
      // push(imm int)
      if (CheckArgs(ptInt)) Then
@@ -222,6 +244,10 @@ Begin
      // push(reg bool)
      if (CheckArgs(ptBoolReg)) Then
       CPU.bcpush_reg(reg_eb, getRegisterAddress(Args[0])) Else
+
+     // push(reg char)
+     if (CheckArgs(ptCharReg)) Then
+      CPU.bcpush_reg(reg_ec, getRegisterAddress(Args[0])) Else
 
      // push(reg int)
      if (CheckArgs(ptIntReg)) Then
@@ -319,6 +345,16 @@ Begin
      if (CheckArgs(ptBoolReg, ptBool)) Then
       CPU.move_membool_immbool(getRegisterAddress(Args[0]), Args[1].ImmBool) Else
 
+     // @TODO: mov(reg bool, reg bool)
+
+     // mov(reg char, imm char)
+     if (CheckArgs(ptCharReg, ptChar)) Then
+      CPU.move_memchar_immchar(getRegisterAddress(Args[0]), Args[1].ImmChar) Else
+
+     // mov(reg char, reg char)
+     if (CheckArgs(ptCharReg, ptCharReg)) Then
+      CPU.move_memchar_memchar(getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
      // mov(reg int, imm int)
      if (CheckArgs(ptIntReg, ptInt)) Then
       CPU.move_memint_immint(getRegisterAddress(Args[0]), Args[1].ImmInt) Else
@@ -356,7 +392,7 @@ Begin
     { jmp, tjmp, fjmp, call }
     o_jmp, o_tjmp, o_fjmp, o_call:
     Begin
-     if (not CheckArgs(ptInt)) Then // jumps and calls have to be constant
+     if (not CheckArgs(ptInt)) Then // jumps and calls have to be constant (known at compile-time)
       InvalidOpcodeException;
 
      // write a special marker
@@ -591,7 +627,10 @@ Begin
    End;
   End;
 
+  jit_debug('First phase finished; compiled code size = %d bytes', [CompiledData.Size]);
+
   (* Phase 2: jump and call resolving *)
+  jit_debug('Phase 2: jump and call resolving...');
   CompiledData.Position := 0;
 
   While (CompiledData.Position < CompiledData.Size) Do
@@ -603,7 +642,11 @@ Begin
     Jump    := JumpTable.FindJumpByBytecodeAddress(JumpPos);
 
     if (Jump = nil) Then
+    Begin
+     jit_debug('JumpTable.FindJumpByBytecodeAddress() returned ''nil'', PANIC!');
+
      raise Exception.CreateFmt('Found a jump to an invalid bytecode area (0x%x)!', [JumpPos]);
+    End;
 
     JumpPos               := CompiledData.Position;
     CompiledData.Position := int64(JumpPos) - sizeof(int32) - sizeof(uint8) - sizeof(uint32);
@@ -641,12 +684,13 @@ Begin
     CompiledData.Position := 0;
    End;
   End;
+
+  jit_debug('CPU post compilation...');
+  CPU.post_compilation;
  Finally
   CPU.getCompiledData.SaveToFile('jit_compiled');
   Reader.Free;
  End;
-
- CPU.post_compilation;
 
  Result := csDone;
 End;

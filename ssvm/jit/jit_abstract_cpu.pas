@@ -53,6 +53,9 @@ Unit JIT_Abstract_CPU;
         // move
         Procedure move_membool_immbool(const MemAddr: uint64; const Value: Boolean); va;
 
+        Procedure move_memchar_immchar(const MemAddr: uint64; const Value: Char); va;
+        Procedure move_memchar_memchar(const MemAddrDst, MemAddrSrc: uint64); va;
+
         Procedure move_memint_immint(const MemAddr: uint64; const Value: int64); va;
         Procedure move_memint_memint(const MemAddrDst, MemAddrSrc: uint64); va;
 
@@ -104,6 +107,7 @@ Unit JIT_Abstract_CPU;
 
         // bcpush
         Procedure bcpush_immbool(const Value: Boolean); va;
+        Procedure bcpush_immchar(const Value: Char); va;
         Procedure bcpush_immint(const Value: uint64); va;
         Procedure bcpush_immfloat(const Value: Float); va;
         Procedure bcpush_immstring(const Value: String); va;

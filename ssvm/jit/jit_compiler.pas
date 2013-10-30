@@ -231,7 +231,9 @@ Begin
      if (CheckArgs(ptFloatReg)) Then
       CPU.bcpush_reg(reg_ef, getRegisterAddress(Args[0])) Else
 
-     // push(reg string) @TODO
+     // push(reg string)
+     if (CheckArgs(ptStringReg)) Then
+      CPU.bcpush_reg(reg_es, getRegisterAddress(Args[0])) Else
 
      // push(reg reference)
      if (CheckArgs(ptReferenceReg)) Then
@@ -340,6 +342,12 @@ Begin
      // mov(reg float, reg int)
      if (CheckArgs(ptFloatReg, ptIntReg)) Then
       CPU.move_memfloat_memint(getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
+     // mov(reg string, imm string)
+     if (CheckArgs(ptStringReg, ptString)) Then
+      CPU.move_memstring_immstring(getRegisterAddress(Args[0]), Args[1].ImmString) Else
+
+     // mov(reg string, reg string) @TODO
 
      // mov(invalid)
       InvalidOpcodeException;
@@ -511,6 +519,21 @@ Begin
       CPU.compare_memfloat_memint(CompareOperation, getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
 
      // opcode(invalid)
+      InvalidOpcodeException;
+    End;
+
+    { strjoin }
+    o_strjoin:
+    Begin
+     // strjoin(reg string, imm string)
+     if (CheckArgs(ptStringReg, ptString)) Then
+      CPU.strjoin_memstring_immstring(getRegisterAddress(Args[0]), Args[1].ImmString) Else
+
+     // strjoin(reg string, reg string)
+     if (CheckArgs(ptStringReg, ptStringReg)) Then
+      CPU.strjoin_memstring_memstring(getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
+     // strjoin(invalid)
       InvalidOpcodeException;
     End;
 

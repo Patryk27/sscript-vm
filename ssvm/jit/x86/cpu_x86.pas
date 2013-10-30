@@ -17,7 +17,7 @@
 Unit CPU_x86;
 
  Interface
- Uses VM, Stack, VMTypes, VMStrings, Opcodes, JIT_Abstract_CPU;
+ Uses VM, Stack, VMTypes, Opcodes, JIT_Abstract_CPU;
 
  Type TRegister32  = (reg_eax=0, reg_ecx, reg_edx, reg_ebx, reg_esp, reg_ebp, reg_esi, reg_edi);
  Type TRegister16  = (reg_ax=0, reg_cx, reg_dx, reg_bx, reg_sp, reg_bp, reg_si, reg_di);
@@ -182,6 +182,8 @@ Type TModRM =
         Procedure move_memfloat_immint(const MemAddr: uint64; const Value: int64); ov;
         Procedure move_memfloat_memint(const MemAddrDst, MemAddrSrc: uint64); ov;
 
+        Procedure move_memstring_immstring(const MemAddr: uint64; const Value: String); ov;
+
         // arithmetic
         Procedure arithmetic_memint_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); ov;
         Procedure arithmetic_memint_memint(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); ov;
@@ -202,6 +204,10 @@ Type TModRM =
 
         Procedure compare_memint_immint(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: int64); ov;
         Procedure compare_memint_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); ov;
+
+        // strings
+        Procedure strjoin_memstring_immstring(const MemAddr: uint64; const Value: String); ov;
+        Procedure strjoin_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64); ov;
 
         // bcpush
         Procedure bcpush_immbool(const Value: Boolean); ov;
@@ -1347,11 +1353,6 @@ Begin
 End;
 
 (* TJITCPU.move_memfloat_immint *)
-{
- mov dword [MemAddrSrc+0], first 4 bits of Value
- mov dword [MemAddrSrc+4], next 4 bits of Value
- mov word [MemAddrSrc+8], next(last) 2 bits of Value
-}
 Procedure TJITCPU.move_memfloat_immint(const MemAddr: uint64; const Value: int64);
 Type PFloat = ^TFloat;
      TFloat =
@@ -1363,20 +1364,22 @@ Var Float: PFloat;
 Begin
  PExtended(@Float)^ := Value;
 
- asm_mov_mem32_imm32(MemAddr+0, Float^.P1);
- asm_mov_mem32_imm32(MemAddr+4, Float^.P2);
- asm_mov_mem16_imm16(MemAddr+8, Float^.P3);
+ asm_mov_mem32_imm32(MemAddr+0, Float^.P1); // mov dword [MemAddrSrc+0], first 4 bits of Value
+ asm_mov_mem32_imm32(MemAddr+4, Float^.P2); // mov dword [MemAddrSrc+4], next 4 bits of Value
+ asm_mov_mem16_imm16(MemAddr+8, Float^.P3); // mov word [MemAddrSrc+8], next(last) 2 bits of Value
 End;
 
 (* TJITCPU.move_memfloat_memint *)
-{
- fild qword [MemAddrSrc]
- fstp tword [MemAddrDst]
-}
 Procedure TJITCPU.move_memfloat_memint(const MemAddrDst, MemAddrSrc: uint64);
 Begin
- asm_fild_memint(MemAddrSrc);
- asm_fstp_memfloat(MemAddrDst);
+ asm_fild_memint(MemAddrSrc); // fild qword [MemAddrSrc]
+ asm_fstp_memfloat(MemAddrDst); // fstp tword [MemAddrDst]
+End;
+
+(* TJITCPU.move_memstring_immstring *)
+Procedure TJITCPU.move_memstring_immstring(const MemAddr: uint64; const Value: String);
+Begin
+ asm_mov_mem32_imm32(MemAddr, AllocateString(Value));
 End;
 
 (* TJITCPU.arithmetic_memint_immint *)
@@ -1871,33 +1874,51 @@ Begin
  generic_int_compare(Operation, 0, 0, NumberPnt0, NumberPnt1, False, False);
 End;
 
+(* TJITCPU.strjoin_memstring_immstring *)
+Procedure TJITCPU.strjoin_memstring_immstring(const MemAddr: uint64; const Value: String);
+Begin
+ asm_mov_reg32_mem32(reg_eax, MemAddr);
+ asm_mov_reg32_imm32(reg_edx, AllocateString(Value));
+ asm_call_internalproc(@r__concat_string, reg_ecx);
+ asm_mov_mem32_reg32(MemAddr, reg_eax);
+End;
+
+(* TJITCPU.strjoin_memstring_memstring *)
+Procedure TJITCPU.strjoin_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64);
+Begin
+ // @TODO: remove this ugly call - it can be done better way (well... at least faster :P), like:
+ {
+  mov     edi, dest
+  mov     esi, string_address
+  mov     ecx, string_length
+  mov     eax, ecx
+  shr     ecx, 2
+  repne movsd
+  mov     cl, al
+  and     cl, 3
+  repne movsb
+ }
+
+ asm_mov_reg32_mem32(reg_eax, MemAddrDst);
+ asm_mov_reg32_mem32(reg_edx, MemAddrSrc);
+ asm_call_internalproc(@r__concat_string, reg_ecx);
+ asm_mov_mem32_reg32(MemAddrDst, reg_eax);
+End;
+
 (* TJITCPU.bcpush_immbool *)
-{
- mov eax, <VM instance address>
- mov edx, Value
- mov ebx, r__push_bool
- call ebx
-}
 Procedure TJITCPU.bcpush_immbool(const Value: Boolean);
 Begin
- asm_mov_reg32_imm32(reg_eax, uint32(getVM));
- asm_mov_reg32_imm32(reg_edx, ord(Value));
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, ord(Value)); // mov edx, Value
  asm_call_internalproc(@r__push_bool, reg_ebx);
 End;
 
 (* TJITCPU.bcpush_immint *)
-{
- mov eax, <VM instance address>
- mov edx, lo(Value)
- mov ecx, hi(Value)
- mov ebx, r__push_int
- call ebx
-}
 Procedure TJITCPU.bcpush_immint(const Value: uint64);
 Begin
- asm_mov_reg32_imm32(reg_eax, uint32(getVM));
- asm_mov_reg32_imm32(reg_edx, lo(Value));
- asm_mov_reg32_imm32(reg_ecx, hi(Value));
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, lo(Value)); // mov edx, lo(Value)
+ asm_mov_reg32_imm32(reg_ecx, hi(Value)); // mov ecx, hi(Value)
  asm_call_internalproc(@r__push_int, reg_ebx);
 End;
 
@@ -1918,47 +1939,16 @@ Begin
 End;
 
 (* TJITCPU.bcpush_reg *)
-{
- mov eax, <VM instance address>
-
- reg_eb:
- > mov edx, 0
- > mov dl, byte [RegAddr]
- > mov ebx, r__push_bool
- > call ebx
-
- reg_ec:
- > @TODO
-
- reg_ei:
- > mov edx, dword [RegAddr+0]
- > mov ecx, dword [RegAddr+4]
- > mov ebx, r__push_int
- > call ebx
-
- reg_ef:
- > mov edx, RegAddr
- > mov ecx, r__push_float_mem
- > call ecx
-
- reg_es:
- > @TODO
-
- reg_er:
- > mov edx, dword [RegAddr]
- > mov ecx, r__push_reference
- > call ebx
-}
 Procedure TJITCPU.bcpush_reg(const RegType: TBytecodeRegister; const RegAddr: uint64);
 Begin
- asm_mov_reg32_imm32(reg_eax, uint32(getVM));
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
 
  Case RegType of
   { eb* }
   reg_eb:
   Begin
-   asm_mov_reg32_imm32(reg_edx, 0);
-   asm_mov_reg8_mem8(reg_dl, RegAddr);
+   asm_mov_reg32_imm32(reg_edx, 0); // mov edx, 0
+   asm_mov_reg8_mem8(reg_dl, RegAddr); // mov dl, byte [RegAddr]
    asm_call_internalproc(@r__push_bool, reg_ebx);
   End;
 
@@ -1971,28 +1961,29 @@ Begin
   { ei* }
   reg_ei:
   Begin
-   asm_mov_reg32_mem32(reg_edx, RegAddr+0);
-   asm_mov_reg32_mem32(reg_ecx, RegAddr+4);
+   asm_mov_reg32_mem32(reg_edx, RegAddr+0); // mov edx, [RegAddr+0]
+   asm_mov_reg32_mem32(reg_ecx, RegAddr+4); // mov ecx, [RegAddr+4]
    asm_call_internalproc(@r__push_int, reg_ebx);
   End;
 
   { ef* }
   reg_ef:
   Begin
-   asm_mov_reg32_imm32(reg_edx, RegAddr);
+   asm_mov_reg32_imm32(reg_edx, RegAddr); // mov edx, RegAddr
    asm_call_internalproc(@r__push_float_mem, reg_ecx);
   End;
 
   { es* }
   reg_es:
   Begin
-   raise Exception.Create('TJITCPU.bcpush_reg() -> unimplemented!');
+   asm_mov_reg32_mem32(reg_edx, RegAddr); // mov edx, [RegAddr]
+   asm_call_internalproc(@r__push_string, reg_ecx);
   End;
 
   { er* }
   reg_er:
   Begin
-   asm_mov_reg32_mem32(reg_edx, RegAddr);
+   asm_mov_reg32_mem32(reg_edx, RegAddr); // mov edx, [RegAddr]
    asm_call_internalproc(@r__push_reference, reg_ecx);
   End;
 

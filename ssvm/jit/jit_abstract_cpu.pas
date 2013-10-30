@@ -61,6 +61,8 @@ Unit JIT_Abstract_CPU;
         Procedure move_memfloat_immint(const MemAddr: uint64; const Value: int64); va;
         Procedure move_memfloat_memint(const MemAddrDst, MemAddrSrc: uint64); va;
 
+        Procedure move_memstring_immstring(const MemAddr: uint64; const Value: String); va;
+
         // arithmetic
         Procedure arithmetic_memint_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); va;
         Procedure arithmetic_memint_memint(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); va;
@@ -95,6 +97,10 @@ Unit JIT_Abstract_CPU;
         Procedure compare_memfloat_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
         Procedure compare_memfloat_immfloat(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: Float); va;
         Procedure compare_memfloat_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
+
+        // strings
+        Procedure strjoin_memstring_immstring(const MemAddr: uint64; const Value: String); va;
+        Procedure strjoin_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64); va;
 
         // bcpush
         Procedure bcpush_immbool(const Value: Boolean); va;
@@ -181,13 +187,10 @@ End;
 
 (* TJITAbstractCPU.AllocateString *)
 Function TJITAbstractCPU.AllocateString(const Value: String): uint64;
-Var SData: PVMString;
 Begin
- New(SData);
- SaveString(SData, Value);
+ AllocatedData.Add(CopyStringToPChar(Value));
 
- AllocatedData.Add(SData);
- Result := uint64(SData);
+ Result := uint64(AllocatedData.Last);
 End;
 
 (* TJITAbstractCPU.Create *)

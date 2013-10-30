@@ -39,12 +39,12 @@ Begin
 End;
 
 { r__push_string }
-Procedure r__push_string(const VM: PVM; const Value: TVMString); register;
+Procedure r__push_string(const VM: PVM; const Value: PChar); register;
 Var MV: TMixedValue;
 Begin
  MV.Reset;
  MV.Typ       := mvString;
- MV.Value.Str := Value.Data;
+ MV.Value.Str := Value;
  VM^.StackPush(MV);
 End;
 
@@ -106,7 +106,7 @@ Begin
 End;
 
 { r__pop_string_reg }
-Procedure r__pop_string_reg(const VM: PVM; const RegAddr: PPChar); register;
+Procedure r__pop_string_reg(const VM: PVM; const RegAddr: PString); register;
 Begin
  RegAddr^ := getString(VM^.Stack[VM^.Regs.i[5]]);
  Dec(VM^.Regs.i[5]);
@@ -161,4 +161,20 @@ End;
 Procedure r__shr_memint_immint(const Pnt: pint64; const Value_lo, Value_hi: int32); register;
 Begin
  Pnt^ := Pnt^ >> (int64(Value_hi) << 32 + Value_lo);
+End;
+
+(* ------------------ string operations ------------------ *)
+{ r__concat_string }
+Function r__concat_string(const A, B: PChar): PChar; register;
+Var LenA, LenB: uint32;
+Begin
+ LenA := Length(A);
+ LenB := Length(B);
+
+ Result := AllocMem(LenA + LenB + 1);
+
+ Move(A[0], Result[0], LenA);
+ Move(B[0], Result[LenA], LenB);
+
+ // AllocMem automatically zeroes allocated area so we don't have to do any "Result[LenA+LenB+1] := 0;"
 End;

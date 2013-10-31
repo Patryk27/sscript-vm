@@ -42,6 +42,7 @@ Unit Stream;
 
         // other functions
         Function Can: Boolean;
+        Function getMemoryPosition: Pointer;
        End;
 
  Implementation
@@ -210,5 +211,11 @@ End;
 Function TStream.Can: Boolean;
 Begin
  Result := (Position < Size);
+End;
+
+(* TStream.getMemoryPosition *)
+Function TStream.getMemoryPosition: Pointer;
+Begin
+ Result := Memory + Position;
 End;
 End.

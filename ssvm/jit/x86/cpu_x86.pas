@@ -2008,19 +2008,7 @@ End;
 Procedure TJITCPU.do_bccondjump(const Address: uint64; const Opcode: TOpcode_E);
 Begin
  asm_cmp_mem8_imm8(uint32(@getVM^.Regs.b[5]), ord(Opcode = o_tjmp)); // cmp [IF-register-address], /1 or 0/
-
- asm_jne(5); // `5` is the size of `jmp`
- do_bcjump(Address);
-
- {
-  @Note: we're using here a simple far-conditonal-jump trick:
-
-  jne dont
-  jmp Address
-
-  dont:
-  ...
- }
+ asm_je(int32(Address) - int32(getCompiledData.Position) - 6); // je <new address>
 End;
 
 (* TJITCPU.do_bccall *)
@@ -2089,6 +2077,6 @@ End;
 (* TJITCPU.get_bcconditionaljump_size *)
 Function TJITCPU.get_bcconditionaljump_size: uint8;
 Begin
- Result := 9;
+ Result := 4;
 End;
 End.

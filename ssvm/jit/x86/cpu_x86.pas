@@ -201,6 +201,7 @@ Type TModRM =
         Procedure move_memfloat_memint(const MemAddrDst, MemAddrSrc: uint64); ov;
 
         Procedure move_memstring_immstring(const MemAddr: uint64; const Value: String); ov;
+        Procedure move_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64); ov;
 
         // arithmetic
         Procedure arithmetic_memint_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); ov;
@@ -1418,86 +1419,59 @@ Begin
  asm_mov_mem32_imm32(MemAddr, AllocateString(Value));
 End;
 
+(* TJITCPU.move_memstring_memstring *)
+Procedure TJITCPU.move_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64);
+Begin
+ asm_mov_reg32_mem32(reg_eax, MemAddrSrc);
+ asm_mov_mem32_reg32(MemAddrDst, reg_eax);
+End;
+
 (* TJITCPU.arithmetic_memint_immint *)
-{
- Add:
- > add [MemAddrDst+0], lo(Value)
- > adc [MemAddrDst+4], hi(Value)
-
- Sub:
- > sub [MemAddrDst+0], lo(Value)
- > sbb [MemAddrDst+4], hi(Value)
-
- Mul:
- > mov edi, [MemAddrDst+4]
- > mov esi, [MemAddrDst+0]
- > mov ecx, hi(Value)
- > mov ebx, lo(Value)
- >
- > mov eax, edi
- > mul ebx
- > xchg eax, ebx
- > mul esi
- > xchg esi, eax
- > add ebx, edx
- > mul ecx
- > add ebx, eax
- >
- > mov [MemAddrDst+4], ebx
- > mov [MemAddrDst+0], esi
-
- Div:
- > mov eax, MemAddrDst
- > mov edx, lo(Value)
- > mov ecx, hi(Value)
- > mov ebx, r__div_memint_immint
- > call ebx
-}
 Procedure TJITCPU.arithmetic_memint_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64);
 Begin
  Case Operation of
   { add }
   ao_add:
   Begin
-   asm_add_mem32_imm32(MemAddrDst+0, lo(Value));
-   asm_adc_mem32_imm32(MemAddrDst+4, hi(Value));
+   asm_add_mem32_imm32(MemAddrDst+0, lo(Value)); // add dword [MemAddrDst+0], lo(Value)
+   asm_adc_mem32_imm32(MemAddrDst+4, hi(Value)); // adc dword [MemAddrDst+4], hi(Value)
   End;
 
   { sub }
   ao_sub:
   Begin
-   asm_sub_mem32_imm32(MemAddrDst+0, lo(Value));
-   asm_sbb_mem32_imm32(MemAddrDst+4, hi(Value));
+   asm_sub_mem32_imm32(MemAddrDst+0, lo(Value)); // sub dword [MemAddrDst+0], lo(Value)
+   asm_sbb_mem32_imm32(MemAddrDst+4, hi(Value)); // sbb dword [MemAddrDst+4], hi(Value)
   End;
 
   { mul }
   ao_mul:
   Begin
-   asm_mov_reg32_mem32(reg_edi, MemAddrDst+4);
-   asm_mov_reg32_mem32(reg_esi, MemAddrDst+0);
-   asm_mov_reg32_imm32(reg_ecx, hi(Value));
-   asm_mov_reg32_imm32(reg_ebx, lo(Value));
+   asm_mov_reg32_mem32(reg_edi, MemAddrDst+4); // mov edi, dword [MemAddrDst+4]
+   asm_mov_reg32_mem32(reg_esi, MemAddrDst+0); // mov esi, dword [MemAddrDst+0]
+   asm_mov_reg32_imm32(reg_ecx, hi(Value)); // mov ecx, hi(Value)
+   asm_mov_reg32_imm32(reg_ebx, lo(Value)); // mov ebx, lo(Value)
 
-   asm_mov_reg32_reg32(reg_eax, reg_edi);
-   asm_mul_reg32(reg_ebx);
-   asm_xchg_reg32_reg32(reg_eax, reg_ebx);
-   asm_mul_reg32(reg_esi);
-   asm_xchg_reg32_reg32(reg_esi, reg_eax);
-   asm_add_reg32_reg32(reg_ebx, reg_edx);
-   asm_mul_reg32(reg_ecx);
-   asm_add_reg32_reg32(reg_ebx, reg_eax);
+   asm_mov_reg32_reg32(reg_eax, reg_edi); // mov eax, edi
+   asm_mul_reg32(reg_ebx); // mul ebx
+   asm_xchg_reg32_reg32(reg_eax, reg_ebx); // xchg eax, ebx
+   asm_mul_reg32(reg_esi); // mul esi
+   asm_xchg_reg32_reg32(reg_esi, reg_eax); // xchg esi, eax
+   asm_add_reg32_reg32(reg_ebx, reg_edx); // add ebx, edx
+   asm_mul_reg32(reg_ecx); // mul ecx
+   asm_add_reg32_reg32(reg_ebx, reg_eax); // add ebx, eax
 
-   asm_mov_mem32_reg32(MemAddrDst+4, reg_ebx);
-   asm_mov_mem32_reg32(MemAddrDst+0, reg_esi);
+   asm_mov_mem32_reg32(MemAddrDst+4, reg_ebx); // mov dword [MemAddrDst+4], ebx
+   asm_mov_mem32_reg32(MemAddrDst+0, reg_esi); // mov dword [MemAddrDst+0], esi
   End;
 
   { div }
   ao_div:
   Begin
-   asm_mov_reg32_imm32(reg_eax, MemAddrDst);
-   asm_mov_reg32_imm32(reg_edx, lo(Value));
-   asm_mov_reg32_imm32(reg_ecx, hi(Value));
-   asm_call_internalproc(@r__div_memint_immint);
+   asm_mov_reg32_imm32(reg_eax, MemAddrDst); // mov eax, MemAddrDst
+   asm_mov_reg32_imm32(reg_edx, lo(Value)); // mov edx, lo(Value)
+   asm_mov_reg32_imm32(reg_ecx, hi(Value)); // mov ecx, hi(Value)
+   asm_call_internalproc(@r__div_memint_immint); // call r__div_memint_immint
   End;
 
   { invalid operation }

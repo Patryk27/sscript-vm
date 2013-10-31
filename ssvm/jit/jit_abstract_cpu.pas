@@ -66,6 +66,7 @@ Unit JIT_Abstract_CPU;
         Procedure move_memfloat_memint(const MemAddrDst, MemAddrSrc: uint64); va;
 
         Procedure move_memstring_immstring(const MemAddr: uint64; const Value: String); va;
+        Procedure move_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64); va;
 
         // arithmetic
         Procedure arithmetic_memint_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); va;

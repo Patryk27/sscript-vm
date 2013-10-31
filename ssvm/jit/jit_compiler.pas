@@ -385,7 +385,9 @@ Begin
      if (CheckArgs(ptStringReg, ptString)) Then
       CPU.move_memstring_immstring(getRegisterAddress(Args[0]), Args[1].ImmString) Else
 
-     // mov(reg string, reg string) @TODO
+     // mov(reg string, reg string)
+     if (CheckArgs(ptStringReg, ptStringReg)) Then
+      CPU.move_memstring_memstring(getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
 
      // mov(invalid)
       InvalidOpcodeException;

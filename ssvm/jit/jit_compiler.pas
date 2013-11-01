@@ -334,6 +334,22 @@ Begin
      if (CheckArgs(ptFloatReg, ptIntReg)) Then
       CPU.arithmetic_memfloat_memint(ArithmeticOperation, getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
 
+     // opcode(stackval, imm int)
+     if (CheckArgs(ptStackval, ptInt)) Then
+      CPU.arithmetic_stackval_immint(ArithmeticOperation, Args[0].StackvalPos, Args[1].ImmInt) Else
+
+     // opcode(stackval, reg int)
+     if (CheckArgs(ptStackval, ptIntReg)) Then
+      CPU.arithmetic_stackval_memint(ArithmeticOperation, Args[0].StackvalPos, getRegisterAddress(Args[1])) Else
+
+     // opcode(stackval, imm float)
+     if (CheckArgs(ptStackval, ptFloat)) Then
+      CPU.arithmetic_stackval_immfloat(ArithmeticOperation, Args[0].StackvalPos, Args[1].ImmFloat) Else
+
+     // opcode(stackval, reg float)
+     if (CheckArgs(ptStackval, ptFloatReg)) Then
+      CPU.arithmetic_stackval_memfloat(ArithmeticOperation, Args[0].StackvalPos, getRegisterAddress(Args[1])) Else
+
      // opcode(invalid)
       InvalidOpcodeException;
     End;

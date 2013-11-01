@@ -71,10 +71,16 @@ Unit JIT_Abstract_CPU;
         // arithmetic
         Procedure arithmetic_memint_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); va;
         Procedure arithmetic_memint_memint(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); va;
+
         Procedure arithmetic_memfloat_immfloat(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: Float); va;
         Procedure arithmetic_memfloat_memfloat(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); va;
         Procedure arithmetic_memfloat_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); va;
         Procedure arithmetic_memfloat_memint(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); va;
+
+        Procedure arithmetic_stackval_immint(const Operation: TArithmeticOperation; const StackvalPos: int32; const Value: int64); va;
+        Procedure arithmetic_stackval_memint(const Operation: TArithmeticOperation; const StackvalPos: int32; const MemAddr: uint64); va;
+        Procedure arithmetic_stackval_immfloat(const Operation: TArithmeticOperation; const StackvalPos: int32; const Value: Float); va;
+        Procedure arithmetic_stackval_memfloat(const Operation: TArithmeticOperation; const StackvalPos: int32; const MemAddr: uint64); va;
 
         // bitwise
         Procedure bitwise_membool_immbool(const Operation: TBitwiseOperation; const MemAddrDst: uint64; const Value: Boolean); va;

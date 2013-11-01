@@ -188,3 +188,150 @@ Begin
 
  // AllocMem automatically zeroes allocated area so we don't have to do any "Result[LenA+LenB+1] := 0;"
 End;
+
+(* ------------------ stack operations ------------------ *)
+{ getStackvalElement }
+Function getStackvalElement(const VM: PVM; const StackvalPos: int32): PMixedValue; inline; // helper function!
+Begin
+ Result := @VM^.Stack[VM^.Regs.i[5] + StackvalPos];
+End;
+
+{ r__add_stackval_int }
+Procedure r__add_stackval_int(const VM: PVM; const StackvalPos: int32; const Value: int64); register;
+Var MV: PMixedValue;
+Begin
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int += Value;
+  mvFloat: MV^.Value.Float += Value;
+
+  else
+   raise Exception.CreateFmt('r__add_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__sub_stackval_int }
+Procedure r__sub_stackval_int(const VM: PVM; const StackvalPos: int32; const Value: int64); register;
+Var MV: PMixedValue;
+Begin
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int -= Value;
+  mvFloat: MV^.Value.Float -= Value;
+
+  else
+   raise Exception.CreateFmt('r__sub_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__mul_stackval_int }
+Procedure r__mul_stackval_int(const VM: PVM; const StackvalPos: int32; const Value: int64); register;
+Var MV: PMixedValue;
+Begin
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int *= Value;
+  mvFloat: MV^.Value.Float *= Value;
+
+  else
+   raise Exception.CreateFmt('r__mul_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__div_stackval_int }
+Procedure r__div_stackval_int(const VM: PVM; const StackvalPos: int32; const Value: int64); register;
+Var MV: PMixedValue;
+Begin
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int := MV^.Value.Int div Value;
+  mvFloat: MV^.Value.Float /= Value;
+
+  else
+   raise Exception.CreateFmt('r__div_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__add_stackval_float }
+Procedure r__add_stackval_float(const VM: PVM; const StackvalPos: int32); register;
+Var MV   : PMixedValue;
+    Value: Extended;
+Begin
+ asm
+  fstp Extended Value
+ end;
+
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int += Round(Value);
+  mvFloat: MV^.Value.Float += Value;
+
+  else
+   raise Exception.CreateFmt('r__add_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__sub_stackval_float }
+Procedure r__sub_stackval_float(const VM: PVM; const StackvalPos: int32); register;
+Var MV   : PMixedValue;
+    Value: Extended;
+Begin
+ asm
+  fstp Extended Value
+ end;
+
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int -= Round(Value);
+  mvFloat: MV^.Value.Float -= Value;
+
+  else
+   raise Exception.CreateFmt('r__sub_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__mul_stackval_float }
+Procedure r__mul_stackval_float(const VM: PVM; const StackvalPos: int32); register;
+Var MV   : PMixedValue;
+    Value: Extended;
+Begin
+ asm
+  fstp Extended Value
+ end;
+
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int *= Round(Value);
+  mvFloat: MV^.Value.Float *= Value;
+
+  else
+   raise Exception.CreateFmt('r__mul_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__div_stackval_float }
+Procedure r__div_stackval_float(const VM: PVM; const StackvalPos: int32); register;
+Var MV   : PMixedValue;
+    Value: Extended;
+Begin
+ asm
+  fstp Extended Value
+ end;
+
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int := MV^.Value.Int div Round(Value);
+  mvFloat: MV^.Value.Float /= Value;
+
+  else
+   raise Exception.CreateFmt('r__div_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;

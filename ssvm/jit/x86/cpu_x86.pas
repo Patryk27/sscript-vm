@@ -158,6 +158,13 @@ Type TModRM =
         Function asm_jg(const Address: int32): uint32;
         Function asm_jl(const Address: int32): uint32;
 
+        // push
+        Procedure asm_push_imm32(const Value: int32);
+        Procedure asm_push_imm64(const Value: int64);
+
+        Procedure asm_push_mem32(const Mem: uint32);
+        Procedure asm_push_mem64(const Mem: uint32);
+
     { >> FPU << }
 
         // fld
@@ -207,10 +214,16 @@ Type TModRM =
         // arithmetic
         Procedure arithmetic_memint_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); ov;
         Procedure arithmetic_memint_memint(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); ov;
+
         Procedure arithmetic_memfloat_immfloat(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: Float); ov;
         Procedure arithmetic_memfloat_memfloat(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); ov;
         Procedure arithmetic_memfloat_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); ov;
         Procedure arithmetic_memfloat_memint(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); ov;
+
+        Procedure arithmetic_stackval_immint(const Operation: TArithmeticOperation; const StackvalPos: int32; const Value: int64); ov;
+        Procedure arithmetic_stackval_memint(const Operation: TArithmeticOperation; const StackvalPos: int32; const MemAddr: uint64); ov;
+        Procedure arithmetic_stackval_immfloat(const Operation: TArithmeticOperation; const StackvalPos: int32; const Value: Float); ov;
+        Procedure arithmetic_stackval_memfloat(const Operation: TArithmeticOperation; const StackvalPos: int32; const MemAddr: uint64); ov;
 
         // bitwise
         Procedure bitwise_membool_immbool(const Operation: TBitwiseOperation; const MemAddrDst: uint64; const Value: Boolean); ov;
@@ -1091,6 +1104,49 @@ Begin
  emit_int32(Address);
 End;
 
+(* TJITCPU.asm_push_imm32 *)
+{
+ push dword value
+}
+Procedure TJITCPU.asm_push_imm32(const Value: int32);
+Begin
+ emit_uint8($68);
+ emit_int32(Value);
+End;
+
+(* TJITCPU.asm_push_imm64 *)
+{
+ push dword hi(Value)
+ push dword lo(Value)
+}
+Procedure TJITCPU.asm_push_imm64(const Value: int64);
+Begin
+ asm_push_imm32(hi(Value));
+ asm_push_imm32(lo(Value));
+End;
+
+(* TJITCPU.asm_push_mem32 *)
+{
+ push dword [mem]
+}
+Procedure TJITCPU.asm_push_mem32(const Mem: uint32);
+Begin
+ emit_uint8($FF);
+ emit_uint8($35);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_push_mem64 *)
+{
+ push dword [mem+4]
+ push dword [mem+0]
+}
+Procedure TJITCPU.asm_push_mem64(const Mem: uint32);
+Begin
+ asm_push_mem32(Mem+4);
+ asm_push_mem32(Mem+0);
+End;
+
 (* TJITCPU.asm_fld_memfloat *)
 {
  fld tword [mem]
@@ -1619,6 +1675,90 @@ Begin
  End;
 
  asm_fstp_memfloat(MemAddrDst);
+End;
+
+(* TJITCPU.arithmetic_stackval_immint *)
+Procedure TJITCPU.arithmetic_stackval_immint(const Operation: TArithmeticOperation; const StackvalPos: int32; const Value: int64);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, StackvalPos); // mov edx, StackvalPos
+ asm_push_imm64(Value); // push Value
+
+ Case Operation of
+  { add }
+  ao_add: asm_call_internalproc(@r__add_stackval_int);
+
+  { sub }
+  ao_sub: asm_call_internalproc(@r__sub_stackval_int);
+
+  { mul }
+  ao_mul: asm_call_internalproc(@r__mul_stackval_int);
+
+  { div }
+  ao_div: asm_call_internalproc(@r__div_stackval_int);
+
+  { invalid operation }
+  else
+   raise Exception.CreateFmt('TJITCPU.arithmetic_stackval_immint() -> invalid operation: %d', [ord(Operation)]);
+ End;
+End;
+
+(* TJITCPU.arithmetic-stackval_memint *)
+Procedure TJITCPU.arithmetic_stackval_memint(const Operation: TArithmeticOperation; const StackvalPos: int32; const MemAddr: uint64);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, StackvalPos); // mov edx, StackvalPos
+ asm_push_mem64(MemAddr); // push qword [MemAddr]
+
+ Case Operation of
+  { add }
+  ao_add: asm_call_internalproc(@r__add_stackval_int);
+
+  { sub }
+  ao_sub: asm_call_internalproc(@r__sub_stackval_int);
+
+  { mul }
+  ao_mul: asm_call_internalproc(@r__mul_stackval_int);
+
+  { div }
+  ao_div: asm_call_internalproc(@r__div_stackval_int);
+
+  { invalid operation }
+  else
+   raise Exception.CreateFmt('TJITCPU.arithmetic_stackval_immint() -> invalid operation: %d', [ord(Operation)]);
+ End;
+End;
+
+(* TJITCPU.arithmetic_stackval_immfloat *)
+Procedure TJITCPU.arithmetic_stackval_immfloat(const Operation: TArithmeticOperation; const StackvalPos: int32; const Value: Float);
+Begin
+ arithmetic_stackval_immfloat(Operation, StackvalPos, AllocateFloat(Value));
+End;
+
+(* TJITCPU.arithmetic_stackval_memfloat *)
+Procedure TJITCPU.arithmetic_stackval_memfloat(const Operation: TArithmeticOperation; const StackvalPos: int32; const MemAddr: uint64);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, StackvalPos); // mov edx, StackvalPos
+ asm_fld_memfloat(MemAddr); // fld tword [MemAddr]
+
+ Case Operation of
+  { add }
+  ao_add: asm_call_internalproc(@r__add_stackval_float);
+
+  { sub }
+  ao_sub: asm_call_internalproc(@r__sub_stackval_float);
+
+  { mul }
+  ao_mul: asm_call_internalproc(@r__mul_stackval_float);
+
+  { div }
+  ao_div: asm_call_internalproc(@r__div_stackval_float);
+
+  { invalid operation }
+  else
+   raise Exception.CreateFmt('TJITCPU.arithmetic_stackval_immfloat() -> invalid operation: %d', [ord(Operation)]);
+ End;
 End;
 
 (* TJITCPU.bitwise_membool_immbool *)

@@ -109,10 +109,11 @@ Type TModRM =
 
         // cmp
         Procedure asm_cmp_mem8_imm8(const Mem: uint32; const Value: int8);
+        Procedure asm_cmp_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
+        Procedure asm_cmp_mem32_imm32(const Mem: uint32; const Value: int32);
 
         Procedure asm_cmp_reg32_imm32(const Reg: TRegister32; const Value: int32);
         Procedure asm_cmp_reg32_mem32(const Reg: TRegister32; const Mem: uint32);
-        Procedure asm_cmp_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
 
         // call
         Procedure asm_call_internalproc(const Proc: Pointer);
@@ -677,6 +678,39 @@ Begin
  emit_int8(Value);
 End;
 
+(* TJITCPU.asm_cmp_mem32_reg32 *)
+{
+ cmp dword [mem], reg
+}
+Procedure TJITCPU.asm_cmp_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := ord(Reg);
+ ModRM.RM   := 5;
+
+ emit_uint8($39);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_cmp_mem32_imm32 *)
+{
+ cmp dword [mem], imm
+}
+Procedure TJITCPU.asm_cmp_mem32_imm32(const Mem: uint32; const Value: int32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := 7;
+ ModRM.RM   := 5;
+
+ emit_uint8($81);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
+ emit_int32(Value);
+End;
+
 (* TJITCPU.asm_cmp_reg32_imm32 *)
 {
  cmp reg, value
@@ -712,22 +746,6 @@ Begin
  ModRM.RM   := 5;
 
  emit_uint8($3B);
- emit_modrm(ModRM);
- emit_uint32(Mem);
-End;
-
-(* TJITCPU.asm_cmp_mem32_reg32 *)
-{
- cmp dword [mem], reg
-}
-Procedure TJITCPU.asm_cmp_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
-Var ModRM: TModRM;
-Begin
- ModRM.Mode := 0;
- ModRM.Reg  := ord(Reg);
- ModRM.RM   := 5;
-
- emit_uint8($39);
  emit_modrm(ModRM);
  emit_uint32(Mem);
 End;
@@ -1217,8 +1235,7 @@ Begin
   // mem, const
   cmMemConst:
   Begin
-   asm_mov_reg32_mem32(reg_eax, Addr0+0); // mov eax, [Addr0+0]
-   asm_cmp_reg32_imm32(reg_eax, lo(Number1)); // cmp eax, lo(Number1)
+   asm_cmp_mem32_imm32(Addr0+0, lo(Number1)); // cmp [Addr0+0], lo(Number1)
   End;
 
   // mem, mem
@@ -1267,8 +1284,7 @@ Begin
   // mem, const
   cmMemConst:
   Begin
-   asm_mov_reg32_mem32(reg_eax, Addr0+4); // mov eax, [Addr0+4]
-   asm_cmp_reg32_imm32(reg_eax, hi(Number1)); // cmp eax, hi(Number1)
+   asm_cmp_mem32_imm32(Addr0+4, hi(Number1)); // cmp [Addr0+4], hi(Number1)
   End;
 
   // mem, mem

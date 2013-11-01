@@ -1146,6 +1146,7 @@ Begin
  emit_uint8($F8 + ord(Reg));
 End;
 
+// -------------------------------------------------------------------------- //
 (* TJITCPU.generic_int_compare *)
 Procedure TJITCPU.generic_int_compare(const Operation: TCompareOperation; const Number0, Number1: int64; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant: Boolean);
 Var LabelTrue, LabelFalse, LabelOut   : uint32;
@@ -1578,41 +1579,23 @@ Begin
 End;
 
 (* TJITCPU.arithmetic_memfloat_memint *)
-{
- fld [MemAddrDst]
- fild [MemAddrSrc]
-
- Add:
- > faddp st0, st1
-
- Sub:
- > fsubp st0, st1
-
- Mul:
- > fmulp st0, st1
-
- Div:
- > fdivp st0, st1
-
- fstp [MemAddrDst]
-}
 Procedure TJITCPU.arithmetic_memfloat_memint(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64);
 Begin
- asm_fld_memfloat(MemAddrDst);
- asm_fild_memint(MemAddrSrc);
+ asm_fld_memfloat(MemAddrDst); // fld tword [MemAddrDst]
+ asm_fild_memint(MemAddrSrc); // fild tword [MemAddrSrc]
 
  Case Operation of
   { add }
-  ao_add: asm_faddp_st0(reg_st1);
+  ao_add: asm_faddp_st0(reg_st1); // faddp st(0), st(1)
 
   { sub }
-  ao_sub: asm_fsubp_st0(reg_st1);
+  ao_sub: asm_fsubp_st0(reg_st1); // fsubp st(0), st(1)
 
   { mul }
-  ao_mul: asm_fmulp_st0(reg_st1);
+  ao_mul: asm_fmulp_st0(reg_st1); // fmulp st(0), st(1)
 
   { div }
-  ao_div: asm_fdivp_st0(reg_st1);
+  ao_div: asm_fdivp_st0(reg_st1); // fdivp st(0), st(1)
 
   { invalid operation }
   else
@@ -1623,27 +1606,17 @@ Begin
 End;
 
 (* TJITCPU.bitwise_membool_immbool *)
-{
- Or:
- > or [MemAddrDst], Value
-
- Xor:
- > xor [MemAddrDst], Value
-
- And:
- > and [MemAddrDst], Value
-}
 Procedure TJITCPU.bitwise_membool_immbool(const Operation: TBitwiseOperation; const MemAddrDst: uint64; const Value: Boolean);
 Begin
  Case Operation of
   { or }
-  bo_or: asm_or_mem8_imm8(MemAddrDst, ord(Value));
+  bo_or: asm_or_mem8_imm8(MemAddrDst, ord(Value)); // or byte [MemAddrDst], Value
 
   { xor }
-  bo_xor: asm_xor_mem8_imm8(MemAddrDst, ord(Value));
+  bo_xor: asm_xor_mem8_imm8(MemAddrDst, ord(Value)); // xor byte [MemAddrDst], Value
 
   { and }
-  bo_and: asm_and_mem8_imm8(MemAddrDst, ord(Value));
+  bo_and: asm_and_mem8_imm8(MemAddrDst, ord(Value)); // and byte [MemAddrDst], Value
 
   { invalid operation }
   else
@@ -1652,31 +1625,19 @@ Begin
 End;
 
 (* TJITCPU.bitwise_membool_membool *)
-{
- mov al, byte [MemAddrSrc]
-
- Or:
- > or byte [MemAddrDst], al
-
- Xor:
- > xor byte [MemAddrDst], al
-
- And:
- > and byte [MemAddrDst], al
-}
 Procedure TJITCPU.bitwise_membool_membool(const Operation: TBitwiseOperation; const MemAddrDst, MemAddrSrc: uint64);
 Begin
- asm_mov_reg8_mem8(reg_al, MemAddrSrc);
+ asm_mov_reg8_mem8(reg_al, MemAddrSrc); // mov al, byte [MemAddrSrc]
 
  Case Operation of
   { or }
-  bo_or: asm_or_mem8_reg8(MemAddrDst, reg_al);
+  bo_or: asm_or_mem8_reg8(MemAddrDst, reg_al); // or byte [MemAddrDst], al
 
   { xor }
-  bo_xor: asm_xor_mem8_reg8(MemAddrDst, reg_al);
+  bo_xor: asm_xor_mem8_reg8(MemAddrDst, reg_al); // xor byte [MemAddrDst], al
 
   { and }
-  bo_and: asm_and_mem8_reg8(MemAddrDst, reg_al);
+  bo_and: asm_and_mem8_reg8(MemAddrDst, reg_al); // and byte [MemAddrDst], al
 
   { invalid operation }
   else
@@ -1685,39 +1646,14 @@ Begin
 End;
 
 (* TJITCPU.bitwise_memint_immint *)
-{
- Or:
- > or [MemAddrDst+0], lo(Value)
- > or [MemAddrDst+4], hi(Value)
-
- Xor:
- > xor [MemAddrDst+0], lo(Value)
- > xor [MemAddrDst+4], hi(Value)
-
- And:
- > and [MemAddrDst+0], lo(Value)
- > and [MemAddrDst+4], hi(Value)
-
- Shl:
- > mov eax, MemAddrDst
- > mov edx, lo(Value)
- > mov ecx, hi(Value)
- > call r__shl_memint_immint
-
- Shr:
- > mov eax, MemAddrDst
- > mov edx, lo(Value)
- > mov ecx, hi(Value)
- > call r__shr_memint_immint
-}
 Procedure TJITCPU.bitwise_memint_immint(const Operation: TBitwiseOperation; const MemAddrDst: uint64; const Value: int64);
 Var Proc: Procedure(const MemAddr: uint32; const Value: int32) of object;
 Begin
  if (Operation in [bo_shl, bo_shr]) Then
  Begin
-  asm_mov_reg32_imm32(reg_eax, MemAddrDst);
-  asm_mov_reg32_imm32(reg_edx, lo(Value));
-  asm_mov_reg32_imm32(reg_ecx, hi(Value));
+  asm_mov_reg32_imm32(reg_eax, MemAddrDst); // mov eax, MemAddrDst
+  asm_mov_reg32_imm32(reg_edx, lo(Value)); // mov edx, lo(Value)
+  asm_mov_reg32_imm32(reg_ecx, hi(Value)); // mov ecx, hi(Value)
 
   if (Operation = bo_shl) Then
    asm_call_internalproc(@r__shl_memint_immint) Else
@@ -1733,58 +1669,28 @@ Begin
     raise Exception.CreateFmt('TJITCPU.bitwise_memint_immint() -> invalid operation: %d', [ord(Operation)]);
   End;
 
-  Proc(MemAddrDst+0, lo(Value));
+  Proc(MemAddrDst+0, lo(Value)); // op dword [MemAddrDst+0], lo(Value)
+  Proc(MemAddrDst+4, hi(Value)); // op dword [MemAddrDst+4], hi(Value)
  End;
- Proc(MemAddrDst+4, hi(Value));
 End;
 
 (* TJITCPU.bitwise_memint_memint *)
-{
- Shl:
- > mov eax, MemAddrDst
- > mov edx, [MemAddrSrc+0]
- > mov ecx, [MemAddrSrc+4]
- > call r__shl_memint_immint
-
- Shr:
- > mov eax, MemAddrDst
- > mov edx, [MemAddrSrc+0]
- > mov ecx, [MemAddrSrc+4]
- > call r__shr_memint_immint
-
- -- For any other operations: --
-
- mov eax, [MemAddrSrc+0]
- mov ebx, [MemAddrSrc+4]
-
- Or:
- > or [MemAddrDst+0], eax
- > or [MemAddrDst+4], ebx
-
- Xor:
- > xor [MemAddrDst+0], eax
- > xor [MemAddrDst+4], ebx
-
- And:
- > and [MemAddrDst+0], eax
- > and [MemAddrDst+4], ebx
-}
 Procedure TJITCPU.bitwise_memint_memint(const Operation: TBitwiseOperation; const MemAddrDst, MemAddrSrc: uint64);
 Var Proc: Procedure(const MemAddr: uint32; const Reg: TRegister32) of object;
 Begin
  if (Operation in [bo_shr, bo_shl]) Then
  Begin
-  asm_mov_reg32_imm32(reg_eax, MemAddrDst);
-  asm_mov_reg32_mem32(reg_edx, MemAddrSrc+0);
-  asm_mov_reg32_mem32(reg_ecx, MemAddrSrc+4);
+  asm_mov_reg32_imm32(reg_eax, MemAddrDst); // mov eax, MemAddrDst
+  asm_mov_reg32_mem32(reg_edx, MemAddrSrc+0); // mov edx, dword [MemAddrSrc+0]
+  asm_mov_reg32_mem32(reg_ecx, MemAddrSrc+4); // mov ecx, dword [MemAddrSrc+4]
 
   if (Operation = bo_shl) Then
    asm_call_internalproc(@r__shl_memint_immint) Else
    asm_call_internalproc(@r__shr_memint_immint);
  End Else
  Begin
-  asm_mov_reg32_mem32(reg_eax, MemAddrSrc+0);
-  asm_mov_reg32_mem32(reg_ebx, MemAddrSrc+4);
+  asm_mov_reg32_mem32(reg_eax, MemAddrSrc+0); // mov eax, dword [MemAddrSrc+0]
+  asm_mov_reg32_mem32(reg_ebx, MemAddrSrc+4); // mov ebx, dword [MemAddrSrc+4]
 
   Case Operation of
    bo_or : Proc := @asm_or_mem32_reg32;
@@ -1795,8 +1701,8 @@ Begin
     raise Exception.CreateFmt('TJITCPU.bitwise_memint_memint() -> invalid operation: %d', [ord(Operation)]);
   End;
 
-  Proc(MemAddrDst+0, reg_eax);
-  Proc(MemAddrDst+4, reg_ebx);
+  Proc(MemAddrDst+0, reg_eax); // op dword [MemAddrDst+0], eax
+  Proc(MemAddrDst+4, reg_ebx); // op dword [MemAddrDst+4], ebx
  End;
 End;
 

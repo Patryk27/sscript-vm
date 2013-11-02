@@ -376,7 +376,7 @@ Begin
  emit_uint8($C7);
  emit_uint8($05);
  emit_uint32(Mem);
- emit_int32(Value);
+ emit_int16(Value);
 End;
 
 (* TJITCPU.asm_mov_mem16_reg16 *)

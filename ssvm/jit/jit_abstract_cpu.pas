@@ -41,9 +41,12 @@ Unit JIT_Abstract_CPU;
 
        Protected
         Procedure emit_int8(const Value: int8);
-        Procedure emit_uint8(const Value: uint8);
-        Procedure emit_uint32(const Value: uint32);
+        Procedure emit_int16(const Value: int16);
         Procedure emit_int32(const Value: int32);
+
+        Procedure emit_uint8(const Value: uint8);
+        Procedure emit_uint16(const Value: uint16);
+        Procedure emit_uint32(const Value: uint32);
 
         Function AllocateInt(const Value: int64): uint64;
         Function AllocateFloat(const Value: Float): uint64;
@@ -166,22 +169,34 @@ Begin
  CompiledData.write_int8(Value);
 End;
 
-(* TJITAbstractCPU.emit_uint8 *)
-Procedure TJITAbstractCPU.emit_uint8(const Value: uint8);
+(* TJITAbstractCPU.emit_int16 *)
+Procedure TJITAbstractCPU.emit_int16(const Value: int16);
 Begin
- CompiledData.write_uint8(Value);
-End;
-
-(* TJITABstractCPU.emit_uint32 *)
-Procedure TJITAbstractCPU.emit_uint32(const Value: uint32);
-Begin
- CompiledData.write_uint32(Value);
+ CompiledData.write_int16(Value);
 End;
 
 (* TJITAbstractCPU.emit_int32 *)
 Procedure TJITAbstractCPU.emit_int32(const Value: int32);
 Begin
  CompiledData.write_int32(Value);
+End;
+
+(* TJITAbstractCPU.emit_uint8 *)
+Procedure TJITAbstractCPU.emit_uint8(const Value: uint8);
+Begin
+ CompiledData.write_uint8(Value);
+End;
+
+(* TJITAbstractCPU.emit_uint16 *)
+Procedure TJITAbstractCPU.emit_uint16(const Value: uint16);
+Begin
+ CompiledData.write_uint16(Value);
+End;
+
+(* TJITABstractCPU.emit_uint32 *)
+Procedure TJITAbstractCPU.emit_uint32(const Value: uint32);
+Begin
+ CompiledData.write_uint32(Value);
 End;
 
 (* TJITAbstractCPU.AllocateInt *)

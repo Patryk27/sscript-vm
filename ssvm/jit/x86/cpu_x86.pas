@@ -145,6 +145,18 @@ Type TModRM =
         Procedure asm_and_mem32_imm32(const Mem: uint32; const Value: int32);
         Procedure asm_and_mem32_reg32(const Mem: uint32; const Reg: TRegister32);
 
+        // set*
+        Procedure asm_sete_mem8(const Mem: uint32);
+        Procedure asm_setne_mem8(const Mem: uint32);
+        Procedure asm_setg_mem8(const Mem: uint32);
+        Procedure asm_setge_mem8(const Mem: uint32);
+        Procedure asm_setl_mem8(const Mem: uint32);
+        Procedure asm_setle_mem8(const Mem: uint32);
+        Procedure asm_setb_mem8(const Mem: uint32);
+        Procedure asm_setbe_mem8(const Mem: uint32);
+        Procedure asm_seta_mem8(const Mem: uint32);
+        Procedure asm_setae_mem8(const Mem: uint32);
+
         // jumps
         Function asm_jmp(const Address: int32): uint32;
         Procedure asm_jmp(const Reg: TRegister32);
@@ -188,9 +200,19 @@ Type TModRM =
         // fdivp
         Procedure asm_fdivp_st0(const Reg: TRegisterFPU);
 
+        // fcompp
+        Procedure asm_fcompp;
+
+        // fstsw_ax
+        Procedure asm_fstsw_ax;
+
+        // sahf
+        Procedure asm_sahf;
+
+    { >> other << }
         // compare
         Procedure generic_int_compare(const Operation: TCompareOperation; const Number0, Number1: int64; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant: Boolean);
-//        Procedure generic_float_compare;
+        Procedure generic_float_compare(const Operation: TCompareOperation; const Number0, Number1: Float; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant, isFirstFloat, isSecondFloat: Boolean);
 
        Public
         // move
@@ -236,10 +258,24 @@ Type TModRM =
 
         // compare
         Procedure compare_immint_immint(const Operation: TCompareOperation; const Value0, Value1: int64); ov;
+        Procedure compare_immint_immfloat(const Operation: TCompareOperation; const Value0: int64; const Value1: Float); ov;
         Procedure compare_immint_memint(const Operation: TCompareOperation; const Value0: int64; const NumberPnt1: uint64); ov;
+        Procedure compare_immint_memfloat(const Operation: TCompareOperation; const Value0: int64; const NumberPnt1: uint64); ov;
 
         Procedure compare_memint_immint(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: int64); ov;
+        Procedure compare_memint_immfloat(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: Float); ov;
         Procedure compare_memint_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); ov;
+        Procedure compare_memint_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); ov;
+
+        Procedure compare_immfloat_immint(const Operation: TCompareOperation; const Value0: Float; const Value1: int64); ov;
+        Procedure compare_immfloat_immfloat(const Operation: TCompareOperation; const Value0, Value1: Float); ov;
+        Procedure compare_immfloat_memint(const Operation: TCompareOperation; const Value0: Float; const NumberPnt1: uint64); ov;
+        Procedure compare_immfloat_memfloat(const Operation: TCompareOperation; const Value0: Float; const NumberPnt1: uint64); ov;
+
+        Procedure compare_memfloat_immint(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: int64); ov;
+        Procedure compare_memfloat_immfloat(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: Float); ov;
+        Procedure compare_memfloat_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); ov;
+        Procedure compare_memfloat_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); ov;
 
         // strings
         Procedure strjoin_memstring_immstring(const MemAddr: uint64; const Value: String); ov;
@@ -969,6 +1005,126 @@ Begin
  emit_uint32(Mem);
 End;
 
+(* TJITCPU.asm_sete_mem *)
+{
+ sete byte [mem]
+}
+Procedure TJITCPU.asm_sete_mem8(const Mem: uint32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($94);
+ emit_uint8($05);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_setne_mem *)
+{
+ setne byte [mem]
+}
+Procedure TJITCPU.asm_setne_mem8(const Mem: uint32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($95);
+ emit_uint8($05);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_setg_mem *)
+{
+ setg byte [mem]
+}
+Procedure TJITCPU.asm_setg_mem8(const Mem: uint32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($9F);
+ emit_uint8($05);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_setge_mem *)
+{
+ setge byte [mem]
+}
+Procedure TJITCPU.asm_setge_mem8(const Mem: uint32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($9D);
+ emit_uint8($05);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_setl_mem *)
+{
+ setl byte [mem]
+}
+Procedure TJITCPU.asm_setl_mem8(const Mem: uint32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($9C);
+ emit_uint8($05);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_setle_mem *)
+{
+ setle byte [mem]
+}
+Procedure TJITCPU.asm_setle_mem8(const Mem: uint32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($9E);
+ emit_uint8($05);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_setb_mem *)
+{
+ setb byte [mem]
+}
+Procedure TJITCPU.asm_setb_mem8(const Mem: uint32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($92);
+ emit_uint8($05);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_setbe_mem *)
+{
+ setbe byte [mem]
+}
+Procedure TJITCPU.asm_setbe_mem8(const Mem: uint32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($96);
+ emit_uint8($05);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_seta_mem *)
+{
+ seta byte [mem]
+}
+Procedure TJITCPU.asm_seta_mem8(const Mem: uint32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($97);
+ emit_uint8($05);
+ emit_uint32(Mem);
+End;
+
+(* TJITCPU.asm_setae_mem *)
+{
+ setae byte [mem]
+}
+Procedure TJITCPU.asm_setae_mem8(const Mem: uint32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($93);
+ emit_uint8($05);
+ emit_uint32(Mem);
+End;
+
 (* TJITCPU.asm_jmp *)
 {
  jmp address
@@ -1225,6 +1381,36 @@ Begin
  emit_uint8($F8 + ord(Reg));
 End;
 
+(* TJITCPU.asm_fcompp *)
+{
+ fcompp
+}
+Procedure TJITCPU.asm_fcompp;
+Begin
+ emit_uint8($DE);
+ emit_uint8($D9);
+End;
+
+(* TJITCPU.asm_fstsw_ax *)
+{
+ fstsw ax
+}
+Procedure TJITCPU.asm_fstsw_ax;
+Begin
+ emit_uint8($9B);
+ emit_uint8($DF);
+ emit_uint8($E0);
+End;
+
+(* TJITCPU.asm_sahf *)
+{
+ sahf
+}
+Procedure TJITCPU.asm_sahf;
+Begin
+ emit_uint8($9E);
+End;
+
 // -------------------------------------------------------------------------- //
 (* TJITCPU.generic_int_compare *)
 Procedure TJITCPU.generic_int_compare(const Operation: TCompareOperation; const Number0, Number1: int64; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant: Boolean);
@@ -1279,13 +1465,6 @@ Begin
  End;
 
  Case CompareMode of
-  // const, const
-  cmConstConst:
-  Begin
-   asm_mov_reg32_imm32(reg_eax, lo(Number0)); // mov eax, lo(Number0)
-   asm_cmp_reg32_imm32(reg_eax, lo(Number1)); // cmp eax, lo(Number1)
-  End;
-
   // const, mem
   cmConstMem:
   Begin
@@ -1328,13 +1507,6 @@ Begin
  End;
 
  Case CompareMode of
-  // const, const
-  cmConstConst:
-  Begin
-   asm_mov_reg32_imm32(reg_eax, hi(Number0)); // mov eax, hi(Number0)
-   asm_cmp_reg32_imm32(reg_eax, hi(Number1)); // cmp eax, hi(Number1)
-  End;
-
   // const, mem
   cmConstMem:
   Begin
@@ -1405,6 +1577,79 @@ Begin
   End;
 
  CData.Position := TmpPos;
+End;
+
+(* TJITCPU.generic_float_compare *)
+Procedure TJITCPU.generic_float_compare(const Operation: TCompareOperation; const Number0, Number1: Float; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant, isFirstFloat, isSecondFloat: Boolean);
+Var Tmp                   : uint32;
+    CompareMode           : (cmConstConst, cmConstMem, cmMemConst, cmMemMem);
+    NumberPnt0, NumberPnt1: uint32;
+    IFRegAddr             : uint32;
+Begin
+ IFRegAddr := uint32(@getVM^.Regs.b[5]);
+
+ if (isFirstConstant) Then
+ Begin
+  if (isSecondConstant) Then
+   CompareMode := cmConstConst Else
+   CompareMode := cmConstMem;
+ End Else
+ Begin
+  if (isSecondConstant) Then
+   CompareMode := cmMemConst Else
+   CompareMode := cmMemMem;
+ End;
+
+ if (CompareMode = cmConstConst) Then // @TODO: optimization
+ Begin
+  Case Operation of
+   co_equal        : Tmp := ord(Number0 = Number1);
+   co_different    : Tmp := ord(Number0 <> Number1);
+   co_greater      : Tmp := ord(Number0 > Number1);
+   co_greater_equal: Tmp := ord(Number0 >= Number1);
+   co_lower        : Tmp := ord(Number0 < Number1);
+   co_lower_equal  : Tmp := ord(Number0 <= Number1);
+  End;
+
+  asm_mov_mem8_imm8(IFRegAddr, Tmp); // mov <IF register>, 0/1
+  Exit;
+ End;
+
+ if (CompareMode = cmMemMem) Then // @TODO: optimization (if Addr0=Addr1)
+ Begin
+ End;
+
+ if (Addr0 = 0) Then
+  NumberPnt0 := AllocateFloat(Number0) Else
+  NumberPnt0 := Addr0;
+
+ if (Addr1 = 0) Then
+  NumberPnt1 := AllocateFloat(Number1) Else
+  NumberPnt1 := Addr1;
+
+ if (isSecondFloat) Then
+  asm_fld_memfloat(NumberPnt1) Else // fld tword [NumberPnt1]
+  asm_fild_memint(NumberPnt1); // fild qword [NumberPnt1]
+
+ if (isFirstFloat) Then
+  asm_fld_memfloat(NumberPnt0) Else // fld tword [NumberPnt0]
+  asm_fild_memint(NumberPnt0); // fild qword [NumberPnt0]
+
+ asm_fcompp;
+ asm_fstsw_ax;
+ asm_sahf;
+
+ Case Operation of
+  co_lower_equal  : asm_setbe_mem8(IFRegAddr);
+  co_lower        : asm_setb_mem8(IFRegAddr);
+  co_equal        : asm_sete_mem8(IFRegAddr);
+  co_different    : asm_setne_mem8(IFRegAddr);
+  co_greater      : asm_seta_mem8(IFRegAddr);
+  co_greater_equal: asm_setae_mem8(IFRegAddr);
+
+  else
+   raise Exception.CreateFmt('TJITCPU.generic_float_compare() -> unknown operation: %d', [ord(Operation)]);
+ End;
 End;
 
 // -------------------------------------------------------------------------- //
@@ -1974,10 +2219,29 @@ Begin
  generic_int_compare(Operation, Value0, Value1, 0, 0, True, True);
 End;
 
+(* TJITCPU.compare_immint_immfloat *)
+Procedure TJITCPU.compare_immint_immfloat(const Operation: TCompareOperation; const Value0: int64; const Value1: Float);
+Begin
+ generic_float_compare(Operation,
+                       Value0, Value1,
+                       0, 0,
+                       True, True, { constant, constant }
+                       True, True  { float, float });
+End;
+
 (* TJITCPU.compare_immint_memint *)
 Procedure TJITCPU.compare_immint_memint(const Operation: TCompareOperation; const Value0: int64; const NumberPnt1: uint64);
 Begin
  generic_int_compare(Operation, Value0, 0, 0, NumberPnt1, True, False);
+End;
+
+Procedure TJITCPU.compare_immint_memfloat(const Operation: TCompareOperation; const Value0: int64; const NumberPnt1: uint64);
+Begin
+ generic_float_compare(Operation,
+                       Value0, 0,
+                       0, NumberPnt1,
+                       True, False, { constant, memory }
+                       True, True   { float, float });
 End;
 
 (* TJITCPU.compare_memint_immint *)
@@ -1986,10 +2250,107 @@ Begin
  generic_int_compare(Operation, 0, Value1, NumberPnt0, 0, False, True);
 End;
 
+(* TJITCPU.compare_memint_immfloat *)
+Procedure TJITCPU.compare_memint_immfloat(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: Float);
+Begin
+ generic_float_compare(Operation,
+                       0, Value1,
+                       NumberPnt0, 0,
+                       False, True, { memory, constant }
+                       False, True  { int, float });
+End;
+
 (* TJITCPU.compare_memint_memint *)
 Procedure TJITCPU.compare_memint_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64);
 Begin
  generic_int_compare(Operation, 0, 0, NumberPnt0, NumberPnt1, False, False);
+End;
+
+(* TJITCPU.compare_memint_memfloat *)
+Procedure TJITCPU.compare_memint_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64);
+Begin
+ generic_float_compare(Operation,
+                       0, 0,
+                       NumberPnt0, NumberPnt1,
+                       False, False, { memory, memory }
+                       False, True   { int, float });
+End;
+
+(* TJITCPU.compare_immfloat_immint *)
+Procedure TJITCPU.compare_immfloat_immint(const Operation: TCompareOperation; const Value0: Float; const Value1: int64);
+Begin
+ generic_float_compare(Operation,
+                       Value0, Value1,
+                       0, 0,
+                       True, True, { constant, constant }
+                       True, False { float, int });
+End;
+
+(* TJITCPU.compare_immfloat_immfloat *)
+Procedure TJITCPU.compare_immfloat_immfloat(const Operation: TCompareOperation; const Value0, Value1: Float);
+Begin
+ generic_float_compare(Operation,
+                       Value0, Value1,
+                       0, 0,
+                       True, True, { constant, constant }
+                       True, True  { float, float });
+End;
+
+(* TJITCPU.compare_immfloat_memint *)
+Procedure TJITCPU.compare_immfloat_memint(const Operation: TCompareOperation; const Value0: Float; const NumberPnt1: uint64);
+Begin
+ generic_float_compare(Operation,
+                       Value0, 0,
+                       0, NumberPnt1,
+                       True, False, { constant, memory }
+                       True, False  { float, int });
+End;
+
+Procedure TJITCPU.compare_immfloat_memfloat(const Operation: TCompareOperation; const Value0: Float; const NumberPnt1: uint64);
+Begin
+ generic_float_compare(Operation,
+                       Value0, 0,
+                       0, NumberPnt1,
+                       True, False, { constant, memory }
+                       True, True   { float, float });
+End;
+
+(* TJITCPU.compare_memfloat_immint *)
+Procedure TJITCPU.compare_memfloat_immint(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: int64);
+Begin
+ generic_float_compare(Operation,
+                       0, Value1,
+                       NumberPnt0, 0,
+                       False, True, { memory, constant }
+                       True, False  { float, int });
+End;
+
+Procedure TJITCPU.compare_memfloat_immfloat(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: Float);
+Begin
+ generic_float_compare(Operation,
+                       0, Value1,
+                       NumberPnt0, 0,
+                       False, True, { memory, constant }
+                       True, True   { float, float });
+End;
+
+Procedure TJITCPU.compare_memfloat_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64);
+Begin
+ generic_float_compare(Operation,
+                       0, 0,
+                       NumberPnt0, NumberPnt1,
+                       False, False, { memory, memory }
+                       True, False   { float, int });
+End;
+
+(* TJITCPU.compare_memfloat_memfloat *)
+Procedure TJITCPU.compare_memfloat_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64);
+Begin
+ generic_float_compare(Operation,
+                       0, 0,
+                       NumberPnt0, NumberPnt1,
+                       False, False, { memory, memory }
+                       True, True    { float, float });
 End;
 
 (* TJITCPU.strjoin_memstring_immstring *)

@@ -289,7 +289,7 @@ Begin
   End;
  {$ELSE}
   PVM(VM)^.LastJITError := CopyStringToPChar('This library has been compiled without a JIT compiler support.');
-  Exit(csJITDisabled);
+  Exit(csDisabled);
  {$ENDIF}
 End;
 
@@ -333,8 +333,10 @@ Begin
   Dispose(ExceptionStack);
   SetLength(Stack, 0);
 
+  {$IFDEF ENABLE_JIT}
   if (JITCompiler <> nil) Then
    TJITCompiler(JITCompiler).Free;
+  {$ENDIF}
  End;
 
  Dispose(PVM(VM));
@@ -747,7 +749,7 @@ Begin
  Case Exception.Typ of
   { throw (by) object }
   etByObject:
-   raise SysUtils.Exception.Create('Exception-by-object throwing has not been implemented yet!');
+   raise SysUtils.Exception.Create('Throwing exceptions using objects has not been implemented yet!');
 
   { throw (by) message (string) }
   etByMessage:

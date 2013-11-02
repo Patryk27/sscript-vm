@@ -335,3 +335,9 @@ Begin
    raise Exception.CreateFmt('r__div_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
  End;
 End;
+
+{ r__push_stackval }
+Procedure r__push_stackval(const VM: PVM; const StackvalPos: int32); register;
+Begin
+ VM^.StackPush(getStackvalElement(VM, StackvalPos)^);
+End;

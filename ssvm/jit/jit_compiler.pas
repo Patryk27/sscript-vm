@@ -265,6 +265,10 @@ Begin
      if (CheckArgs(ptReferenceReg)) Then
       CPU.bcpush_reg(reg_er, getRegisterAddress(Args[0])) Else
 
+     // push(stackval)
+     if (CheckArgs(ptStackval)) Then
+      CPU.bcpush_stackval(Args[0].StackvalPos) Else
+
      // push(invalid)
       InvalidOpcodeException;
     End;
@@ -300,14 +304,15 @@ Begin
       InvalidOpcodeException;
     End;
 
-    { add, sub, mul, div }
-    o_add, o_sub, o_mul, o_div:
+    { add, sub, mul, div, mod }
+    o_add, o_sub, o_mul, o_div, o_mod:
     Begin
      Case Opcode of
       o_add: ArithmeticOperation := ao_add;
       o_sub: ArithmeticOperation := ao_sub;
       o_mul: ArithmeticOperation := ao_mul;
       o_div: ArithmeticOperation := ao_div;
+      o_mod: ArithmeticOperation := ao_mod;
      End;
 
      // opcode(reg int, imm int)

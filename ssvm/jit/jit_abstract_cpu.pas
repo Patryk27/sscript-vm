@@ -14,7 +14,7 @@ Unit JIT_Abstract_CPU;
  Type Float = Extended;
 
  { TArithmeticOperation }
- Type TArithmeticOperation = (ao_add, ao_sub, ao_mul, ao_div);
+ Type TArithmeticOperation = (ao_add, ao_sub, ao_mul, ao_div, ao_mod);
 
  { TBitwiseOperation }
  Type TBitwiseOperation = (bo_or, bo_xor, bo_and, bo_shl, bo_shr);
@@ -121,6 +121,8 @@ Unit JIT_Abstract_CPU;
         Procedure bcpush_immstring(const Value: String); va;
 
         Procedure bcpush_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); va;
+
+        Procedure bcpush_stackval(const StackvalPos: int32); va;
 
         // bcpop
         Procedure bcpop_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); va;

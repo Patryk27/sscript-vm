@@ -251,6 +251,8 @@ Type TModRM =
 
         Procedure bcpush_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); ov;
 
+        Procedure bcpush_stackval(const StackvalPos: int32); ov;
+
         // bcpop
         Procedure bcpop_reg(const RegType: TBytecodeRegister; const RegAddr: uint64); ov;
 
@@ -2013,6 +2015,14 @@ Begin
   else
    raise Exception.CreateFmt('TJITCPU.bcpush_reg() -> invalid ''RegType'' = ''%d''', [ord(RegType)]);
  End;
+End;
+
+(* TJITCPU.bcpush_stackval *)
+Procedure TJITCPU.bcpush_stackval(const StackvalPos: int32);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM));
+ asm_mov_reg32_imm32(reg_edx, StackvalPos);
+ asm_call_internalproc(@r__push_stackval);
 End;
 
 (* TJITCPU.bcpop_reg *)

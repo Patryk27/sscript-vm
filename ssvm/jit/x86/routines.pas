@@ -161,6 +161,12 @@ Begin
  Pnt^ := Pnt^ div (int64(Value_hi) << 32 + Value_lo);
 End;
 
+{ r__mod_memint_immint }
+Procedure r__mod_memint_immint(const Pnt: pint64; const Value_lo, Value_hi: int32); register;
+Begin
+ Pnt^ := Pnt^ mod (int64(Value_hi) << 32 + Value_lo);
+End;
+
 { r__shl_memint_immint }
 Procedure r__shl_memint_immint(const Pnt: pint64; const Value_lo, Value_hi: int32); register;
 Begin

@@ -1905,6 +1905,15 @@ Begin
    asm_call_internalproc(@r__div_memint_immint); // call r__div_memint_immint
   End;
 
+  { mod }
+  ao_mod:
+  Begin
+   asm_mov_reg32_imm32(reg_eax, MemAddrDst); // mov eax, MemAddrDst
+   asm_mov_reg32_imm32(reg_edx, lo(Value)); // mov edx, lo(Value)
+   asm_mov_reg32_imm32(reg_ecx, hi(Value)); // mov ecx, hi(Value)
+   asm_call_internalproc(@r__mod_memint_immint); // call r__mod_memint_immint
+  End;
+
   { invalid operation }
   else
    raise Exception.CreateFmt('TJITCPU.arithmetic_memint_immint() -> invalid operation: %d', [ord(Operation)]);
@@ -1961,6 +1970,15 @@ Begin
    asm_mov_reg32_mem32(reg_edx, MemAddrSrc+0); // mov edx, dword [MemAddrSrc+0]
    asm_mov_reg32_mem32(reg_ecx, MemAddrSrc+4); // mov ecx, dword [MemAddrSrc+4]
    asm_call_internalproc(@r__div_memint_immint); // call r__div_memint_immint
+  End;
+
+  { mod }
+  ao_mod:
+  Begin
+   asm_mov_reg32_imm32(reg_eax, MemAddrDst); // mov eax, MemAddrDst
+   asm_mov_reg32_mem32(reg_edx, MemAddrSrc+0); // mov edx, dword [MemAddrSrc+0]
+   asm_mov_reg32_mem32(reg_ecx, MemAddrSrc+4); // mov ecx, dword [MemAddrSrc+4]
+   asm_call_internalproc(@r__mod_memint_immint); // call r__mod_memint_immint
   End;
 
   { invalid operation }

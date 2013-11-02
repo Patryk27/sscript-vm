@@ -186,7 +186,7 @@ Begin
  Move(A[0], Result[0], LenA);
  Move(B[0], Result[LenA], LenB);
 
- // AllocMem automatically zeroes allocated area so we don't have to do any "Result[LenA+LenB+1] := 0;"
+ // AllocMem automatically zeroes allocated area so we don't have to do any "Result[LenA+LenB+1] := #0;"
 End;
 
 (* ------------------ stack operations ------------------ *)

@@ -312,12 +312,13 @@ Type TModRM =
         Procedure post_compilation; ov;
 
         // half-properties
-        Function get_bccall_size: uint8; ov;
+        Function get_bcjump_size: uint8; ov;
         Function get_bcconditionaljump_size: uint8; ov;
+        Function get_bccall_size: uint8; ov;
        End;
 
  Implementation
-Uses SysUtils, Stream, VMStrings;
+Uses JIT_Compiler, SysUtils, Stream, VMStrings;
 
 // -------------------------------------------------------------------------- //
 {$I routines.pas}
@@ -2558,7 +2559,7 @@ End;
 Procedure TJITCPU.do_bccall(const Address: uint64);
 Var RetEIP: uint32;
 Begin
- RetEIP := uint32(getCompiledData.Memory) + getCompiledData.Position + 22;
+ RetEIP := uint32(getCompiledData.Memory) + getCompiledData.Position + 20;
 
  asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance pointer>
  asm_mov_reg32_imm32(reg_edx, RetEIP); // mov edx, RetEIP
@@ -2611,15 +2612,21 @@ Begin
  End;
 End;
 
-(* TJITCPU.get_bccall_size *)
-Function TJITCPU.get_bccall_size: uint8;
+(* TJITCPU.get_bcjump_size *)
+Function TJITCPU.get_bcjump_size: uint8;
 Begin
- Result := 13;
+ Result := 5;
 End;
 
 (* TJITCPU.get_bcconditionaljump_size *)
 Function TJITCPU.get_bcconditionaljump_size: uint8;
 Begin
- Result := 4;
+ Result := 13;
+End;
+
+(* TJITCPU.get_bccall_size *)
+Function TJITCPU.get_bccall_size: uint8;
+Begin
+ Result := 20;
 End;
 End.

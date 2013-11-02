@@ -150,8 +150,9 @@ Unit JIT_Abstract_CPU;
         Procedure post_compilation; va;
 
         // half-properties
-        Function get_bccall_size: uint8; va;
+        Function get_bcjump_size: uint8; va;
         Function get_bcconditionaljump_size: uint8; va;
+        Function get_bccall_size: uint8; va;
 
        Public
         Constructor Create(const fVM: PVM);

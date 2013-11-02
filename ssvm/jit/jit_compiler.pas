@@ -16,13 +16,22 @@ Unit JIT_Compiler;
   CPU_x86
  {$ENDIF};
 
+ { TJumpToResolve }
+ Type TJumpToResolve =
+      Record
+       Opcode       : TOpcode_E;
+       Address      : int32;
+       CDataPosition: uint64;
+      End;
+
  { TJITCompiler }
  Type TJITCompiler =
       Class
        Private
-        VM       : PVM;
-        CPU      : TJITAbstractCPU;
-        JumpTable: TJumpTable;
+        VM            : PVM;
+        CPU           : TJITAbstractCPU;
+        JumpTable     : TJumpTable;
+        JumpsToResolve: Array of TJumpToResolve;
 
        Private
         Function getRegisterAddress(const Arg: TOpcodeArg): uint64;
@@ -92,7 +101,6 @@ End;
 
 (* TJITCompiler.Compile *)
 Function TJITCompiler.Compile: TJITCompiledState;
-Const JUMP_MARKER: uint32 = $CAFEBABE;
 Var Reader: TBytecodeReader;
     Opcode: TOpcode_E;
     Args  : TOpcodeArgArray;
@@ -183,6 +191,7 @@ Var ArithmeticOperation: TArithmeticOperation;
 
     JumpPos: int32;
     Jump   : PJumpRecord;
+    RJump  : TJumpToResolve;
     I      : Integer;
 Begin
  Result := csJITFailed;
@@ -455,25 +464,29 @@ Begin
      if (not CheckArgs(ptInt)) Then // jumps and calls have to be constant (known at compile-time)
       InvalidOpcodeException;
 
-     // write a special marker
-     While (CompiledData.Position mod 4 <> 0) Do
-      CPU.do_nop;
+     SetLength(JumpsToResolve, Length(JumpsToResolve)+1);
+     JumpsToResolve[High(JumpsToResolve)].Opcode        := Opcode;
+     JumpsToResolve[High(JumpsToResolve)].Address       := int32(CurrentBytecodePosition) + Args[0].ImmInt;
+     JumpsToResolve[High(JumpsToResolve)].CDataPosition := CompiledData.Position;
 
-     CompiledData.write_uint32(JUMP_MARKER);
-     CompiledData.write_uint8(ord(Opcode));
-     CompiledData.write_int32(int32(CurrentBytecodePosition) + Args[0].ImmInt);
+     // jumps
+     if (Opcode = o_jmp) Then
+     Begin
+      For I := 1 To CPU.get_bcjump_size Do
+       CompiledData.write_uint8(0);
+     End Else
+
+     // conditional jumps
+     if (Opcode in [o_fjmp, o_tjmp]) Then
+     Begin
+      For I := 1 To CPU.get_bcconditionaljump_size Do
+       CompiledData.write_uint8(0);
+     End Else
 
      // calls
      if (Opcode = o_call) Then
      Begin
       For I := 1 To CPU.get_bccall_size Do
-       CompiledData.write_uint8(0);
-     End Else
-
-     // jumps
-     if (Opcode in [o_fjmp, o_tjmp]) Then
-     Begin
-      For I := 1 To CPU.get_bcconditionaljump_size Do
        CompiledData.write_uint8(0);
      End;
     End;
@@ -691,58 +704,49 @@ Begin
 
   (* Phase 2: jump and call resolving *)
   jit_debug('Phase 2: jump and call resolving...');
-  CompiledData.Position := 0;
 
-  While (CompiledData.Position < CompiledData.Size) Do
+  For RJump in JumpsToResolve Do
   Begin
-   if (CompiledData.read_uint32 = JUMP_MARKER) Then // found a jump marker?
+   Opcode  := RJump.Opcode;
+   JumpPos := RJump.Address;
+   Jump    := JumpTable.FindJumpByBytecodeAddress(JumpPos);
+
+   if (Jump = nil) Then
    Begin
-    Opcode  := TOpcode_E(CompiledData.read_uint8);
-    JumpPos := CompiledData.read_int32;
-    Jump    := JumpTable.FindJumpByBytecodeAddress(JumpPos);
+    jit_debug('JumpTable.FindJumpByBytecodeAddress() returned ''nil'', PANIC!');
 
-    if (Jump = nil) Then
-    Begin
-     jit_debug('JumpTable.FindJumpByBytecodeAddress() returned ''nil'', PANIC!');
-
-     raise Exception.CreateFmt('Found a jump to an invalid bytecode area (0x%x)!', [JumpPos]);
-    End;
-
-    JumpPos               := CompiledData.Position;
-    CompiledData.Position := int64(JumpPos) - sizeof(int32) - sizeof(uint8) - sizeof(uint32);
-
-    // unconditional jump (i.e. always taken)
-    if (Opcode = o_jmp) Then
-    Begin
-     CPU.do_bcjump(Jump^.JumpAddress);
-    End Else
-
-    // conditional jump
-    if (Opcode in [o_tjmp, o_fjmp]) Then
-    Begin
-     Inc(JumpPos, CPU.get_bcconditionaljump_size);
-     CPU.do_bccondjump(Jump^.JumpAddress, Opcode);
-    End Else
-
-    // call (always taken)
-    if (Opcode = o_call) Then
-    Begin
-     Inc(JumpPos, CPU.get_bccall_size);
-     CPU.do_bccall(Jump^.JumpAddress);
-    End Else
-
-    // invalid opcode
-     raise Exception.CreateFmt('This was not supposed to happen: invalid opcode in jump resolver (opcode = 0x%x)', [ord(Opcode)]);
-
-    if (CompiledData.Position > JumpPos) Then
-     raise Exception.CreateFmt('This was not supposed to happen: ''CompiledData.Position > JumpPos'' (the JIT CPU generated %d byte(s) too much)', [CompiledData.Position-JumpPos]);
-
-    // fill left space with NOP-s
-    While (CompiledData.Position < JumpPos) Do
-     CPU.do_nop;
-
-    CompiledData.Position := 0;
+    raise Exception.CreateFmt('Found a jump to an invalid bytecode area (0x%x)!', [JumpPos]);
    End;
+
+   CompiledData.Position := RJump.CDataPosition;
+   JumpPos               := CompiledData.Position;
+
+   // unconditional jump (i.e. always taken)
+   if (Opcode = o_jmp) Then
+   Begin
+    Inc(JumpPos, CPU.get_bcjump_size);
+    CPU.do_bcjump(Jump^.JumpAddress);
+   End Else
+
+   // conditional jump
+   if (Opcode in [o_tjmp, o_fjmp]) Then
+   Begin
+    Inc(JumpPos, CPU.get_bcconditionaljump_size);
+    CPU.do_bccondjump(Jump^.JumpAddress, Opcode);
+   End Else
+
+   // call (always taken)
+   if (Opcode = o_call) Then
+   Begin
+    Inc(JumpPos, CPU.get_bccall_size);
+    CPU.do_bccall(Jump^.JumpAddress);
+   End Else
+
+   // invalid opcode
+    raise Exception.CreateFmt('This was not supposed to happen: invalid opcode in jump resolver (opcode = 0x%x)', [ord(Opcode)]);
+
+   if (CompiledData.Position > JumpPos) Then
+     raise Exception.CreateFmt('This was not supposed to happen: ''CompiledData.Position > JumpPos'' (the JIT CPU generated %d byte(s) too much)', [CompiledData.Position-JumpPos]);
   End;
 
   jit_debug('CPU post compilation...');

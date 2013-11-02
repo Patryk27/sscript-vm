@@ -212,7 +212,7 @@ Type TModRM =
     { >> other << }
         // compare
         Procedure generic_int_compare(const Operation: TCompareOperation; const Number0, Number1: int64; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant: Boolean);
-        Procedure generic_float_compare(const Operation: TCompareOperation; const Number0, Number1: Float; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant, isFirstFloat, isSecondFloat: Boolean);
+        Procedure generic_float_compare(const Operation: TCompareOperation; const Number0, Number1: Float; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant: Boolean; isFirstFloat, isSecondFloat: Boolean);
 
        Public
         // move
@@ -1580,7 +1580,7 @@ Begin
 End;
 
 (* TJITCPU.generic_float_compare *)
-Procedure TJITCPU.generic_float_compare(const Operation: TCompareOperation; const Number0, Number1: Float; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant, isFirstFloat, isSecondFloat: Boolean);
+Procedure TJITCPU.generic_float_compare(const Operation: TCompareOperation; const Number0, Number1: Float; const Addr0, Addr1: uint32; const isFirstConstant, isSecondConstant: Boolean; isFirstFloat, isSecondFloat: Boolean);
 Var Tmp                   : uint32;
     CompareMode           : (cmConstConst, cmConstMem, cmMemConst, cmMemMem);
     NumberPnt0, NumberPnt1: uint32;
@@ -1620,11 +1620,17 @@ Begin
  End;
 
  if (Addr0 = 0) Then
-  NumberPnt0 := AllocateFloat(Number0) Else
+ Begin
+  NumberPnt0   := AllocateFloat(Number0);
+  isFirstFloat := True;
+ End Else
   NumberPnt0 := Addr0;
 
  if (Addr1 = 0) Then
-  NumberPnt1 := AllocateFloat(Number1) Else
+ Begin
+  NumberPnt1    := AllocateFloat(Number1);
+  isSecondFloat := True;
+ End Else
   NumberPnt1 := Addr1;
 
  if (isSecondFloat) Then

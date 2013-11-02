@@ -8,7 +8,7 @@
 Unit JIT_Compiler;
 
  Interface
- Uses VM, Stack, BCReader, Opcodes, JIT_Abstract_CPU, JIT_Jump_Table,
+ Uses Variants, VM, Stack, BCReader, Opcodes, JIT_Abstract_CPU, JIT_Jump_Table,
 
  {$I jit_cpu.inc}
 
@@ -163,6 +163,14 @@ Var Reader: TBytecodeReader;
     Function CheckArgs(const Arg0, Arg1: TOpcodeArgType): Boolean;
     Begin
      Result := (Args[0].ArgType = Arg0) and (Args[1].ArgType = Arg1);
+    End;
+
+    { OpcodeArgumentToBytecodeRegister }
+    Function OpcodeArgumentToBytecodeRegister(const Arg: TOpcodeArgType): TBytecodeRegister;
+    Begin
+     if (Arg in [ptBoolReg..ptReferenceReg]) Then
+      Result := TBytecodeRegister(ord(reg_eb) + ord(Arg) - ord(ptBoolReg)) Else
+      raise Exception.CreateFmt('OpcodeArgumentToBytecodeRegister() -> invalid argument: %d', [ord(Arg)]);
     End;
 
 Var ArithmeticOperation: TArithmeticOperation;
@@ -409,6 +417,33 @@ Begin
      // mov(reg string, reg string)
      if (CheckArgs(ptStringReg, ptStringReg)) Then
       CPU.move_memstring_memstring(getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
+     // mov(stackval, constant value)
+     if (CheckArgs(ptStackval)) Then
+     Begin
+      Case Args[1].ArgType of
+       ptBool  : CPU.move_stackval_imm(Args[0].StackvalPos, Args[1].ImmBool, Args[1].ArgType);
+       ptChar  : CPU.move_stackval_imm(Args[0].StackvalPos, Args[1].ImmChar, Args[1].ArgType);
+       ptInt   : CPU.move_stackval_imm(Args[0].StackvalPos, Args[1].ImmInt, Args[1].ArgType);
+       ptFloat : CPU.move_stackval_imm(Args[0].StackvalPos, Args[1].ImmFloat, Args[1].ArgType);
+       ptString: CPU.move_stackval_imm(Args[0].StackvalPos, Args[1].ImmString, Args[1].ArgType);
+
+       else
+        InvalidOpcodeException;
+      End;
+     End Else
+
+     // mov(register/stackval, stackval)
+     if (Args[1].ArgType = ptStackval) Then
+     Begin
+      Case Args[0].ArgType of
+       ptBoolReg..ptReferenceReg: CPU.move_register_stackval(getRegisterAddress(Args[0]), OpcodeArgumentToBytecodeRegister(Args[0].ArgType), Args[1].StackvalPos);
+
+       // @TODO: mov(stackval, stackval)
+       else
+        InvalidOpcodeException;
+      End;
+     End Else
 
      // mov(invalid)
       InvalidOpcodeException;

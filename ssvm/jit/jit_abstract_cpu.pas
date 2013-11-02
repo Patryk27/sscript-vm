@@ -6,7 +6,7 @@
 Unit JIT_Abstract_CPU;
 
  Interface
- Uses VM, Stack, Stream, Opcodes, FGL;
+ Uses VM, Stack, Stream, Opcodes, FGL, Variants;
 
  {$DEFINE va := virtual abstract}
 
@@ -67,6 +67,9 @@ Unit JIT_Abstract_CPU;
 
         Procedure move_memstring_immstring(const MemAddr: uint64; const Value: String); va;
         Procedure move_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64); va;
+
+        Procedure move_stackval_imm(const StackvalPos: int32; const Value: Variant; const ArgType: TOpcodeArgType); va;
+        Procedure move_register_stackval(const MemAddr: uint64; const RegType: TBytecodeRegister; const StackvalPos: int32); va;
 
         // arithmetic
         Procedure arithmetic_memint_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); va;

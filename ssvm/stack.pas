@@ -36,6 +36,7 @@ Unit Stack;
 
        Function isLValue: Boolean;
        Procedure Reset;
+       Procedure ReleaseData;
       End;
 
       TStackElement = TMixedValue;
@@ -348,12 +349,18 @@ End;
 
 // -------------------------------------------------------------------------- //
 (* TMixedValue.isLValue *)
+{
+ Returns 'true' if this MixedValue is one of those: register, stackval, memory reference
+}
 Function TMixedValue.isLValue: Boolean;
 Begin
  Result := (isReg or isStackval or isMemRef);
 End;
 
 (* TMixedValue.Reset *)
+{
+ Clears all structure fields.
+}
 Procedure TMixedValue.Reset;
 Begin
  Typ        := mvNone;
@@ -362,5 +369,15 @@ Begin
  isMemRef   := False;
  RegIndex   := 0;
  MemAddr    := 0;
+End;
+
+(* TMixedValue.RelaseData *)
+{
+ Releases string data, if 'Typ' = 'mvString'
+}
+Procedure TMixedValue.ReleaseData;
+Begin
+ if (Typ = mvString) Then
+  FreeMem(Value.Str);
 End;
 End.

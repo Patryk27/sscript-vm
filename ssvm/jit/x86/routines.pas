@@ -341,3 +341,104 @@ Procedure r__push_stackval(const VM: PVM; const StackvalPos: int32); register;
 Begin
  VM^.StackPush(getStackvalElement(VM, StackvalPos)^);
 End;
+
+{ r__move_stackval_bool }
+Procedure r__move_stackval_bool(const VM: PVM; const StackvalPos: int32; const NewValue: Boolean); register;
+Begin
+ With getStackvalElement(VM, StackvalPos)^ do
+ Begin
+  ReleaseData;
+
+  Typ        := mvBool;
+  Value.Bool := NewValue;
+ End;
+End;
+
+{ r__move_stackval_char }
+Procedure r__move_stackval_char(const VM: PVM; const StackvalPos: int32; const NewValue: Char); register;
+Begin
+ With getStackvalElement(VM, StackvalPos)^ do
+ Begin
+  ReleaseData;
+
+  Typ        := mvChar;
+  Value.Char := NewValue;
+ End;
+End;
+
+{ r__move_stackval_int }
+Procedure r__move_stackval_int(const VM: PVM; const StackvalPos: int32; const NewValue: int64); register;
+Begin
+ With getStackvalElement(VM, StackvalPos)^ do
+ Begin
+  ReleaseData;
+
+  Typ       := mvInt;
+  Value.Int := NewValue;
+ End;
+End;
+
+{ r__move_stackval_float }
+Procedure r__move_stackval_float(const VM: PVM; const StackvalPos: int32); register;
+Var NewValue: Extended;
+Begin
+ asm
+  fstp Extended NewValue
+ end;
+
+ With getStackvalElement(VM, StackvalPos)^ do
+ Begin
+  ReleaseData;
+
+  Typ         := mvFloat;
+  Value.Float := NewValue;
+ End;
+End;
+
+{ r__move_stackval_string }
+Procedure r__move_stackval_string(const VM: PVM; const StackvalPos: int32; const NewValue: PChar); register;
+Begin
+ With getStackvalElement(VM, StackvalPos)^ do
+ Begin
+  ReleaseData;
+
+  Typ       := mvString;
+  Value.Str := CopyStringToPChar(NewValue);
+ End;
+End;
+
+{ r__stackval_fetch_bool }
+Function r__stackval_fetch_bool(const VM: PVM; const StackvalPos: int32): Boolean; register;
+Begin
+ Result := getBool(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__stackval_fetch_char }
+Function r__stackval_fetch_char(const VM: PVM; const StackvalPos: int32): Char; register;
+Begin
+ Result := getChar(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__stackval_fetch_int }
+Function r__stackval_fetch_int(const VM: PVM; const StackvalPos: int32): int64; register;
+Begin
+ Result := getInt(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__stackval_fetch_float }
+Function r__stackval_fetch_float(const VM: PVM; const StackvalPos: int32): Float; register;
+Begin
+ Result := getFloat(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__stackval_fetch_string }
+Function r__stackval_fetch_string(const VM: PVM; const StackvalPos: int32): PChar; register;
+Begin
+ Result := getString(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__stackval_fetch_reference }
+Function r__stackval_fetch_reference(const VM: PVM; const StackvalPos: int32): Pointer; register;
+Begin
+ Result := getReference(getStackvalElement(VM, StackvalPos)^);
+End;

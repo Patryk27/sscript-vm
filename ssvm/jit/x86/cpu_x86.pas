@@ -17,7 +17,7 @@
 Unit CPU_x86;
 
  Interface
- Uses VM, Stack, VMTypes, Opcodes, JIT_Abstract_CPU;
+ Uses VM, Stack, VMTypes, Opcodes, JIT_Abstract_CPU, Variants;
 
  Type TRegister32  = (reg_eax=0, reg_ecx, reg_edx, reg_ebx, reg_esp, reg_ebp, reg_esi, reg_edi);
  Type TRegister16  = (reg_ax=0, reg_cx, reg_dx, reg_bx, reg_sp, reg_bp, reg_si, reg_di);
@@ -211,6 +211,9 @@ Type TModRM =
         Procedure move_memstring_immstring(const MemAddr: uint64; const Value: String); ov;
         Procedure move_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64); ov;
 
+        Procedure move_stackval_imm(const StackvalPos: int32; const Value: Variant; const ArgType: TOpcodeArgType); ov;
+        Procedure move_register_stackval(const MemAddr: uint64; const RegType: TBytecodeRegister; const StackvalPos: int32); ov;
+
         // arithmetic
         Procedure arithmetic_memint_immint(const Operation: TArithmeticOperation; const MemAddrDst: uint64; const Value: int64); ov;
         Procedure arithmetic_memint_memint(const Operation: TArithmeticOperation; const MemAddrDst, MemAddrSrc: uint64); ov;
@@ -278,7 +281,7 @@ Type TModRM =
        End;
 
  Implementation
-Uses SysUtils, Stream;
+Uses SysUtils, Stream, VMStrings;
 
 // -------------------------------------------------------------------------- //
 {$I routines.pas}
@@ -1466,19 +1469,18 @@ End;
 
 (* TJITCPU.move_memfloat_immint *)
 Procedure TJITCPU.move_memfloat_immint(const MemAddr: uint64; const Value: int64);
-Type PFloat = ^TFloat;
-     TFloat =
+Type TFloat =
      Packed Record
       P1, P2: int32;
       P3    : int16;
      End;
-Var Float: PFloat;
+Var Float: TFloat;
 Begin
  PExtended(@Float)^ := Value;
 
- asm_mov_mem32_imm32(MemAddr+0, Float^.P1); // mov dword [MemAddrSrc+0], first 4 bits of Value
- asm_mov_mem32_imm32(MemAddr+4, Float^.P2); // mov dword [MemAddrSrc+4], next 4 bits of Value
- asm_mov_mem16_imm16(MemAddr+8, Float^.P3); // mov word [MemAddrSrc+8], next(last) 2 bits of Value
+ asm_mov_mem32_imm32(MemAddr+0, Float.P1); // mov dword [MemAddrSrc+0], first 4 bits of Value
+ asm_mov_mem32_imm32(MemAddr+4, Float.P2); // mov dword [MemAddrSrc+4], next 4 bits of Value
+ asm_mov_mem16_imm16(MemAddr+8, Float.P3); // mov word [MemAddrSrc+8], next(last) 2 bits of Value
 End;
 
 (* TJITCPU.move_memfloat_memint *)
@@ -1499,6 +1501,108 @@ Procedure TJITCPU.move_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64)
 Begin
  asm_mov_reg32_mem32(reg_eax, MemAddrSrc);
  asm_mov_mem32_reg32(MemAddrDst, reg_eax);
+End;
+
+(* TJITCPU.move_stackval_imm *)
+Procedure TJITCPU.move_stackval_imm(const StackvalPos: int32; const Value: Variant; const ArgType: TOpcodeArgType);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, StackvalPos); // mov edx, StackvalPos
+
+ Case ArgType of
+  { bool }
+  ptBool:
+  Begin
+   asm_mov_reg32_imm32(reg_ecx, ord(Boolean(Value))); // mov ecx, Value
+   asm_call_internalproc(@r__move_stackval_bool); // call r__move_stackval_bool
+  End;
+
+  { char }
+  ptChar:
+  Begin
+   asm_mov_reg32_imm32(reg_ecx, ord(Char(Value))); // mov ecx, Value
+   asm_call_internalproc(@r__move_stackval_char); // call r__move_stackval_char
+  End;
+
+  { int }
+  ptInt:
+  Begin
+   asm_push_imm64(Int64(Value)); // push Value
+   asm_call_internalproc(@r__move_stackval_int); // call r__move_stackval_int
+  End;
+
+  { float }
+  ptFloat:
+  Begin
+   asm_fld_memfloat(AllocateFloat(Value)); // fld <Value>
+   asm_call_internalproc(@r__move_stackval_float);
+  End;
+
+  { string }
+  ptString:
+  Begin
+   asm_mov_reg32_imm32(reg_ecx, AllocateString(Value)); // mov ecx, <Value>
+   asm_call_internalproc(@r__move_stackval_string); // call r__move_stackval_string
+  End;
+
+  else
+   raise Exception.CreateFmt('TJITCPU.move_stackval_imm() -> unknown ArgType: %d', [ord(ArgType)]);
+ End;
+End;
+
+(* TJITCPU.move_register_stackval *)
+Procedure TJITCPU.move_register_stackval(const MemAddr: uint64; const RegType: TBytecodeRegister; const StackvalPos: int32);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, StackvalPos); // mov edx, StackvalPos
+
+ Case RegType of
+  { bool }
+  reg_eb:
+  Begin
+   asm_call_internalproc(@r__stackval_fetch_bool); // call r__stackval_fetch_bool
+   asm_mov_mem8_reg8(MemAddr, reg_al); // mov byte [MemAddr], al
+  End;
+
+  { char }
+  reg_ec:
+  Begin
+   asm_call_internalproc(@r__stackval_fetch_char); // call r__stackval_fetch_char
+   asm_mov_mem8_reg8(MemAddr, reg_al); // mov byte [MemAddr], al
+  End;
+
+  { int }
+  reg_ei:
+  Begin
+   asm_call_internalproc(@r__stackval_fetch_int); // call r__stackval_fetch_int
+   asm_mov_mem32_reg32(MemAddr+0, reg_eax); // mov dword [MemAddr+0], eax
+   asm_mov_mem32_reg32(MemAddr+4, reg_edx); // mov dword [MemAddr+4], edx
+  End;
+
+  { float }
+  reg_ef:
+  Begin
+   asm_call_internalproc(@r__stackval_fetch_float); // call r__stackval_fetch_float
+   asm_fstp_memfloat(MemAddr); // fstp tword [MemAddr]
+  End;
+
+  { string }
+  reg_es:
+  Begin
+   asm_call_internalproc(@r__stackval_fetch_string); // call r__stackval_fetch_string
+   asm_mov_mem32_reg32(MemAddr, reg_eax); // mov dword [MemAddr], eax
+  End;
+
+  { reference }
+  reg_er:
+  Begin
+   asm_call_internalproc(@r__stackval_fetch_reference); // call r__stackval_fetch_reference
+   asm_mov_mem32_reg32(MemAddr, reg_eax); // mov dword [MemAddr], eax
+  End;
+
+  else
+   raise Exception.CreateFmt('TJITCPU.move_register_stackval() -> unknown RegType: %d', [ord(RegType)]);
+ End;
 End;
 
 (* TJITCPU.arithmetic_memint_immint *)
@@ -2132,7 +2236,7 @@ Begin
 
  For Call in ResolvableCalls Do
  Begin
-  CData.Position := Call.OpcodeAddress + 1; // '+1' because we must skip the opcode ($E8 in this case)
+  CData.Position := int64(Call.OpcodeAddress) + 1; // '+1' because we must skip the opcode ($E8 in this case)
   Addr           := CData.read_uint32;
   CData.Position := CData.Position - 4;
 

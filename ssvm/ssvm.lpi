@@ -88,7 +88,7 @@
       <CompilerMessages>
         <MsgFileName Value=""/>
       </CompilerMessages>
-      <CustomOptions Value="-vm4055"/>
+      <CustomOptions Value="-vm4055 -Madvancedrecords"/>
       <CompilerPath Value="$(CompPath)"/>
     </Other>
   </CompilerOptions>

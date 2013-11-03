@@ -3,7 +3,7 @@
  All rights reserved.
 *)
 {$MACRO ON}
-Unit JIT_Abstract_CPU;
+Unit JIT_AbstractCPU;
 
  Interface
  Uses VM, Stack, Stream, Opcodes, FGL, Variants;
@@ -11,7 +11,8 @@ Unit JIT_Abstract_CPU;
  {$DEFINE va := virtual abstract}
 
  { Float }
- Type Float = Extended;
+ Type PFloat = ^Float;
+      Float = Extended;
 
  { TArithmeticOperation }
  Type TArithmeticOperation = (ao_add, ao_sub, ao_mul, ao_div, ao_mod);
@@ -115,6 +116,18 @@ Unit JIT_Abstract_CPU;
         Procedure compare_memfloat_immfloat(const Operation: TCompareOperation; const NumberPnt0: uint64; const Value1: Float); va;
         Procedure compare_memfloat_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); va;
 
+        Procedure compare_stackval_immint(const Operation: TCompareOperation; const StackvalPos0: int32; const Value1: int64); va;
+        Procedure compare_stackval_immfloat(const Operation: TCompareOperation; const StackvalPos0: int32; const Value1: Float); va;
+        Procedure compare_stackval_memint(const Operation: TCompareOperation; const StackvalPos0: int32; const NumberPnt1: uint64); va;
+        Procedure compare_stackval_memfloat(const Operation: TCompareOperation; const StackvalPos0: int32; const NumberPnt1: uint64); va;
+
+        Procedure compare_immint_stackval(const Operation: TCompareOperation; const Value0: int64; const StackvalPos1: int32); va;
+        Procedure compare_immfloat_stackval(const Operation: TCompareOperation; const Value0: Float; const StackvalPos1: int32); va;
+        Procedure compare_memint_stackval(const Operation: TCompareOperation; const NumberPnt0: uint64; const StackvalPos1: int32); va;
+        Procedure compare_memfloat_stackval(const Operation: TCompareOperation; const NumberPnt0: uint64; const StackvalPos1: int32); va;
+
+        Procedure compare_stackval_stackval(const Operation: TCompareOperation; const StackvalPos0, StackvalPos1: int32); va;
+
         // strings
         Procedure strjoin_memstring_immstring(const MemAddr: uint64; const Value: String); va;
         Procedure strjoin_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64); va;
@@ -194,7 +207,7 @@ Begin
  CompiledData.write_uint16(Value);
 End;
 
-(* TJITABstractCPU.emit_uint32 *)
+(* TJITAbstractCPU.emit_uint32 *)
 Procedure TJITAbstractCPU.emit_uint32(const Value: uint32);
 Begin
  CompiledData.write_uint32(Value);

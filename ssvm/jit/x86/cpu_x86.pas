@@ -17,27 +17,28 @@
 Unit CPU_x86;
 
  Interface
- Uses VM, Stack, VMTypes, Opcodes, JIT_Abstract_CPU, Variants;
+ Uses VM, Stack, VMTypes, Opcodes, JIT_AbstractCPU, Variants;
 
+ { registers }
  Type TRegister32  = (reg_eax=0, reg_ecx, reg_edx, reg_ebx, reg_esp, reg_ebp, reg_esi, reg_edi);
  Type TRegister16  = (reg_ax=0, reg_cx, reg_dx, reg_bx, reg_sp, reg_bp, reg_si, reg_di);
  Type TRegister8   = (reg_al=0, reg_cl, reg_dl, reg_bl, reg_ah, reg_ch, reg_dh, reg_bh);
  Type TRegisterFPU = (reg_st0=0, reg_st1, reg_st2, reg_st3, reg_st4, reg_st5, reg_st6, reg_st7);
 
-{ TModRM }
-Type TModRM =
-     Bitpacked Record // ModR/M byte structure
-      RM  : 0..7;
-      Reg : 0..7;
-      Mode: 0..3;
+ { TModRM }
+ Type TModRM =
+      Bitpacked Record // ModR/M byte structure
+       RM  : 0..7;
+       Reg : 0..7;
+       Mode: 0..3;
 
-      {
-       Mode 0: [reg]
-       Mode 1: [reg+disp8]
-       Mode 2: [reg+disp32]
-       Mode 3: reg
-      }
-     End;
+       {
+        Mode 0: [reg]
+        Mode 1: [reg+disp8]
+        Mode 2: [reg+disp32]
+        Mode 3: reg
+       }
+      End;
 
  { TResolvableCall }
  Type TResolvableCall =
@@ -277,6 +278,18 @@ Type TModRM =
         Procedure compare_memfloat_memint(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); ov;
         Procedure compare_memfloat_memfloat(const Operation: TCompareOperation; const NumberPnt0, NumberPnt1: uint64); ov;
 
+        Procedure compare_stackval_immint(const Operation: TCompareOperation; const StackvalPos0: int32; const Value1: int64); ov;
+        Procedure compare_stackval_immfloat(const Operation: TCompareOperation; const StackvalPos0: int32; const Value1: Float); ov;
+        Procedure compare_stackval_memint(const Operation: TCompareOperation; const StackvalPos0: int32; const NumberPnt1: uint64); ov;
+        Procedure compare_stackval_memfloat(const Operation: TCompareOperation; const StackvalPos0: int32; const NumberPnt1: uint64); ov;
+
+        Procedure compare_immint_stackval(const Operation: TCompareOperation; const Value0: int64; const StackvalPos1: int32); ov;
+        Procedure compare_immfloat_stackval(const Operation: TCompareOperation; const Value0: Float; const StackvalPos1: int32); ov;
+        Procedure compare_memint_stackval(const Operation: TCompareOperation; const NumberPnt0: uint64; const StackvalPos1: int32); ov;
+        Procedure compare_memfloat_stackval(const Operation: TCompareOperation; const NumberPnt0: uint64; const StackvalPos1: int32); ov;
+
+        Procedure compare_stackval_stackval(const Operation: TCompareOperation; const StackvalPos0, StackvalPos1: int32); ov;
+
         // strings
         Procedure strjoin_memstring_immstring(const MemAddr: uint64; const Value: String); ov;
         Procedure strjoin_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64); ov;
@@ -318,7 +331,7 @@ Type TModRM =
        End;
 
  Implementation
-Uses JIT_Compiler, SysUtils, Stream, VMStrings;
+Uses SysUtils, Stream, VMStrings;
 
 // -------------------------------------------------------------------------- //
 {$I routines.pas}
@@ -1601,7 +1614,7 @@ Begin
    CompareMode := cmMemMem;
  End;
 
- if (CompareMode = cmConstConst) Then // @TODO: optimization
+ if (CompareMode = cmConstConst) Then
  Begin
   Case Operation of
    co_equal        : Tmp := ord(Number0 = Number1);
@@ -1616,8 +1629,12 @@ Begin
   Exit;
  End;
 
- if (CompareMode = cmMemMem) Then // @TODO: optimization (if Addr0=Addr1)
+ if (CompareMode = cmMemMem) and (Addr0 = Addr1) Then
  Begin
+  Tmp := ord(Operation in [co_equal, co_greater_equal, co_lower_equal]);
+
+  asm_mov_mem8_imm8(uint32(@getVM^.Regs.b[5]), Tmp);
+  Exit;
  End;
 
  if (Addr0 = 0) Then
@@ -2378,6 +2395,95 @@ Begin
                        True, True    { float, float });
 End;
 
+(* TJITCPU.compare_stackval_immint *)
+Procedure TJITCPU.compare_stackval_immint(const Operation: TCompareOperation; const StackvalPos0: int32; const Value1: int64);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mox eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, ord(Operation)); // mov edx, Operation
+ asm_mov_reg32_imm32(reg_ecx, StackvalPos0); // mov ecx, StackvalPos0
+ asm_push_imm64(Value1); // push Value
+
+ asm_call_internalproc(@r__compare_stackval_int); // call r__compare_stackval_int
+End;
+
+(* TJITCPU.compare_stackval_immfloat *)
+Procedure TJITCPU.compare_stackval_immfloat(const Operation: TCompareOperation; const StackvalPos0: int32; const Value1: Float);
+Begin
+ compare_stackval_memfloat(Operation, StackvalPos0, AllocateFloat(Value1));
+End;
+
+(* TJITCPU.compare_stackval_memint *)
+Procedure TJITCPU.compare_stackval_memint(const Operation: TCompareOperation; const StackvalPos0: int32; const NumberPnt1: uint64);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mox eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, ord(Operation)); // mov edx, Operation
+ asm_mov_reg32_imm32(reg_ecx, StackvalPos0); // mov ecx, StackvalPos0
+ asm_push_mem64(NumberPnt1); // push [NumberPnt1]
+
+ asm_call_internalproc(@r__compare_stackval_int); // call r__compare_stackval_int
+End;
+
+(* TJITCPU.compare_stackval_memfloat *)
+Procedure TJITCPU.compare_stackval_memfloat(const Operation: TCompareOperation; const StackvalPos0: int32; const NumberPnt1: uint64);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mox eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, ord(Operation)); // mov edx, Operation
+ asm_mov_reg32_imm32(reg_ecx, StackvalPos0); // mov ecx, StackvalPos0
+ asm_fld_memfloat(NumberPnt1); // fld tword [NumberPnt1]
+
+ asm_call_internalproc(@r__compare_stackval_float); // call r__compare_stackval_float
+End;
+
+(* TJITCPU.compare_immint_stackval *)
+Procedure TJITCPU.compare_immint_stackval(const Operation: TCompareOperation; const Value0: int64; const StackvalPos1: int32);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, ord(Operation)); // mov edx, Operation
+ asm_mov_reg32_imm32(reg_ecx, StackvalPos1); // mov ecx, StackvalPos1
+ asm_push_imm64(Value0); // push Value0
+
+ asm_call_internalproc(@r__compare_int_stackval); // call r__compare_int_stackval
+End;
+
+(* TJITCPU.compare_immfloat_stackval *)
+Procedure TJITCPU.compare_immfloat_stackval(const Operation: TCompareOperation; const Value0: Float; const StackvalPos1: int32);
+Begin
+ compare_memfloat_stackval(Operation, AllocateFloat(Value0), StackvalPos1);
+End;
+
+(* TJITCPU.compare_memint_stackval *)
+Procedure TJITCPU.compare_memint_stackval(const Operation: TCompareOperation; const NumberPnt0: uint64; const StackvalPos1: int32);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, ord(Operation)); // mov edx, Operation
+ asm_mov_reg32_imm32(reg_ecx, StackvalPos1); // mov ecx, StackvalPos1
+ asm_push_mem64(NumberPnt0); // push [NumberPnt0]
+
+ asm_call_internalproc(@r__compare_int_stackval); // call r__compare_int_stackval
+End;
+
+(* TJITCPU.compare_memfloat_stackval *)
+Procedure TJITCPU.compare_memfloat_stackval(const Operation: TCompareOperation; const NumberPnt0: uint64; const StackvalPos1: int32);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, ord(Operation)); // mov edx, Operation
+ asm_mov_reg32_imm32(reg_ecx, StackvalPos1); // mov ecx, StackvalPos1
+ asm_fld_memfloat(NumberPnt0); // fld tword [NumberPnt0]
+
+ asm_call_internalproc(@r__compare_float_stackval); // call r__compare_float_stackval
+End;
+
+(* TJITCPU.compare_stackval_stackval *)
+Procedure TJITCPU.compare_stackval_stackval(const Operation: TCompareOperation; const StackvalPos0, StackvalPos1: int32);
+Begin
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // mov eax, <VM instance address>
+ asm_mov_reg32_imm32(reg_edx, ord(Operation)); // mov edx, Operation
+ asm_mov_reg32_imm32(reg_ecx, StackvalPos0); // mov ecx, StackvalPos0
+ asm_push_imm32(StackvalPos1); // push dword StackvalPos1
+
+ asm_call_internalproc(@r__compare_stackvals); // call r__compare_stackvals
+End;
+
 (* TJITCPU.strjoin_memstring_immstring *)
 Procedure TJITCPU.strjoin_memstring_immstring(const MemAddr: uint64; const Value: String);
 Begin
@@ -2390,7 +2496,7 @@ End;
 (* TJITCPU.strjoin_memstring_memstring *)
 Procedure TJITCPU.strjoin_memstring_memstring(const MemAddrDst, MemAddrSrc: uint64);
 Begin
- // @TODO: remove this ugly call - it can be done better way (well... at least faster :P), like:
+ // @TODO: remove this ugly call - it can be done better way (well... at least a faster one :P) like:
  {
   mov     edi, dest
   mov     esi, string_address
@@ -2555,7 +2661,7 @@ Begin
  asm_call_internalproc(icall^.Handler);
 
  // apply result
- asm_mov_reg32_imm32(reg_eax, uint32(getVM));
+ asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // @TODO: do we really have to do this assignment?
  asm_mov_reg32_imm32(reg_edx, uint32(ResultMV));
  asm_call_internalproc(@r__apply_mixedvalue);
 End;

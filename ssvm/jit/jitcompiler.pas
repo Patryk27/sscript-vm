@@ -5,10 +5,10 @@
 
 {$I jit_cpu.inc}
 
-Unit JIT_Compiler;
+Unit JITCompiler;
 
  Interface
- Uses Variants, VM, Stack, BCReader, Opcodes, JIT_Abstract_CPU, JIT_Jump_Table,
+ Uses Variants, VM, Stack, BCReader, Opcodes, JIT_AbstractCPU, JIT_JumpTable,
 
  {$I jit_cpu.inc}
 
@@ -626,6 +626,38 @@ Begin
      // opcode(reg float, reg int)
      if (CheckArgs(ptFloatReg, ptIntReg)) Then
       CPU.compare_memfloat_memint(CompareOperation, getRegisterAddress(Args[0]), getRegisterAddress(Args[1])) Else
+
+     // opcode(stackval, stackval)
+     if (CheckArgs(ptStackval, ptStackval)) Then
+      CPU.compare_stackval_stackval(CompareOperation, Args[0].StackvalPos, Args[1].StackvalPos) Else
+
+     // opcode(stackval, imm/reg int/float)
+     if (CheckArgs(ptStackval)) Then
+     Begin
+      Case Args[1].ArgType of
+       ptInt     : CPU.compare_stackval_immint(CompareOperation, Args[0].StackvalPos, Args[1].ImmInt);
+       ptFloat   : CPU.compare_stackval_immfloat(CompareOperation, Args[0].StackvalPos, Args[1].ImmFloat);
+       ptIntReg  : CPU.compare_stackval_memint(CompareOperation, Args[0].StackvalPos, getRegisterAddress(Args[1]));
+       ptFloatReg: CPU.compare_stackval_memfloat(CompareOperation, Args[0].StackvalPos, getRegisterAddress(Args[1]));
+
+       else
+        InvalidOpcodeException;
+      End;
+     End Else
+
+     // opcode(imm/reg int/float, stackval)
+     if (Args[1].ArgType = ptStackval) Then
+     Begin
+      Case Args[0].ArgType of
+       ptInt     : CPU.compare_immint_stackval(CompareOperation, Args[0].ImmInt, Args[1].StackvalPos);
+       ptFloat   : CPU.compare_immfloat_stackval(CompareOperation, Args[0].ImmFloat, Args[1].StackvalPos);
+       ptIntReg  : CPU.compare_memint_stackval(CompareOperation, getRegisterAddress(Args[0]), Args[1].StackvalPos);
+       ptFloatReg: CPU.compare_memfloat_stackval(CompareOperation, getRegisterAddress(Args[0]), Args[1].StackvalPos);
+
+       else
+        InvalidOpcodeException;
+      End;
+     End Else
 
      // opcode(invalid)
       InvalidOpcodeException;

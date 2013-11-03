@@ -156,7 +156,7 @@ Unit VM;
 Uses SysUtils, Opcodes, Objects, VMStrings,
      GC, OpcodeInterpreter
 {$IFDEF ENABLE_JIT}
- , JIT_Compiler
+ , JITCompiler
 {$ENDIF};
 
 (* VM_Create *)

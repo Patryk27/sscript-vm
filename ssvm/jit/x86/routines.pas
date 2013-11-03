@@ -39,7 +39,7 @@ Begin
 End;
 
 { r__push_float_mem }
-Procedure r__push_float_mem(const VM: PVM; const Addr: PExtended); register;
+Procedure r__push_float_mem(const VM: PVM; const Addr: PFloat); register;
 Var MV: TMixedValue;
 Begin
  MV.Reset;
@@ -201,6 +201,27 @@ Function getStackvalElement(const VM: PVM; const StackvalPos: int32): PMixedValu
 Begin
  Result := @VM^.Stack[VM^.Regs.i[5] + StackvalPos];
 End;
+
+{ __compare_stackvals }
+Procedure __compare_stackvals(const VM: PVM; const MV0, MV1: TMixedValue; const Operation: TCompareOperation); inline; // helper function!
+Var Result: Boolean;
+Begin
+ Case Operation of
+  co_equal        : Result := (MV0 = MV1);
+  co_different    : Result := (MV0 <> MV1);
+  co_greater      : Result := (MV0 > MV1);
+  co_lower        : Result := (MV0 < MV1);
+  co_greater_equal: Result := (MV0 >= MV1);
+  co_lower_equal  : Result := (MV0 <= MV1);
+
+  else
+   raise Exception.CreateFmt('__compare_stackvals() -> unknown compare operation: %d', [ord(Operation)]);
+ End;
+
+ VM^.Regs.b[5] := Result;
+End;
+
+// ----- //
 
 { r__add_stackval_int }
 Procedure r__add_stackval_int(const VM: PVM; const StackvalPos: int32; const Value: int64); register;
@@ -447,4 +468,64 @@ End;
 Function r__stackval_fetch_reference(const VM: PVM; const StackvalPos: int32): Pointer; register;
 Begin
  Result := getReference(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__compare_stackvals }
+Procedure r__compare_stackvals(const VM: PVM; const Operation: TCompareOperation; const StackvalPos0, StackvalPos1: int32); register;
+Var MV0, MV1: TMixedValue;
+Begin
+ MV0 := getStackvalElement(VM, StackvalPos0)^;
+ MV1 := getStackvalElement(VM, StackvalPos1)^;
+
+ __compare_stackvals(VM, MV0, MV1, Operation);
+End;
+
+{ r__compare_stackval_int }
+Procedure r__compare_stackval_int(const VM: PVM; const Operation: TCompareOperation; const StackvalPos: int32; const Value: int64); register;
+Var MV0, MV1: TMixedValue;
+Begin
+ MV0 := getStackvalElement(VM, StackvalPos)^;
+ MV1 := TMixedValue.Create(Value);
+
+ __compare_stackvals(VM, MV0, MV1, Operation);
+End;
+
+{ r__compare_stackval_float }
+Procedure r__compare_stackval_float(const VM: PVM; const Operation: TCompareOperation; const StackvalPos: int32); register;
+Var Value   : Float;
+    MV0, MV1: TMixedValue;
+Begin
+ asm
+  fstp Float Value
+ end;
+
+ MV0 := getStackvalElement(VM, StackvalPos)^;
+ MV1 := TMixedValue.Create(Value);
+
+ __compare_stackvals(VM, MV0, MV1, Operation);
+End;
+
+{ r__compare_int_stackval }
+Procedure r__compare_int_stackval(const VM: PVM; const Operation: TCompareOperation; const StackvalPos: int32; const Value: int64); register;
+Var MV0, MV1: TMixedValue;
+Begin
+ MV0 := TMixedValue.Create(Value);
+ MV1 := getStackvalElement(VM, StackvalPos)^;
+
+ __compare_stackvals(VM, MV0, MV1, Operation);
+End;
+
+{ r__compare_float_stackval }
+Procedure r__compare_float_stackval(const VM: PVM; const Operation: TCompareOperation; const StackvalPos: int32); register;
+Var Value   : Float;
+    MV0, MV1: TMixedValue;
+Begin
+ asm
+  fstp Float Value
+ end;
+
+ MV0 := TMixedValue.Create(Value);
+ MV1 := getStackvalElement(VM, StackvalPos)^;
+
+ __compare_stackvals(VM, MV0, MV1, Operation);
 End;

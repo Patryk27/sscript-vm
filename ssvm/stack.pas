@@ -2,7 +2,6 @@
  Copyright © by Patryk Wychowaniec, 2013
  All rights reserved.
 *)
-{$MODESWITCH ADVANCEDRECORDS}
 {$H+}
 Unit Stack;
 
@@ -17,6 +16,7 @@ Unit Stack;
       PMixedValue = ^TMixedValue;
       TMixedValue =
       Packed Record
+       // public fields
        Typ  : TMixedValueType;
        Value: Record
                Bool : Boolean;
@@ -29,10 +29,15 @@ Unit Stack;
        isStackval: Boolean;
        Stackval  : PStackElement;
 
+       // VM-only fields
        isReg   : Boolean;
        isMemRef: Boolean;
        RegIndex: uint8;
        MemAddr : uint32;
+
+       // VM-only functions
+       Class Function Create(const NewValue: Int64): TMixedValue; static;
+       Class Function Create(const NewValue: Extended): TMixedValue; static;
 
        Function isLValue: Boolean;
        Procedure Reset;
@@ -348,6 +353,22 @@ Begin
 End;
 
 // -------------------------------------------------------------------------- //
+(* TMixedValue.Create *)
+Class Function TMixedValue.Create(const NewValue: Int64): TMixedValue;
+Begin
+ Result.Reset;
+ Result.Typ       := mvInt;
+ Result.Value.Int := NewValue;
+End;
+
+(* TMixedValue.Create *)
+Class Function TMixedValue.Create(const NewValue: Extended): TMixedValue;
+Begin
+ Result.Reset;
+ Result.Typ         := mvFloat;
+ Result.Value.Float := NewValue;
+End;
+
 (* TMixedValue.isLValue *)
 {
  Returns 'true' if this MixedValue is one of those: register, stackval, memory reference

@@ -2661,7 +2661,7 @@ Begin
  asm_call_internalproc(icall^.Handler);
 
  // apply result
- asm_mov_reg32_imm32(reg_eax, uint32(getVM)); // @TODO: do we really have to do this assignment?
+ // eax is preserved from previous call so we don't have to assign it again
  asm_mov_reg32_imm32(reg_edx, uint32(ResultMV));
  asm_call_internalproc(@r__apply_mixedvalue);
 End;

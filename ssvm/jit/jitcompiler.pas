@@ -171,7 +171,8 @@ Begin
     { add, sub, mul, div, mod }
     o_add, o_sub, o_mul, o_div, o_mod:
     Begin
-     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptInt, ptIntReg]) Then
+     // op(reg int, reg/imm int)
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptIntReg, ptInt]) Then
      Begin
       JITOpcode := TJITOpcodeKind(ord(jo_iiadd) + ord(Opcode)-ord(o_add));
 
@@ -187,14 +188,21 @@ Begin
       End;
 
       // arg1
-      if (CPU.hasNativeReg(Args[1])) Then
+      if (Args[1].ArgType = ptIntReg) Then
       Begin
-       Arg1     := Args[1].RegID;
-       Arg1Kind := joa_register;
+       if (CPU.hasNativeReg(Args[1])) Then
+       Begin
+        Arg1     := Args[1].RegID;
+        Arg1Kind := joa_register;
+       End Else
+       Begin
+        Arg1     := getRegisterAddress(Args[1]);
+        Arg1Kind := joa_memory;
+       End;
       End Else
       Begin
-       Arg1     := getRegisterAddress(Args[1]);
-       Arg1Kind := joa_memory;
+       Arg1     := Args[1].ImmInt;
+       Arg1Kind := joa_constant;
       End;
 
       // append opcode

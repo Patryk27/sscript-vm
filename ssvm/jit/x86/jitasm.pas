@@ -71,9 +71,11 @@ Unit JITAsm;
         Procedure mov_reg32_mem32(const Reg: TRegister32; const Mem: VMReference);
 
         // add
+        Procedure add_mem32_imm32(const Mem: VMReference; const Value: int32);
         Procedure add_mem32_reg32(const Mem: VMReference; const Reg: TRegister32);
 
         // adc
+        Procedure adc_mem32_imm32(const Mem: VMReference; const Value: int32);
         Procedure adc_mem32_reg32(const Mem: VMReference; const Reg: TRegister32);
 
         // call
@@ -219,6 +221,18 @@ Begin
  End;
 End;
 
+(* TJITAsm.add_mem32_imm32 *)
+{
+ add dword [mem], value
+}
+Procedure TJITAsm.add_mem32_imm32(const Mem: VMReference; const Value: int32);
+Begin
+ emit_uint8($81);
+ emit_uint8($05);
+ emit_uint32(Mem);
+ emit_int32(Value);
+End;
+
 (* TJITAsm.add_mem32_reg32 *)
 {
  add dword [mem], reg
@@ -233,6 +247,18 @@ Begin
  emit_uint8($01);
  emit_modrm(ModRM);
  emit_uint32(Mem);
+End;
+
+(* TJITAsm.adc_mem32_imm32 *)
+{
+ adc dword [mem], value
+}
+Procedure TJITAsm.adc_mem32_imm32(const Mem: VMReference; const Value: int32);
+Begin
+ emit_uint8($81);
+ emit_uint8($15);
+ emit_uint32(Mem);
+ emit_int32(Value);
 End;
 
 (* TJITAsm.adc_mem32_reg32 *)

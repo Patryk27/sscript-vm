@@ -132,12 +132,22 @@ Begin
     { iiadd }
     jo_iiadd:
     Begin
+     // iiadd(mem, mem)
      if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_memory) Then
      Begin
       JAsm.mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+0);
       JAsm.mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+4);
       JAsm.add_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
       JAsm.adc_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
+     End Else
+
+     // iiadd(mem, int)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
+     Begin
+      TmpInt := Arg1.Constant;
+
+      JAsm.add_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
+      JAsm.adc_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
      End Else
 
       InvalidOpcodeException;

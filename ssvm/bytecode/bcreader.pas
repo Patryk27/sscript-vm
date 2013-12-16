@@ -21,16 +21,20 @@ Unit BCReader;
         Destructor Destroy; override;
 
         Function FetchOpcode: TOpcode_E;
+        Procedure FetchOpcode(out Opcode: TOpcode_E; out Args: TOpcodeArgArray);
         Function FetchArgument: TOpcodeArg;
         Function FetchArguments(const Opcode: TOpcode_E): TOpcodeArgArray;
 
+        Function OpcodeToString(const Opcode: TOpcode_E; const Args: TOpcodeArgArray): String;
+
         Function AnyOpcodeLeft: Boolean;
 
+       Public
         Property getBytecodeData: TStream read BytecodeData;
        End;
 
  Implementation
-Uses SysUtils;
+Uses SysUtils, TypInfo;
 
 (* TBytecodeReader.Create *)
 Constructor TBytecodeReader.Create(const fBytecodeData: Pointer);
@@ -57,6 +61,13 @@ End;
 Function TBytecodeReader.FetchOpcode: TOpcode_E;
 Begin
  Result := TOpcode_E(BytecodeData.read_uint8);
+End;
+
+(* TBytecodeReader.FetchOpcode *)
+Procedure TBytecodeReader.FetchOpcode(out Opcode: TOpcode_E; out Args: TOpcodeArgArray);
+Begin
+ Opcode := FetchOpcode;
+ Args   := FetchArguments(Opcode);
 End;
 
 (* TBytecodeReader.FetchArgument *)
@@ -86,6 +97,46 @@ Begin
 
  For I := Low(Result) To High(Result) Do
   Result[I] := FetchArgument;
+End;
+
+(* TBytecodeReader.OpcodeToString *)
+Function TBytecodeReader.OpcodeToString(const Opcode: TOpcode_E; const Args: TOpcodeArgArray): String;
+Const BoolRegsNames: Array[1..5] of String = ('eb1', 'eb2', 'eb3', 'eb4', 'if');
+      IntRegsNames : Array[1..5] of String = ('ei1', 'ei2', 'ei3', 'ei4', 'stp');
+      BoolTable    : Array[Boolean] of String = ('false', 'true');
+Var I: int8;
+Begin
+ Result := Copy(GetEnumName(TypeInfo(Opcode), ord(Opcode)), 3, 10) + '(';
+
+ For I := Low(Args) To High(Args) Do
+ Begin
+  Case Args[I].ArgType of
+   ptBoolReg     : Result += BoolRegsNames[Args[I].RegID];
+   ptCharReg     : Result += 'ec'+IntToStr(Args[I].RegID);
+   ptIntReg      : Result += IntRegsNames[Args[I].RegID];
+   ptFloatReg    : Result += 'ef'+IntToStr(Args[I].RegID);
+   ptStringReg   : Result += 'es'+IntToStr(Args[I].RegID);
+   ptReferenceReg: Result += 'er'+IntToStr(Args[I].RegID);
+
+   ptBool  : Result += BoolTable[Args[I].ImmBool];
+   ptChar  : Result += '#'+IntToStr(ord(Args[I].ImmChar));
+   ptInt   : Result += IntToStr(Args[I].ImmInt);
+   ptFloat : Result += FloatToStr(Args[I].ImmFloat);
+   ptString: Result += '"'+Args[I].ImmString+'"';
+
+   ptStackval: Result += '['+IntToStr(Args[I].StackvalPos)+']';
+
+   ptConstantMemRef: Result += '&'+IntToStr(Args[I].MemoryAddress);
+
+   else
+    raise Exception.CreateFmt('TBytecodeReader.OpcodeToString -> invalid opcode argument (type = %d)', [ord(Args[I].ArgType)]);
+  End;
+
+  if (I <> High(Args)) Then
+   Result += ', ';
+ End;
+
+ Result += ')';
 End;
 
 (* TBytecodeReader.AnyOpcodeLeft *)

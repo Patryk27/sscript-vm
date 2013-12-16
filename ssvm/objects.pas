@@ -21,7 +21,7 @@ Unit Objects;
 
                    Constructor Create(const fVM: PVM);
 
-                   Procedure GC_Mark; virtual;
+                   Procedure GCMark; virtual;
                   End;
 
  { TMArray }
@@ -39,7 +39,7 @@ Unit Objects;
                   Constructor Create(const fVM: Pointer; const fType: Byte; const fSizes: uint32Array);
                   Destructor Destroy; override;
 
-                  Procedure GC_Mark; override;
+                  Procedure GCMark; override;
 
                   Procedure setValue(const Position: uint32Array; NewValue: TMixedValue); // set element's value
                   Function getValue(const Position: uint32Array): TMixedValue; // get element's value
@@ -58,8 +58,8 @@ Begin
  TGarbageCollector(VM^.GarbageCollector).PutObject(self);
 End;
 
-(* TMObject.GC_Mark *)
-Procedure TMObject.GC_Mark;
+(* TMObject.GCMark *)
+Procedure TMObject.GCMark;
 Begin
  isMarked := True;
 End;
@@ -115,7 +115,7 @@ End;
 Destructor TMArray.Destroy;
 Var Mem, MemEnd: PPointer;
 Begin
- if (Typ = TYPE_STRING_id) Then // strings need a special freeing
+ if (Typ = TYPE_STRING_id) Then // strings need special freeing
  Begin
   Mem    := Data;
   MemEnd := Mem+MemSize;
@@ -133,7 +133,7 @@ Begin
 End;
 
 (* TMArray.GC_Mark *)
-Procedure TMArray.GC_Mark;
+Procedure TMArray.GCMark;
 Var Mem, MemEnd: Pointer;
     Obj        : TMObject;
 Begin
@@ -148,7 +148,7 @@ Begin
   Begin
    Obj := TMObject(Pointer(uint32(Pint64(Mem)^)));
    if (VM^.isValidObject(Obj)) Then
-    Obj.GC_Mark;
+    Obj.GCMark;
 
    Inc(Mem, sizeof(int64));
   End;

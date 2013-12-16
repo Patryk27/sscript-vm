@@ -33,8 +33,8 @@ Unit VM;
  Type PCall = ^TCall; // @TODO: TInternalCall/PInternalCall?
       TCall = Record
                PackageName, FunctionName, FullName: String; // package name, function name, full name ('package_name.function_name')
-               ParamCount                         : uint8; // amount of params needed by function
-               Handler                            : TCallHandler; // handler to be called when calling this function
+               ParamCount                         : uint8; // number of parameters required by function
+               Handler                            : TCallHandler; // handler associated with this function
               End;
 
  Type TCallList = specialize TFPGList<PCall>;
@@ -269,11 +269,14 @@ Begin
     TJITCompiler(JITCompiler).Free;
 
    JITCompiler  := nil;
+   JITCode      := nil;
+   JITCodeSize  := 0;
    LastJITError := #0;
 
    Try
-    Compiler := TJITCompiler.Create(VM); // create compiler instance, load bytecode...
-    Result   := Compiler.Compile; // ...and compile it! :)
+    Compiler    := TJITCompiler.Create(VM); // create compiler instance, load bytecode...
+    JITCode     := Compiler.Compile(); // ...and compile it! :)
+    JITCodeSize := MemSize(JITCode);
    Except
     On E: Exception Do
     Begin
@@ -283,9 +286,9 @@ Begin
     End;
    End;
 
-   JITCode     := Compiler.getCPU.getCompiledData.Memory;
-   JITCodeSize := Compiler.getCPU.getCompiledData.Size;
    JITCompiler := Compiler;
+
+   Result := csDone;
   End;
  {$ELSE}
   PVM(VM)^.LastJITError := CopyStringToPChar('This library has been compiled without a JIT compiler support.');

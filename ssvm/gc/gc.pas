@@ -95,7 +95,7 @@ Procedure TGarbageCollector.Mark(const ObjectList: TObjectList);
   Begin
    Obj := TMObject(Address);
    if (ObjectList.IndexOf(Obj) > -1) and (not Obj.isMarked) Then
-    Obj.GC_Mark;
+    Obj.GCMark;
   End;
 
 Var Obj: TMObject;

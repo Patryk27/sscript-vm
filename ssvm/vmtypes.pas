@@ -11,6 +11,20 @@ Unit VMTypes;
       Puint64 = ^uint64;
       Pint64  = ^int64;
 
+ Type VMBool      = Boolean;
+      VMChar      = Char;
+      VMInt       = Int64;
+      VMFloat     = Extended;
+      VMString    = String;
+      VMReference = Pointer;
+
+ Type PVMBool      = ^VMBool;
+      PVMChar      = ^VMChar;
+      PVMInt       = ^VMInt;
+      PVMFloat     = ^VMFloat;
+      PVMString    = ^VMString;
+      PVMReference = ^VMReference;
+
  Implementation
 
 End.

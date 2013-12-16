@@ -4,15 +4,15 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="55">
+    <Units Count="70">
       <Unit0>
         <Filename Value="ssvm.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="ssvm"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="93"/>
-        <CursorPos X="46" Y="112"/>
+        <TopLine Value="94"/>
+        <CursorPos X="72" Y="109"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -22,8 +22,8 @@
         <UnitName Value="VM"/>
         <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="28"/>
-        <CursorPos X="8" Y="28"/>
+        <TopLine Value="671"/>
+        <CursorPos X="27" Y="687"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit1>
@@ -40,10 +40,10 @@
         <Filename Value="stack.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="Stack"/>
-        <EditorIndex Value="9"/>
+        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="41" Y="25"/>
+        <TopLine Value="4"/>
+        <CursorPos X="7" Y="16"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -62,14 +62,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="9"/>
       </Unit5>
       <Unit6>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\heaph.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="62"/>
         <CursorPos X="10" Y="92"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="9"/>
       </Unit6>
       <Unit7>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\packages\fv\src\memory.pas"/>
@@ -77,14 +77,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="9"/>
       </Unit7>
       <Unit8>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\systemh.inc"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="488"/>
-        <CursorPos X="3" Y="504"/>
-        <UsageCount Value="3"/>
+        <TopLine Value="448"/>
+        <CursorPos X="43" Y="472"/>
+        <UsageCount Value="8"/>
       </Unit8>
       <Unit9>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\types.pp"/>
@@ -92,7 +92,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="91"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="9"/>
       </Unit9>
       <Unit10>
         <Filename Value="opcodes.pas"/>
@@ -100,7 +100,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="100"/>
         <CursorPos X="5" Y="129"/>
-        <UsageCount Value="42"/>
+        <UsageCount Value="40"/>
       </Unit10>
       <Unit11>
         <Filename Value="opcodeparam.pas"/>
@@ -108,16 +108,16 @@
         <WindowIndex Value="0"/>
         <TopLine Value="71"/>
         <CursorPos X="20" Y="70"/>
-        <UsageCount Value="1"/>
+        <UsageCount Value="9"/>
       </Unit11>
       <Unit12>
         <Filename Value="objects.pas"/>
         <UnitName Value="Objects"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="190"/>
-        <CursorPos X="77" Y="219"/>
-        <UsageCount Value="30"/>
+        <TopLine Value="199"/>
+        <CursorPos X="40" Y="191"/>
+        <UsageCount Value="37"/>
         <Loaded Value="True"/>
       </Unit12>
       <Unit13>
@@ -126,27 +126,27 @@
         <WindowIndex Value="0"/>
         <TopLine Value="15"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="2"/>
+        <UsageCount Value="10"/>
       </Unit13>
       <Unit14>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\classes\classesh.inc"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1603"/>
-        <CursorPos X="17" Y="1602"/>
-        <UsageCount Value="5"/>
+        <TopLine Value="952"/>
+        <CursorPos X="3" Y="969"/>
+        <UsageCount Value="9"/>
       </Unit14>
       <Unit15>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\sysutils\osutilsh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="11" Y="28"/>
-        <UsageCount Value="2"/>
+        <UsageCount Value="10"/>
       </Unit15>
       <Unit16>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\objpash.inc"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="186"/>
-        <CursorPos X="21" Y="201"/>
+        <TopLine Value="380"/>
+        <CursorPos X="7" Y="389"/>
         <UsageCount Value="9"/>
       </Unit16>
       <Unit17>
@@ -155,7 +155,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="38" Y="16"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="1"/>
       </Unit17>
       <Unit18>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\strings.pp"/>
@@ -163,7 +163,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="1"/>
       </Unit18>
       <Unit19>
         <Filename Value="strings.pas"/>
@@ -171,7 +171,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="1"/>
       </Unit19>
       <Unit20>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\lineinfo.pp"/>
@@ -179,7 +179,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="196"/>
         <CursorPos X="3" Y="30"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="1"/>
       </Unit20>
       <Unit21>
         <Filename Value="mstrings.pas"/>
@@ -187,7 +187,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="5" Y="10"/>
-        <UsageCount Value="19"/>
+        <UsageCount Value="17"/>
       </Unit21>
       <Unit22>
         <Filename Value="..\..\SScript-Compiler\Compile2.pas"/>
@@ -195,7 +195,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="31"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="1"/>
       </Unit22>
       <Unit23>
         <Filename Value="jit\i386\jit.pas"/>
@@ -203,7 +203,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="300"/>
         <CursorPos X="73" Y="322"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="4"/>
       </Unit23>
       <Unit24>
         <Filename Value="jit\jitstream.pas"/>
@@ -211,15 +211,15 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="6" Y="1"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="1"/>
       </Unit24>
       <Unit25>
         <Filename Value="stream.pas"/>
         <UnitName Value="Stream"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="10"/>
-        <CursorPos X="7" Y="12"/>
-        <UsageCount Value="36"/>
+        <TopLine Value="18"/>
+        <CursorPos X="21" Y="18"/>
+        <UsageCount Value="39"/>
       </Unit25>
       <Unit26>
         <Filename Value="jit\jit_base.pas"/>
@@ -227,7 +227,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="19"/>
         <CursorPos X="1" Y="50"/>
-        <UsageCount Value="63"/>
+        <UsageCount Value="61"/>
       </Unit26>
       <Unit27>
         <Filename Value="jit\i386\routines.pas"/>
@@ -235,7 +235,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="37"/>
         <CursorPos X="57" Y="26"/>
-        <UsageCount Value="2"/>
+        <UsageCount Value="10"/>
       </Unit27>
       <Unit28>
         <Filename Value="jit\x86\backup\routines.pas"/>
@@ -243,16 +243,16 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="3"/>
       </Unit28>
       <Unit29>
         <Filename Value="jit\x86\routines.pas"/>
         <UnitName Value="routines"/>
-        <EditorIndex Value="8"/>
+        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="38" Y="25"/>
-        <UsageCount Value="93"/>
+        <TopLine Value="46"/>
+        <CursorPos X="64" Y="60"/>
+        <UsageCount Value="99"/>
         <Loaded Value="True"/>
       </Unit29>
       <Unit30>
@@ -261,7 +261,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1547"/>
         <CursorPos X="39" Y="1550"/>
-        <UsageCount Value="58"/>
+        <UsageCount Value="56"/>
       </Unit30>
       <Unit31>
         <Filename Value="jit/\x86\jit.pas"/>
@@ -269,22 +269,24 @@
         <WindowIndex Value="0"/>
         <TopLine Value="73"/>
         <CursorPos X="7" Y="44"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="7"/>
       </Unit31>
       <Unit32>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\sysutils\sysstrh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="97"/>
         <CursorPos X="10" Y="112"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="8"/>
       </Unit32>
       <Unit33>
         <Filename Value="bytecode\bcreader.pas"/>
         <UnitName Value="BCReader"/>
+        <EditorIndex Value="12"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="26" Y="11"/>
-        <UsageCount Value="10"/>
+        <TopLine Value="90"/>
+        <CursorPos X="56" Y="112"/>
+        <UsageCount Value="18"/>
+        <Loaded Value="True"/>
       </Unit33>
       <Unit34>
         <Filename Value="bytecode\bcloader.pas"/>
@@ -292,15 +294,17 @@
         <WindowIndex Value="0"/>
         <TopLine Value="4"/>
         <CursorPos X="32" Y="17"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="11"/>
       </Unit34>
       <Unit35>
         <Filename Value="bytecode\opcodes.pas"/>
         <UnitName Value="Opcodes"/>
+        <EditorIndex Value="13"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="17"/>
-        <CursorPos X="54" Y="17"/>
-        <UsageCount Value="31"/>
+        <TopLine Value="1"/>
+        <CursorPos X="43" Y="16"/>
+        <UsageCount Value="45"/>
+        <Loaded Value="True"/>
       </Unit35>
       <Unit36>
         <Filename Value="mtypes.pas"/>
@@ -308,25 +312,23 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="4"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="7"/>
       </Unit36>
       <Unit37>
         <Filename Value="bytecode\opcodeinterpreter.pas"/>
         <UnitName Value="OpcodeInterpreter"/>
-        <EditorIndex Value="2"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="81"/>
-        <CursorPos X="17" Y="85"/>
-        <UsageCount Value="32"/>
-        <Loaded Value="True"/>
+        <TopLine Value="840"/>
+        <CursorPos X="72" Y="869"/>
+        <UsageCount Value="31"/>
       </Unit37>
       <Unit38>
         <Filename Value="gc\gc.pas"/>
         <UnitName Value="GC"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="190"/>
-        <CursorPos X="29" Y="202"/>
-        <UsageCount Value="12"/>
+        <TopLine Value="80"/>
+        <CursorPos X="11" Y="98"/>
+        <UsageCount Value="10"/>
       </Unit38>
       <Unit39>
         <Filename Value="..\packages\moutput.pas"/>
@@ -334,14 +336,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="65"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="4"/>
+        <UsageCount Value="2"/>
       </Unit39>
       <Unit40>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\compproc.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="587"/>
         <CursorPos X="1" Y="602"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="3"/>
       </Unit40>
       <Unit41>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\fgl.pp"/>
@@ -349,7 +351,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="111"/>
         <CursorPos X="17" Y="127"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="3"/>
       </Unit41>
       <Unit42>
         <Filename Value="..\..\SScript-Compiler\symbol\variable_allocation.pas"/>
@@ -357,7 +359,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="3"/>
       </Unit42>
       <Unit43>
         <Filename Value="..\..\SScript-Compiler\syntax\parse_for.pas"/>
@@ -365,7 +367,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="3"/>
       </Unit43>
       <Unit44>
         <Filename Value="..\vm_header.pas"/>
@@ -373,36 +375,30 @@
         <WindowIndex Value="0"/>
         <TopLine Value="28"/>
         <CursorPos X="48" Y="44"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="3"/>
       </Unit44>
       <Unit45>
         <Filename Value="jit\jit_compiler.pas"/>
         <UnitName Value="JIT_Compiler"/>
-        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="619"/>
-        <CursorPos X="34" Y="636"/>
-        <UsageCount Value="43"/>
-        <Loaded Value="True"/>
+        <TopLine Value="408"/>
+        <CursorPos X="1" Y="450"/>
+        <UsageCount Value="47"/>
       </Unit45>
       <Unit46>
         <Filename Value="jit\jit_cpu.inc"/>
-        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="55" Y="1"/>
-        <UsageCount Value="11"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="15"/>
       </Unit46>
       <Unit47>
         <Filename Value="jit\jit_abstract_cpu.pas"/>
         <UnitName Value="JIT_Abstract_CPU"/>
-        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="47"/>
-        <CursorPos X="82" Y="55"/>
-        <UsageCount Value="43"/>
-        <Loaded Value="True"/>
+        <TopLine Value="148"/>
+        <CursorPos X="9" Y="153"/>
+        <UsageCount Value="47"/>
       </Unit47>
       <Unit48>
         <Filename Value="jit\x86\cpu.pas"/>
@@ -410,32 +406,29 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="3"/>
       </Unit48>
       <Unit49>
         <Filename Value="jit\x86\cpu_x86.pas"/>
         <UnitName Value="CPU_x86"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="7"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="2082"/>
-        <CursorPos X="17" Y="2102"/>
-        <UsageCount Value="43"/>
-        <Loaded Value="True"/>
+        <TopLine Value="2486"/>
+        <CursorPos X="52" Y="2524"/>
+        <UsageCount Value="51"/>
       </Unit49>
       <Unit50>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\varianth.inc"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="76"/>
-        <CursorPos X="14" Y="91"/>
-        <UsageCount Value="7"/>
+        <TopLine Value="92"/>
+        <CursorPos X="4" Y="68"/>
+        <UsageCount Value="9"/>
       </Unit50>
       <Unit51>
         <Filename Value="jit\jit_jump_table.pas"/>
         <UnitName Value="JIT_Jump_Table"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="3"/>
-        <CursorPos X="25" Y="14"/>
+        <TopLine Value="21"/>
+        <CursorPos X="51" Y="21"/>
         <UsageCount Value="10"/>
       </Unit51>
       <Unit52>
@@ -444,7 +437,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="29" Y="20"/>
-        <UsageCount Value="9"/>
+        <UsageCount Value="7"/>
       </Unit52>
       <Unit53>
         <Filename Value="vmstrings.pas"/>
@@ -452,140 +445,274 @@
         <WindowIndex Value="0"/>
         <TopLine Value="18"/>
         <CursorPos X="11" Y="18"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="9"/>
       </Unit53>
       <Unit54>
         <Filename Value="vmtypes.pas"/>
         <UnitName Value="VMTypes"/>
+        <EditorIndex Value="6"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="35" Y="26"/>
+        <UsageCount Value="12"/>
+        <Loaded Value="True"/>
+      </Unit54>
+      <Unit55>
+        <Filename Value="..\..\routines — kopia.pas"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
+        <UsageCount Value="8"/>
+      </Unit55>
+      <Unit56>
+        <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\variants.pp"/>
+        <UnitName Value="variants"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="263"/>
+        <CursorPos X="3" Y="263"/>
         <UsageCount Value="10"/>
-      </Unit54>
+      </Unit56>
+      <Unit57>
+        <Filename Value="jit\jitcompiler.pas"/>
+        <UnitName Value="JITCompiler"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="237"/>
+        <CursorPos X="3" Y="261"/>
+        <UsageCount Value="22"/>
+        <Loaded Value="True"/>
+      </Unit57>
+      <Unit58>
+        <Filename Value="jit\jit_abstractcpu.pas"/>
+        <UnitName Value="JIT_AbstractCPU"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="82"/>
+        <CursorPos X="19" Y="75"/>
+        <UsageCount Value="12"/>
+      </Unit58>
+      <Unit59>
+        <Filename Value="jit\jit_jumptable.pas"/>
+        <UnitName Value="JIT_JumpTable"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="53"/>
+        <CursorPos X="40" Y="19"/>
+        <UsageCount Value="13"/>
+      </Unit59>
+      <Unit60>
+        <Filename Value="jit\jit_abstractllcpu.pas"/>
+        <UnitName Value="JIT_AbstractLLCPU"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="12" Y="20"/>
+        <UsageCount Value="9"/>
+      </Unit60>
+      <Unit61>
+        <Filename Value="jit\jit_abstracthlcpu.pas"/>
+        <UnitName Value="JIT_AbstractHLCPU"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="103"/>
+        <CursorPos X="58" Y="247"/>
+        <UsageCount Value="9"/>
+      </Unit61>
+      <Unit62>
+        <Filename Value="jit\jitbase.pas"/>
+        <UnitName Value="JIT_Base"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="91"/>
+        <CursorPos X="3" Y="4"/>
+        <UsageCount Value="9"/>
+      </Unit62>
+      <Unit63>
+        <Filename Value="..\..\..\..\Downloads\space.pas"/>
+        <UnitName Value="gra"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="257"/>
+        <CursorPos X="25" Y="257"/>
+        <UsageCount Value="9"/>
+      </Unit63>
+      <Unit64>
+        <Filename Value="..\..\..\..\AppData\Local\Temp\Temp1_rozwiazanieXE4.zip\SmartPointersUnit.pas"/>
+        <UnitName Value="SmartPointersUnit"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="2"/>
+        <CursorPos X="28" Y="22"/>
+        <UsageCount Value="9"/>
+      </Unit64>
+      <Unit65>
+        <Filename Value="jit\jitopcodes.pas"/>
+        <UnitName Value="JITOpcodes"/>
+        <EditorIndex Value="10"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="38" Y="8"/>
+        <UsageCount Value="18"/>
+        <Loaded Value="True"/>
+      </Unit65>
+      <Unit66>
+        <Filename Value="jit\jitopcodelist.pas"/>
+        <UnitName Value="JITOpcodeList"/>
+        <EditorIndex Value="11"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="7"/>
+        <CursorPos X="53" Y="35"/>
+        <UsageCount Value="17"/>
+        <Loaded Value="True"/>
+      </Unit66>
+      <Unit67>
+        <Filename Value="jit\jitabstractcpu.pas"/>
+        <UnitName Value="JITAbstractCPU"/>
+        <EditorIndex Value="9"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="14"/>
+        <CursorPos X="61" Y="25"/>
+        <UsageCount Value="15"/>
+        <Loaded Value="True"/>
+      </Unit67>
+      <Unit68>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <UnitName Value="JITCPU"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="4"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="180"/>
+        <CursorPos X="4" Y="195"/>
+        <UsageCount Value="17"/>
+        <Loaded Value="True"/>
+      </Unit68>
+      <Unit69>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <UnitName Value="JITAsm"/>
+        <EditorIndex Value="8"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="143"/>
+        <CursorPos X="42" Y="145"/>
+        <UsageCount Value="13"/>
+        <Loaded Value="True"/>
+      </Unit69>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1476" Column="25" TopLine="1451"/>
+        <Filename Value="jit\jitabstractcpu.pas"/>
+        <Caret Line="26" Column="38" TopLine="4"/>
       </Position1>
       <Position2>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1534" Column="25" TopLine="1509"/>
+        <Filename Value="jit\jitabstractcpu.pas"/>
+        <Caret Line="48" Column="41" TopLine="28"/>
       </Position2>
       <Position3>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1713" Column="29" TopLine="1710"/>
+        <Filename Value="jit\jitabstractcpu.pas"/>
+        <Caret Line="49" Column="41" TopLine="25"/>
       </Position3>
       <Position4>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1725" Column="25" TopLine="1710"/>
+        <Filename Value="jit\jitabstractcpu.pas"/>
+        <Caret Line="54" Column="79" TopLine="33"/>
       </Position4>
       <Position5>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1726" Column="25" TopLine="1710"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="75" Column="47" TopLine="55"/>
       </Position5>
       <Position6>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1784" Column="25" TopLine="1764"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="32" Column="23" TopLine="4"/>
       </Position6>
       <Position7>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1785" Column="25" TopLine="1764"/>
+        <Filename Value="vm.pas"/>
+        <Caret Line="687" Column="38" TopLine="671"/>
       </Position7>
       <Position8>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1834" Column="41" TopLine="1808"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="11" Column="17" TopLine="4"/>
       </Position8>
       <Position9>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1835" Column="62" TopLine="1819"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="164" Column="51" TopLine="136"/>
       </Position9>
       <Position10>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1856" Column="23" TopLine="1830"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="75" Column="25" TopLine="60"/>
       </Position10>
       <Position11>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="1865" Column="60" TopLine="1839"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="199" Column="1" TopLine="168"/>
       </Position11>
       <Position12>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="68" Column="201" TopLine="66"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="67" Column="63" TopLine="50"/>
       </Position12>
       <Position13>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="105" Column="40" TopLine="81"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="32" Column="30" TopLine="5"/>
       </Position13>
       <Position14>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="48" Column="55" TopLine="27"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="70" Column="19" TopLine="55"/>
       </Position14>
       <Position15>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="59" Column="69" TopLine="41"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="164" Column="29" TopLine="137"/>
       </Position15>
       <Position16>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="280" Column="57" TopLine="263"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="35" Column="18" TopLine="11"/>
       </Position16>
       <Position17>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="45" Column="11" TopLine="36"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position17>
       <Position18>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="280" Column="59" TopLine="262"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="168" Column="30" TopLine="144"/>
       </Position18>
       <Position19>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="59" Column="59" TopLine="39"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="154" Column="60" TopLine="139"/>
       </Position19>
       <Position20>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="280" Column="83" TopLine="265"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="46" Column="69" TopLine="26"/>
       </Position20>
       <Position21>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="743" Column="35" TopLine="727"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="111" Column="32" TopLine="86"/>
       </Position21>
       <Position22>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="2000" Column="54" TopLine="1979"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="112" Column="25" TopLine="86"/>
       </Position22>
       <Position23>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="2082" Column="17" TopLine="2074"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="113" Column="12" TopLine="87"/>
       </Position23>
       <Position24>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="2102" Column="35" TopLine="2086"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="114" Column="12" TopLine="88"/>
       </Position24>
       <Position25>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="2093" Column="10" TopLine="2082"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="61" Column="36" TopLine="37"/>
       </Position25>
       <Position26>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="2098" Column="26" TopLine="2082"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="151" Column="16" TopLine="129"/>
       </Position26>
       <Position27>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="2101" Column="8" TopLine="2082"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="124" Column="32" TopLine="107"/>
       </Position27>
       <Position28>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="2102" Column="33" TopLine="2082"/>
+        <Filename Value="jit\x86\jitasm.pas"/>
+        <Caret Line="262" Column="37" TopLine="236"/>
       </Position28>
       <Position29>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="2103" Column="26" TopLine="2082"/>
+        <Filename Value="jit\x86\routines.pas"/>
+        <Caret Line="65" Column="5" TopLine="34"/>
       </Position29>
       <Position30>
-        <Filename Value="jit\x86\cpu_x86.pas"/>
-        <Caret Line="2105" Column="8" TopLine="2082"/>
+        <Filename Value="jit\x86\jitcpu.pas"/>
+        <Caret Line="11" Column="35" TopLine="6"/>
       </Position30>
     </JumpHistory>
   </ProjectSession>

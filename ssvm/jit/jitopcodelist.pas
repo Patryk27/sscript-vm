@@ -54,7 +54,7 @@ End;
 }
 Function TJITOpcodeList.Append(const Opcode: TJITOpcode): uint32;
 Begin
- if (Position >= Length(Data)) Then
+ if (Position >= uint32(Length(Data))) Then
  Begin
   Try
    if (Length(Data) = 0) Then

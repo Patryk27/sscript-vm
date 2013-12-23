@@ -4,20 +4,33 @@
 *)
 Unit JITCPU;
 
- // @TODO: ei1 -> eax:ebx, es1 -> ecx, eb1 -> edx?
- // Ew.zrobić to dynamicznie - te najczęściej używane rejestry lądują w fizycznych rejestrach CPU, a reszta sio do pamięci; najlepiej jeszcze, aby taki "najczęściej używany" wybierany był przez kompilator lub maszynę na poziomie każdej funkcji.
-
  Interface
- Uses VM, Stack, Opcodes, VMTypes, JITAbstractCPU, JITOpcodes, JITOpcodeList, JITAsm;
+ Uses VM, Stack, Opcodes, VMTypes, JITAbstractCPU, JITOpcodes, JITOpcodeList, JITAsm, JITJumpTable, Stream;
 
  {$MACRO ON}
  {$DEFINE ov := override}
+
+ { TJumpToResolve }
+ Type TJumpToResolve =
+      Record
+       Opcode      : TJITOpcodeKind;
+       JumpAddress : uint32;
+       DataPosition: uint32;
+      End;
+
+ { TJumpsToResolveArray }
+ Type TJumpsToResolveArray = Array of TJumpToResolve;
 
  { TJITCPU }
  Type TJITCPU =
       Class (TJITAbstractCPU)
        Private
-        JAsm: TJITAsm;
+        JAsm          : TJITAsm;
+        JumpTable     : TJITJumpTable;
+        JumpsToResolve: TJumpsToResolveArray;
+
+       Private
+        Procedure ResolveJumps;
 
        Public
         Constructor Create(const fVM: PVM);
@@ -31,22 +44,67 @@ Unit JITCPU;
  Implementation
 Uses SysUtils, Variants;
 
+Const asm_jmp_size = 5;
+      asm_call_size = 20;
+
 // ------------------------ //
 {$I routines.pas}
 // ------------------------ //
+
+(* TJITCPU.ResolveJumps *)
+Procedure TJITCPU.ResolveJumps;
+Var Jump   : TJumpToResolve;
+    JumpRec: TJITJumpRecord;
+    Data   : TStream;
+    RetEIP : uint32;
+Begin
+ Data := JAsm.getData;
+
+ For Jump in JumpsToResolve Do
+ Begin
+  if (not JumpTable.FindJumpByBytecodeAddress(Jump.JumpAddress, JumpRec)) Then
+   raise Exception.Create('Unexpected state: invalid JIT jump!');
+
+  Data.Position := Jump.DataPosition;
+
+  Case Jump.Opcode of
+   // unconditional jump
+   jo_jmp:
+   Begin
+    JAsm.jmp(JumpRec.CodeAddress - Data.Position - 5);
+   End;
+
+   // call
+   jo_call:
+   Begin
+    RetEIP := uint32(Data.Memory) + Data.Position + 20;
+
+    JAsm.mov_reg32_imm32(reg_eax, uint32(getVM));
+    JAsm.mov_reg32_imm32(reg_edx, RetEIP);
+    JAsm.call_internalproc(@r__push_reference);
+
+    JAsm.jmp(JumpRec.CodeAddress - Data.Position - 5);
+   End;
+  End;
+ End;
+
+ Data.Position := 0;
+End;
 
 (* TJITCPU.Create *)
 Constructor TJITCPU.Create(const fVM: PVM);
 Begin
  inherited Create(fVM);
 
- JAsm := TJITAsm.Create;
+ JAsm      := TJITAsm.Create;
+ JumpTable := TJITJumpTable.Create;
 End;
 
 (* TJITCPU.Destroy *)
 Destructor TJITCPU.Destroy;
 Begin
  JAsm.Free;
+ JumpTable.Free;
 
  inherited Destroy;
 End;
@@ -61,6 +119,8 @@ Var OpcodeID  : uint32;
     ResultMV, ParamsMV: PMixedValue;
 
     TmpInt: Int64;
+
+    I: Integer;
 
   { InvalidOpcodeException }
   Procedure InvalidOpcodeException;
@@ -81,11 +141,14 @@ Begin
  ParamsMV := JITMemAlloc(sizeof(TMixedValue)); // ditto
 
  Try
+  (* Compile *)
   For OpcodeID := 0 To OpcodeList.getSize-1 Do
   Begin
    Opcode := OpcodeList[OpcodeID];
    Arg0   := Opcode.Args[0];
    Arg1   := Opcode.Args[1];
+
+   JumpTable.AddJump(OpcodeID, JAsm.getData.Size);
 
    With JAsm do
    Case Opcode.ID of
@@ -117,6 +180,26 @@ Begin
      End;
 
      call_internalproc(@r__push_int);
+    End;
+
+    { spush }
+    jo_spush:
+    Begin
+     mov_reg32_imm32(reg_eax, uint32(getVM));
+
+     Case Arg0.Kind of
+      // memory
+      joa_memory:
+      Begin
+       mov_reg32_imm32(reg_edx, uint32(Arg0.MemoryAddr));
+      End;
+
+      // invalid
+      else
+       InvalidOpcodeException;
+     End;
+
+     call_internalproc(@r__push_string);
     End;
 
     { iimov }
@@ -246,6 +329,39 @@ Begin
       InvalidOpcodeException;
     End;
 
+    { jmp, tjmp, fjmp, call }
+    jo_jmp, jo_tjmp, jo_fjmp, jo_call:
+    Begin
+     if (Arg0.Kind <> joa_constant) Then // check parameter type
+      InvalidOpcodeException;
+
+     {$DEFINE JTR := JumpsToResolve}
+     {$DEFINE Last := JTR[High(JTR)]}
+     SetLength(JTR, Length(JTR)+1);
+     Last.Opcode       := Opcode.ID;
+     Last.JumpAddress  := Arg0.Constant;
+     Last.DataPosition := JumpTable.getLast.CodeAddress;
+     {$UNDEF JTR}
+     {$UNDEF Last}
+
+     Case Opcode.ID of
+      jo_jmp : I := asm_jmp_size;
+      jo_call: I := asm_call_size;
+      // @TODO: the rest :P
+     End;
+
+     For I := 1 To I Do
+      nop;
+    End;
+
+    { ret }
+    jo_ret:
+    Begin
+     mov_reg32_imm32(reg_eax, uint32(getVM));
+     call_internalproc(@r__pop_reference);
+     jmp(reg_eax);
+    End;
+
     { icall }
     jo_icall:
     Begin
@@ -287,6 +403,9 @@ Begin
      raise Exception.CreateFmt('TJITCPU.Compile() -> invalid opcode (kind=#%d)', [ord(Opcode.ID)]);
    End;
   End;
+
+  (* Resolve jumps *)
+  ResolveJumps;
  Finally
  End;
 
@@ -295,7 +414,7 @@ Begin
  JAsm.post_compilation;
 
  // do other "post" things
- JAsm.getData.SaveToFile('jit_compiled.o');
+ JAsm.getData.SaveToFile('jit_compiled.o'); // @TODO: debug only!
 
  Result := JAsm.getData.getMemoryPosition;
 End;
@@ -303,13 +422,6 @@ End;
 (* TJITCPU.hasNativeReg *)
 Function TJITCPU.hasNativeReg(const Kind: TBytecodeRegister; const ID: uint8): Boolean;
 Begin
- {Case Kind of
-  reg_ei: Result := (ID = 1); // "ei1"
-
-  else
-   Result := False;
- End;}
-
  Result := False;
 End;
 End.

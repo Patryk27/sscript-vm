@@ -77,11 +77,11 @@ Begin
  Result := T;
 
  Case Result of
-  ptBoolReg     : Result := ptBool;
-  ptCharReg     : Result := ptChar;
-  ptIntReg      : Result := ptInt;
-  ptFloatReg    : Result := ptFloat;
-  ptStringReg   : Result := ptString;
+  ptBoolReg  : Result := ptBool;
+  ptCharReg  : Result := ptChar;
+  ptIntReg   : Result := ptInt;
+  ptFloatReg : Result := ptFloat;
+  ptStringReg: Result := ptString;
 //  ptReferenceReg: Result := ptInt;
  End;
 End;

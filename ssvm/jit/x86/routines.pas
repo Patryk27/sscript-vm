@@ -16,7 +16,7 @@ Begin
  NumA^ := NumA^ mod ((int64(NumB_hi) << 32) + NumB_lo);
 End;
 
-(* ------------------ push_* ------------------ *)
+(* ------------------ push ------------------ *)
 { r__push_bool }
 Procedure r__push_bool(const VM: PVM; const Value: VMBool); register;
 Var MV: TMixedValue;
@@ -75,6 +75,23 @@ Begin
  MV.Typ       := mvReference;
  MV.Value.Int := Value;
  VM^.StackPush(MV);
+End;
+
+(* ------------------ pop ------------------ *)
+{ PopCheck }
+Procedure PopCheck(const VM: PVM); register;
+Begin
+ if (VM^.Regs.i[5] <= 0) Then
+  raise Exception.Create('Cannot do ''pop'' - there''s nothing on the stack!');
+End;
+
+{ r__pop_reference }
+Function r__pop_reference(const VM: PVM): Pointer; register;
+Begin
+ PopCheck(VM);
+
+ Result := getReference(VM^.Stack[VM^.Regs.i[5]]);
+ Dec(VM^.Regs.i[5]);
 End;
 
 (* ------------------ internal calls ------------------ *)

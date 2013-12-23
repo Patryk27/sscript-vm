@@ -5,12 +5,13 @@
 Unit JITOpcodes;
 
  Interface
- Uses VMTypes;
+ Uses Variants, VMTypes;
 
  { TJITOpcodeKind }
  Type TJITOpcodeKind = // don't change order of these!
       (
        jo_ipush, // ipush(int register/memory/contant)
+       jo_spush, // spush(string register/memory); string constants are automatically allocated and reported as "memory"
 
        jo_iimov, // iimov(int register/memory, int register/memory/constant)
 
@@ -23,9 +24,14 @@ Unit JITOpcodes;
        ji_ifcast, // @params? int -> float
        ji_ficast, // @params? float -> int
 
-       jo_icall, // icall(memory ref) (memory reference is the address where the icall's data's located (the "TCall" structure pointer"))
+       jo_jmp, // jmp(const int) -> parameter is JIT opcode index where to jump
+       jo_tjmp, // tjmp(^)
+       jo_fjmp, // fjmp(^)
 
-       jo_jmp, // jmp(const int)
+       jo_call, // call(^)
+       jo_ret, // ret()
+
+       jo_icall, // icall(memory ref) (memory reference is the address where the icall's data's located (the "TCall" structure pointer"))
 
        jo_stop // stop()
       );
@@ -34,22 +40,28 @@ Unit JITOpcodes;
  Const JITOpcodeParamCount:
        Array[TJITOpcodeKind] of uint8 =
        (
+        // i/s  push
+        1, 1,
+
+        // iimov
+        2,
+
+        // ii  add/sub/mul/div/mod
+        2, 2, 2, 2, 2,
+
+        // **cast
+        2, 2,
+
+        // jmp, tjmp, fjmp
+        1, 1, 1,
+
+        // call, ret
+        1, 0,
+
+        // icall
         1,
 
-        2,
-
-        2,
-        2,
-        2,
-        2,
-        2,
-
-        2,
-        2,
-
-        1,
-        1,
-
+        // stop
         0
        );
 

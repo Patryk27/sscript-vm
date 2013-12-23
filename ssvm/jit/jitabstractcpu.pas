@@ -16,10 +16,7 @@ Unit JITAbstractCPU;
        Private
         VM: PVM;
 
-        AllocatedBlocks: Array of Pointer; // allocated by "JITMemAlloc" and freed in 'TJITAbstractCPU.Destroy'.
-
-       Protected
-        Function JITMemAlloc(const Size: uint32): Pointer;
+        AllocatedBlocks: Array of Pointer; // allocated by "JITMemAlloc" and freed in TJITAbstractCPU.Destroy()
 
        Public
         Constructor Create(const fVM: PVM);
@@ -28,7 +25,9 @@ Unit JITAbstractCPU;
         Function Compile(const OpcodeList: TJITOpcodeList): Pointer; va;
 
        Public
-        Function hasConstantStringSupport: Boolean; va;
+        Function JITMemAlloc(const Size: uint32): Pointer;
+
+       Public
         Function hasNativeReg(const Kind: TBytecodeRegister; const ID: uint8): Boolean; va;
         Function hasNativeReg(const Arg: TOpcodeArg): Boolean;
 
@@ -38,16 +37,6 @@ Unit JITAbstractCPU;
 
  Implementation
 Uses SysUtils;
-
-(* TJITAbstractCPU.JITMemAlloc *)
-Function TJITAbstractCPU.JITMemAlloc(const Size: uint32): Pointer;
-Begin
- Result := AllocMem(Size);
-
- // @TODO: TArray<Pointer>.Append(AllocatedBlocks, Result);
- SetLength(AllocatedBlocks, Length(AllocatedBlocks)+1);
- AllocatedBlocks[High(AllocatedBlocks)] := Result;
-End;
 
 (* TJITAbstractCPU.Create *)
 Constructor TJITAbstractCPU.Create(const fVM: PVM);
@@ -66,6 +55,17 @@ Begin
   FreeMem(Pnt);
 
  inherited Destroy;
+End;
+
+(* TJITAbstractCPU.JITMemAlloc *)
+Function TJITAbstractCPU.JITMemAlloc(const Size: uint32): Pointer;
+Begin
+ Result := AllocMem(Size);
+
+ {$DEFINE AB := AllocatedBlocks}
+ SetLength(AB, Length(AB)+1);
+ AB[High(AB)] := Result;
+ {$UNDEF AB}
 End;
 
 (* TJITAbstractCPU.hasNativeReg *)

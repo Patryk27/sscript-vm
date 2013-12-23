@@ -2,31 +2,64 @@
  Copyright © by Patryk Wychowaniec, 2013
  All rights reserved.
 *)
+{$MACRO ON}
 Unit JITCompiler;
 
  Interface
- Uses VM, VMTypes, BCReader, Opcodes, JITOpcodes, JITOpcodeList, JITAbstractCPU, JITCPU;
+ Uses VM, VMTypes, BCReader, Opcodes, JITOpcodes, JITOpcodeList, JITAbstractCPU, JITCPU, JITJumpTable;
+
+ { TJumpToResolve }
+ Type TJumpToResolve =
+      Record
+       JITOpcodeIndex     : uint32;
+       AbsoluteJumpAddress: uint32;
+      End;
+
+ { TJumpsToResolveArray }
+ Type TJumpsToResolveArray = Array of TJumpToResolve;
 
  { TJITCompiler }
  Type TJITCompiler =
       Class
        Private
-        VM        : PVM; // virtual machine instance
-        CPU       : TJITAbstractCPU;
-        OpcodeList: TJITOpcodeList;
+        VM            : PVM; // virtual machine instance
+        CPU           : TJITAbstractCPU;
+        OpcodeList    : TJITOpcodeList;
+        JumpTable     : TJITJumpTable;
+        JumpsToResolve: TJumpsToResolveArray;
+
+       Private
+        Function AllocateString(const Value: String): uint64;
 
        Private
         Function getRegisterAddress(const Arg: TOpcodeArg): uint64;
-
         Procedure PutOpcode(const ID: TJITOpcodeKind; const ArgTypes: Array of TJITOpcodeArgKind; const Args: Array of Variant);
+
+        Procedure ResolveJITJumps;
 
        Public
         Constructor Create(const fVM: PVM);
+        Destructor Destroy; override;
+
         Function Compile: Pointer;
        End;
 
  Implementation
 Uses Variants, SysUtils;
+
+(* TJITCompiler.AllocateString *)
+Function TJITCompiler.AllocateString(const Value: String): uint64;
+Var I, Len: uint32;
+Begin
+ Result := uint64(CPU.JITMemAlloc(Length(Value)+1));
+
+ Len := Length(Value);
+
+ For I := 1 To Len Do
+  PChar(Result + I-1)^ := Value[I];
+
+ PChar(Result + Len)^ := #0;
+End;
 
 (* TJITCompiler.getRegisterAddress *)
 Function TJITCompiler.getRegisterAddress(const Arg: TOpcodeArg): uint64;
@@ -79,11 +112,40 @@ Begin
  OpcodeList.Append(Opcode); // append opcode
 End;
 
+(* TJITCompiler.ResolveJITJumps *)
+Procedure TJITCompiler.ResolveJITJumps;
+Var Jump   : TJumpToResolve;
+    JumpRec: TJITJumpRecord;
+    Opcode : TJITOpcode;
+Begin
+ For Jump in JumpsToResolve Do
+ Begin
+  if (not JumpTable.FindJumpByBytecodeAddress(Jump.AbsoluteJumpAddress, JumpRec)) Then
+   raise Exception.Create('Unexpected state: invalid jump!'); // @TODO: this should be a bit nicer message imho
+
+  {$DEFINE Op := OpcodeList[Jump.JITOpcodeIndex]}
+  Opcode                  := Op;
+  Opcode.Args[0].Constant := JumpRec.CodeAddress;
+  Op                      := Opcode;
+  {$UNDEF Op}
+ End;
+End;
+
 (* TJITCompiler.Create *)
 Constructor TJITCompiler.Create(const fVM: PVM);
 Begin
- VM  := fVM;
- CPU := TJITCPU.Create(VM);
+ VM        := fVM;
+ CPU       := TJITCPU.Create(VM);
+ JumpTable := TJITJumpTable.Create;
+End;
+
+(* TJITCompiler.Destroy *)
+Destructor TJITCompiler.Destroy;
+Begin
+ CPU.Free;
+ JumpTable.Free;
+
+ inherited Destroy;
 End;
 
 (* TJITCompiler.Compile *)
@@ -132,6 +194,8 @@ Begin
    OpcodePos := Reader.getBytecodeData.Position;
    Reader.FetchOpcode(Opcode, Args);
 
+   JumpTable.AddJump(OpcodePos, OpcodeList.getSize);
+
    if (isLocationOpcode(Opcode)) Then // skip the location opcodes
     Continue;
 
@@ -149,6 +213,14 @@ Begin
     { push }
     o_push:
     Begin
+     // push(const string)
+     if (CheckArgs(ptString)) Then
+     Begin
+      PutOpcode(jo_spush,
+               [joa_memory],
+               [AllocateString(Args[0].ImmString)]);
+     End Else
+
      // push(reg int)
      if (CheckArgs(ptIntReg)) Then
      Begin
@@ -238,6 +310,30 @@ Begin
       InvalidOpcodeException;
     End;
 
+    { jmp, tjmp, fjmp, call }
+    o_jmp, o_tjmp, o_fjmp, o_call:
+    Begin
+     if (Args[0].ArgType <> ptInt) Then // jumps and calls have to be constant
+      InvalidOpcodeException;
+
+     Case Opcode of
+      o_jmp : JITOpcode := jo_jmp;
+      o_tjmp: JITOpcode := jo_tjmp;
+      o_fjmp: JITOpcode := jo_fjmp;
+      o_call: JITOpcode := jo_call;
+     End;
+
+     {$DEFINE JTR := JumpsToResolve}
+     {$DEFINE Last := JTR[High(JTR)]}
+     SetLength(JTR, Length(JTR)+1);
+     Last.JITOpcodeIndex      := OpcodeList.getSize;
+     Last.AbsoluteJumpAddress := OpcodePos + Args[0].ImmInt;
+     {$UNDEF JTR}
+     {$UNDEF Last}
+
+     PutOpcode(JITOpcode, [joa_constant], [0]);
+    End;
+
     { icall }
     o_icall:
     Begin
@@ -257,12 +353,21 @@ Begin
       InvalidOpcodeException;
     End;
 
+    { ret }
+    o_ret:
+    Begin
+     PutOpcode(jo_ret, [], []); // ret()
+    End;
+
     else
      InvalidOpcodeException;
    End;
   End;
 
-  (* Stage 2: JIT bytecode -> CPU code *)
+  (* Stage 2: resolve JIT jumps *)
+  ResolveJITJumps;
+
+  (* Stage 3: JIT bytecode -> CPU code *)
   Result := CPU.Compile(OpcodeList);
 
   if (Result = nil) Then

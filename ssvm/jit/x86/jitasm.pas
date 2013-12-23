@@ -96,6 +96,10 @@ Unit JITAsm;
         // mul
         Procedure mul_reg32(const Reg: TRegister32);
 
+        // jmp
+        Procedure jmp(const Address: uint32);
+        Procedure jmp(const Reg: TRegister32);
+
         // call
         Procedure call_internalproc(const Handler: Pointer);
 
@@ -426,12 +430,37 @@ Begin
  emit_uint8($E0+ord(Reg));
 End;
 
+(* TJITAsm.jmp *)
+{
+ jmp address
+}
+Procedure TJITAsm.jmp(const Address: uint32);
+Begin
+ emit_uint8($E9);
+ emit_uint32(Address);
+End;
+
+(* TJITAsm.jmp *)
+{
+ jmp reg
+}
+Procedure TJITAsm.jmp(const Reg: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 3;
+ ModRM.Reg  := 4;
+ ModRM.RM   := ord(Reg);
+
+ emit_uint8($FF);
+ emit_modrm(ModRM);
+End;
+
 (* TJITAsm.call_internalproc *)
 {
  call proc
 
  Note #1: this is "lazy" calling - it's resolved in late post compilation
- Note #2: passed argument must be an absolute address
+ Note #2: passed argument must be an absolute address, it's automatically changed to relative later (see note above)
 }
 Procedure TJITAsm.call_internalproc(const Handler: Pointer);
 Begin

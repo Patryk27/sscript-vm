@@ -3,7 +3,20 @@
  All rights reserved.
 *)
 
-(* ------------------ PUSH ------------------ *)
+(* ------------------ integer operations ------------------ *)
+{ r__div_imem_iconst }
+Procedure r__div_imem_iconst(const NumA: Pint64; const NumB_lo, NumB_hi: uint32); register;
+Begin
+ NumA^ := NumA^ div ((int64(NumB_hi) << 32) + NumB_lo);
+End;
+
+{ r__mod_imem_iconst }
+Procedure r__mod_imem_iconst(const NumA: Pint64; const NumB_lo, NumB_hi: uint32); register;
+Begin
+ NumA^ := NumA^ mod ((int64(NumB_hi) << 32) + NumB_lo);
+End;
+
+(* ------------------ push_* ------------------ *)
 { r__push_bool }
 Procedure r__push_bool(const VM: PVM; const Value: VMBool); register;
 Var MV: TMixedValue;

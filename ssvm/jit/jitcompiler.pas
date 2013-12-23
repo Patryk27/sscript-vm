@@ -53,7 +53,7 @@ Var Opcode : TJITOpcode;
     I      : uint8;
 Begin
  if (Length(ArgTypes) <> Length(Args)) or (Length(Args) > High(TJITOpcode.Args)) or (Length(Args) <> JITOpcodeParamCount[ID]) Then // lenghts of the arrays are not the same (or too high)
-  raise Exception.CreateFmt('TJITCompiler.PutOpcode() -> shouldn''t happen! (Length(ArgTypes)=%d, Length(Args)=%d)', [Length(ArgTypes), Length(Args)]);
+  raise Exception.CreateFmt('TJITCompiler.PutOpcode() -> shouldn''t happen! (Length(ArgTypes)=%d, Length(Args)=%d, High(TJITOpcode.Args)=%d, JITOpcodeParamCount[ID]=%d)', [Length(ArgTypes), Length(Args), High(TJITOpcode.Args), JITOpcodeParamCount[ID]]);
 
  Opcode.ID := ID;
 
@@ -174,7 +174,9 @@ Begin
      // op(reg int, reg/imm int)
      if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptIntReg, ptInt]) Then
      Begin
-      JITOpcode := TJITOpcodeKind(ord(jo_iiadd) + ord(Opcode)-ord(o_add));
+      if (Opcode = o_mod) Then
+       JITOpcode := jo_iimod Else
+       JITOpcode := TJITOpcodeKind(ord(jo_iiadd) + ord(Opcode)-ord(o_add));
 
       // arg0
       if (CPU.hasNativeReg(Args[0])) Then

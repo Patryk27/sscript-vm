@@ -87,32 +87,36 @@ Begin
    Arg0   := Opcode.Args[0];
    Arg1   := Opcode.Args[1];
 
+   With JAsm do
    Case Opcode.ID of
     { ipush }
     jo_ipush:
     Begin
-     JAsm.mov_reg32_imm32(reg_eax, uint32(getVM));
+     mov_reg32_imm32(reg_eax, uint32(getVM));
 
      Case Arg0.Kind of
+      // memory
       joa_memory:
       Begin
-       JAsm.mov_reg32_mem32(reg_edx, Arg0.MemoryAddr+0);
-       JAsm.mov_reg32_mem32(reg_ecx, Arg0.MemoryAddr+4);
+       mov_reg32_mem32(reg_edx, Arg0.MemoryAddr+0);
+       mov_reg32_mem32(reg_ecx, Arg0.MemoryAddr+4);
       End;
 
+      // constant
       joa_constant:
       Begin
        TmpInt := Arg0.Constant;
 
-       JAsm.mov_reg32_imm32(reg_edx, lo(TmpInt));
-       JAsm.mov_reg32_imm32(reg_ecx, hi(TmpInt));
+       mov_reg32_imm32(reg_edx, lo(TmpInt));
+       mov_reg32_imm32(reg_ecx, hi(TmpInt));
       End;
 
+      // invalid
       else
        InvalidOpcodeException;
      End;
 
-     JAsm.call_internalproc(@r__push_int);
+     call_internalproc(@r__push_int);
     End;
 
     { iimov }
@@ -122,8 +126,8 @@ Begin
      Begin
       TmpInt := Arg1.Constant;
 
-      JAsm.mov_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
-      JAsm.mov_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
+      mov_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
+      mov_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
      End Else
 
       InvalidOpcodeException;
@@ -135,10 +139,10 @@ Begin
      // iiadd(mem, mem)
      if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_memory) Then
      Begin
-      JAsm.mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+0);
-      JAsm.mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+4);
-      JAsm.add_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
-      JAsm.adc_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
+      mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+0);
+      mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+4);
+      add_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
+      adc_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
      End Else
 
      // iiadd(mem, int)
@@ -146,8 +150,97 @@ Begin
      Begin
       TmpInt := Arg1.Constant;
 
-      JAsm.add_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
-      JAsm.adc_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
+      add_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
+      adc_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
+     End Else
+
+      InvalidOpcodeException;
+    End;
+
+    { iisub }
+    jo_iisub:
+    Begin
+     // iisub(mem, mem)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_memory) Then
+     Begin
+      mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+4);
+      mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+0);
+      sub_mem32_reg32(Arg0.MemoryAddr+4, reg_eax);
+      sbb_mem32_reg32(Arg0.MemoryAddr+0, reg_ebx);
+     End Else
+
+     // iisub(mem, int)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
+     Begin
+      TmpInt := Arg1.Constant;
+
+      sub_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
+      sbb_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
+     End Else
+
+      InvalidOpcodeException;
+    End;
+
+    { iimul }
+    jo_iimul:
+    Begin
+     // iimul(mem, mem/int)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind in [joa_memory, joa_constant]) Then
+     Begin
+      mov_reg32_mem32(reg_edi, Arg0.MemoryAddr+4);
+      mov_reg32_mem32(reg_esi, Arg0.MemoryAddr+0);
+
+      if (Arg1.Kind = joa_memory) Then
+      Begin
+       mov_reg32_mem32(reg_ecx, Arg1.MemoryAddr+4);
+       mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+0);
+      End Else
+      Begin
+       TmpInt := Arg1.Constant;
+
+       mov_reg32_imm32(reg_ecx, hi(TmpInt));
+       mov_reg32_imm32(reg_ebx, lo(TmpInt));
+      End;
+
+      mov_reg32_reg32(reg_eax, reg_edi);
+      mul_reg32(reg_ebx);
+      xchg_reg32_reg32(reg_eax, reg_ebx);
+      mul_reg32(reg_esi);
+      xchg_reg32_reg32(reg_esi, reg_eax);
+      add_reg32_reg32(reg_ebx, reg_edx);
+      mul_reg32(reg_ecx);
+      add_reg32_reg32(reg_ebx, reg_eax);
+
+      mov_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
+      mov_mem32_reg32(Arg0.MemoryAddr+0, reg_esi);
+     End Else
+
+      InvalidOpcodeException;
+    End;
+
+    { iidiv, iimod }
+    jo_iidiv, jo_iimod:
+    Begin
+     // opcode(mem, mem/int)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind in [joa_memory, joa_constant]) Then
+     Begin
+      mov_reg32_imm32(reg_eax, uint32(Arg0.MemoryAddr));
+
+      if (Arg1.Kind = joa_memory) Then
+      Begin
+       mov_reg32_mem32(reg_edx, Arg1.MemoryAddr+0);
+       mov_reg32_mem32(reg_ecx, Arg1.MemoryAddr+4);
+      End Else
+      Begin
+       TmpInt := Arg1.Constant;
+
+       mov_reg32_imm32(reg_edx, lo(TmpInt));
+       mov_reg32_imm32(reg_ecx, hi(TmpInt));
+      End;
+
+      if (Opcode.ID = jo_iidiv) Then
+       call_internalproc(@r__div_imem_iconst) Else
+       call_internalproc(@r__mod_imem_iconst);
      End Else
 
       InvalidOpcodeException;
@@ -163,30 +256,30 @@ Begin
      icall := Arg0.MemoryAddr;
 
      // prepare parameter list
-     JAsm.mov_reg32_imm32(reg_eax, uint32(getVM));
-     JAsm.mov_reg32_imm32(reg_edx, uint32(icall));
-     JAsm.mov_reg32_imm32(reg_ecx, uint32(ParamsMV));
-     JAsm.call_internalproc(@r__create_icall_parameter_list);
+     mov_reg32_imm32(reg_eax, uint32(getVM));
+     mov_reg32_imm32(reg_edx, uint32(icall));
+     mov_reg32_imm32(reg_ecx, uint32(ParamsMV));
+     call_internalproc(@r__create_icall_parameter_list);
 
      // clean result
-     JAsm.mov_reg32_imm32(reg_eax, uint32(ResultMV));
-     JAsm.call_internalproc(@r__clean_mixedvalue);
+     mov_reg32_imm32(reg_eax, uint32(ResultMV));
+     call_internalproc(@r__clean_mixedvalue);
 
      // call icall
-     JAsm.mov_reg32_imm32(reg_eax, uint32(getVM));
-     JAsm.mov_reg32_imm32(reg_edx, uint32(ParamsMV));
-     JAsm.mov_reg32_imm32(reg_ecx, uint32(ResultMV));
-     JAsm.call_internalproc(icall^.Handler);
+     mov_reg32_imm32(reg_eax, uint32(getVM));
+     mov_reg32_imm32(reg_edx, uint32(ParamsMV));
+     mov_reg32_imm32(reg_ecx, uint32(ResultMV));
+     call_internalproc(icall^.Handler);
 
      // apply result; eax is preserved from the previous call, so we don't have to assign it again
-     JAsm.mov_reg32_imm32(reg_edx, uint32(ResultMV));
-     JAsm.call_internalproc(@r__apply_mixedvalue);
+     mov_reg32_imm32(reg_edx, uint32(ResultMV));
+     call_internalproc(@r__apply_mixedvalue);
     End;
 
     { stop }
     jo_stop:
     Begin
-     JAsm.ret;
+     ret;
     End;
 
     { invalid opcode }
@@ -202,7 +295,7 @@ Begin
  JAsm.post_compilation;
 
  // do other "post" things
- //JAsm.getData.SaveToFile('jit_compiled.o');
+ JAsm.getData.SaveToFile('jit_compiled.o');
 
  Result := JAsm.getData.getMemoryPosition;
 End;

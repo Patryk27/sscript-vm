@@ -69,6 +69,8 @@ Unit JITAsm;
         Procedure mov_reg32_reg32(const RegA, RegB: TRegister32);
         Procedure mov_reg32_mem32(const Reg: TRegister32; const Mem: VMReference);
 
+        Procedure mov_mem8_imm8(const Mem: VMReference; const Value: int8);
+
         Procedure mov_mem32_imm32(const Mem: VMReference; const Value: int32);
         Procedure mov_mem32_reg32(const Mem: VMReference; const Reg: TRegister32);
 
@@ -96,9 +98,14 @@ Unit JITAsm;
         // mul
         Procedure mul_reg32(const Reg: TRegister32);
 
-        // jmp
-        Procedure jmp(const Address: uint32);
+        // cmp
+        Procedure cmp_mem8_imm8(const Mem: VMReference; const Value: int8);
+
+        // jumps
+        Procedure jmp(const Address: int32);
         Procedure jmp(const Reg: TRegister32);
+
+        Procedure je(const Address: int32);
 
         // call
         Procedure call_internalproc(const Handler: Pointer);
@@ -244,6 +251,18 @@ Begin
   emit_modrm(ModRM);
   emit_uint32(Mem);
  End;
+End;
+
+(* TJITAsm.mov_mem8_imm8 *)
+{
+ mov byte [mem], value
+}
+Procedure TJITAsm.mov_mem8_imm8(const Mem: VMReference; const Value: int8);
+Begin
+ emit_uint8($C6);
+ emit_uint8($05);
+ emit_uint32(Mem);
+ emit_uint8(Value);
 End;
 
 (* TJITAsm.mov_mem32_imm32 *)
@@ -430,14 +449,26 @@ Begin
  emit_uint8($E0+ord(Reg));
 End;
 
+(* TJITAsm.cmp_mem8_imm8 *)
+{
+ cmp byte [mem], value
+}
+Procedure TJITAsm.cmp_mem8_imm8(const Mem: VMReference; const Value: int8);
+Begin
+ emit_uint8($80);
+ emit_uint8($3D);
+ emit_uint32(Mem);
+ emit_uint8(Value);
+End;
+
 (* TJITAsm.jmp *)
 {
  jmp address
 }
-Procedure TJITAsm.jmp(const Address: uint32);
+Procedure TJITAsm.jmp(const Address: int32);
 Begin
  emit_uint8($E9);
- emit_uint32(Address);
+ emit_int32(Address);
 End;
 
 (* TJITAsm.jmp *)
@@ -453,6 +484,17 @@ Begin
 
  emit_uint8($FF);
  emit_modrm(ModRM);
+End;
+
+(* TJITAsm.je *)
+{
+ je address
+}
+Procedure TJITAsm.je(const Address: int32);
+Begin
+ emit_uint8($0F);
+ emit_uint8($84);
+ emit_int32(Address);
 End;
 
 (* TJITAsm.call_internalproc *)

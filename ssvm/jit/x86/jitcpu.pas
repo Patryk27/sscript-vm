@@ -38,14 +38,15 @@ Unit JITCPU;
 
         Function Compile(const OpcodeList: TJITOpcodeList): Pointer; ov;
 
-        Function hasNativeReg(const Kind: TBytecodeRegister; const ID: uint8): Boolean; ov;
+        Function isRegNative(const Kind: TBytecodeRegister; const ID: uint8): Boolean; ov;
        End;
 
  Implementation
 Uses SysUtils, Variants;
 
-Const asm_jmp_size = 5;
-      asm_call_size = 20;
+Const asm_jmp_size     = 5;
+      asm_condjmp_size = 13;
+      asm_call_size    = 20;
 
 // ------------------------ //
 {$I routines.pas}
@@ -72,6 +73,13 @@ Begin
    jo_jmp:
    Begin
     JAsm.jmp(JumpRec.CodeAddress - Data.Position - 5);
+   End;
+
+   // conditional jump
+   jo_tjmp, jo_fjmp:
+   Begin
+    JAsm.cmp_mem8_imm8(@getVM^.Regs.b[5], ord(Jump.Opcode = jo_tjmp));
+    JAsm.je(int32(JumpRec.CodeAddress) - int32(Data.Position) - 6);
    End;
 
    // call
@@ -200,6 +208,17 @@ Begin
      End;
 
      call_internalproc(@r__push_string);
+    End;
+
+    { bbmov }
+    jo_bbmov:
+    Begin
+     if (Arg0.Kind = joa_memory) Then
+     Begin
+      mov_mem8_imm8(Arg0.MemoryAddr, Arg1.Constant);
+     End Else
+
+      InvalidOpcodeException;
     End;
 
     { iimov }
@@ -345,9 +364,12 @@ Begin
      {$UNDEF Last}
 
      Case Opcode.ID of
-      jo_jmp : I := asm_jmp_size;
-      jo_call: I := asm_call_size;
-      // @TODO: the rest :P
+      jo_jmp          : I := asm_jmp_size;
+      jo_call         : I := asm_call_size;
+      jo_tjmp, jo_fjmp: I := asm_condjmp_size;
+
+      else
+       InvalidOpcodeException;
      End;
 
      For I := 1 To I Do
@@ -414,13 +436,13 @@ Begin
  JAsm.post_compilation;
 
  // do other "post" things
- JAsm.getData.SaveToFile('jit_compiled.o'); // @TODO: debug only!
+ JAsm.getData.SaveToFile('jit_compiled.o'); // @note: debug only
 
  Result := JAsm.getData.getMemoryPosition;
 End;
 
-(* TJITCPU.hasNativeReg *)
-Function TJITCPU.hasNativeReg(const Kind: TBytecodeRegister; const ID: uint8): Boolean;
+(* TJITCPU.isRegNative *)
+Function TJITCPU.isRegNative(const Kind: TBytecodeRegister; const ID: uint8): Boolean;
 Begin
  Result := False;
 End;

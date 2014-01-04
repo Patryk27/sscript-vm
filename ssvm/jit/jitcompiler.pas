@@ -224,7 +224,7 @@ Begin
      // push(reg int)
      if (CheckArgs(ptIntReg)) Then
      Begin
-      if (CPU.hasNativeReg(Args[0])) Then
+      if (CPU.isRegNative(Args[0])) Then
       Begin
        PutOpcode(jo_ipush, // ipush(reg)
                 [joa_register],
@@ -251,7 +251,7 @@ Begin
        JITOpcode := TJITOpcodeKind(ord(jo_iiadd) + ord(Opcode)-ord(o_add));
 
       // arg0
-      if (CPU.hasNativeReg(Args[0])) Then
+      if (CPU.isRegNative(Args[0])) Then
       Begin
        Arg0     := Args[0].RegID;
        Arg0Kind := joa_register;
@@ -264,7 +264,7 @@ Begin
       // arg1
       if (Args[1].ArgType = ptIntReg) Then
       Begin
-       if (CPU.hasNativeReg(Args[1])) Then
+       if (CPU.isRegNative(Args[1])) Then
        Begin
         Arg1     := Args[1].RegID;
         Arg1Kind := joa_register;
@@ -291,10 +291,26 @@ Begin
     Begin
      RegAddr := getRegisterAddress(Args[0]);
 
+     // mov(reg bool, imm bool)
+     if (CheckArgs(ptBoolReg, ptBool)) Then
+     Begin
+      if (CPU.isRegNative(Args[0])) Then
+      Begin
+       PutOpcode(jo_bbmov, // bbmov(reg, value)
+                [joa_register, joa_constant],
+                [Args[0].RegID, Args[1].ImmBool]);
+      End Else
+      Begin
+       PutOpcode(jo_bbmov, // bbmov(mem, value)
+                [joa_memory, joa_constant],
+                [RegAddr, Args[1].ImmBool]);
+      End;
+     End Else
+
      // mov(reg int, imm int)
      if (CheckArgs(ptIntReg, ptInt)) Then
      Begin
-      if (CPU.hasNativeReg(Args[0])) Then // if register can be used natively
+      if (CPU.isRegNative(Args[0])) Then
       Begin
        PutOpcode(jo_iimov, // iimov(reg, value)
                 [joa_register, joa_constant],

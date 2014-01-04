@@ -13,6 +13,7 @@ Unit JITOpcodes;
        jo_ipush, // ipush(int register/memory/contant)
        jo_spush, // spush(string register/memory); string constants are automatically allocated and reported as "memory"
 
+       jo_bbmov, // bbmov(bool register/memory, bool register/memory/constant)
        jo_iimov, // iimov(int register/memory, int register/memory/constant)
 
        jo_iiadd, // iiadd(int register/memory, int register/memory/constant)
@@ -43,8 +44,8 @@ Unit JITOpcodes;
         // i/s  push
         1, 1,
 
-        // iimov
-        2,
+        // **mov
+        2, 2,
 
         // ii  add/sub/mul/div/mod
         2, 2, 2, 2, 2,

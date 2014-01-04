@@ -28,8 +28,8 @@ Unit JITAbstractCPU;
         Function JITMemAlloc(const Size: uint32): Pointer;
 
        Public
-        Function hasNativeReg(const Kind: TBytecodeRegister; const ID: uint8): Boolean; va;
-        Function hasNativeReg(const Arg: TOpcodeArg): Boolean;
+        Function isRegNative(const Kind: TBytecodeRegister; const ID: uint8): Boolean; va;
+        Function isRegNative(const Arg: TOpcodeArg): Boolean;
 
        Public
         Property getVM: PVM read VM;
@@ -68,16 +68,16 @@ Begin
  {$UNDEF AB}
 End;
 
-(* TJITAbstractCPU.hasNativeReg *)
-Function TJITAbstractCPU.hasNativeReg(const Arg: TOpcodeArg): Boolean;
+(* TJITAbstractCPU.isRegNative *)
+Function TJITAbstractCPU.isRegNative(const Arg: TOpcodeArg): Boolean;
 Begin
  Case Arg.ArgType of // @TODO: it's kinda DRY-breaker :P
-  ptBoolReg     : Result := hasNativeReg(reg_eb, Arg.RegID);
-  ptCharReg     : Result := hasNativeReg(reg_ec, Arg.RegID);
-  ptIntReg      : Result := hasNativeReg(reg_ei, Arg.RegID);
-  ptFloatReg    : Result := hasNativeReg(reg_ef, Arg.RegID);
-  ptStringReg   : Result := hasNativeReg(reg_es, Arg.RegID);
-  ptReferenceReg: Result := hasNativeReg(reg_er, Arg.RegID);
+  ptBoolReg     : Result := isRegNative(reg_eb, Arg.RegID);
+  ptCharReg     : Result := isRegNative(reg_ec, Arg.RegID);
+  ptIntReg      : Result := isRegNative(reg_ei, Arg.RegID);
+  ptFloatReg    : Result := isRegNative(reg_ef, Arg.RegID);
+  ptStringReg   : Result := isRegNative(reg_es, Arg.RegID);
+  ptReferenceReg: Result := isRegNative(reg_er, Arg.RegID);
 
   else
    Result := False;

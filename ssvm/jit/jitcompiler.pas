@@ -160,7 +160,12 @@ Var Reader   : TBytecodeReader;
     Arg0, Arg1        : Variant;
     Arg0Kind, Arg1Kind: TJITOpcodeArgKind;
 
+    TmpArg : Variant;
+    TmpKind: TJITOpcodeArgKind;
+
     icall: PCall;
+
+    I: Integer;
 
   { InvalidOpcodeException }
   Procedure InvalidOpcodeException; inline;
@@ -213,6 +218,22 @@ Begin
     { push }
     o_push:
     Begin
+     // push(reg bool)
+     if (CheckArgs(ptBoolReg)) Then
+     Begin
+      if (CPU.isRegNative(Args[0])) Then
+      Begin
+       PutOpcode(jo_bpush,
+                [joa_register],
+                [Args[0].RegID]);
+      End Else
+      Begin
+       PutOpcode(jo_bpush,
+                [joa_memory],
+                [getRegisterAddress(Args[0])]);
+      End;
+     End Else
+
      // push(const string)
      if (CheckArgs(ptString)) Then
      Begin
@@ -375,8 +396,56 @@ Begin
      PutOpcode(jo_ret, [], []); // ret()
     End;
 
-    else
-     InvalidOpcodeException;
+    { if_* }
+    o_if_e, o_if_ne, o_if_g, o_if_l, o_if_ge, o_if_le:
+    Begin
+     if (Args[0].ArgType in [ptInt, ptIntReg]) and
+        (Args[1].ArgType in [ptInt, ptIntReg]) Then
+     Begin
+      JITOpcode := TJITOpcodeKind(ord(jo_iicmpe) + ord(Opcode) - ord(o_if_e));
+     End;
+
+     For I := 0 To 1 Do
+     Begin
+      Case Args[I].ArgType of
+       // imm int
+       ptInt:
+       Begin
+        TmpArg  := Args[I].ImmInt;
+        TmpKind := joa_constant;
+       End;
+
+       // reg int
+       ptIntReg:
+       Begin
+        if (CPU.isRegNative(Args[I])) Then
+        Begin
+         TmpArg  := Args[I].RegID;
+         TmpKind := joa_register;
+        End Else
+        Begin
+         TmpArg  := getRegisterAddress(Args[I]);
+         TmpKind := joa_memory;
+        End;
+       End;
+
+       else
+        InvalidOpcodeException;
+      End;
+
+      if (I = 0) Then
+      Begin
+       Arg0     := TmpArg;
+       Arg0Kind := TmpKind;
+      End Else
+      Begin
+       Arg1     := TmpArg;
+       Arg1Kind := TmpKind;
+      End;
+     End;
+
+     PutOpcode(JITOpcode, [Arg0Kind, Arg1Kind], [Arg0, Arg1]);
+    End;
    End;
   End;
 

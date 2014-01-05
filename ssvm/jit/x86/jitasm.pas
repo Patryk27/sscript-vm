@@ -65,6 +65,8 @@ Unit JITAsm;
         Procedure ret;
 
         // mov
+        Procedure mov_reg8_mem8(const Reg: TRegister8; const Mem: VMReference);
+
         Procedure mov_reg32_imm32(const Reg: TRegister32; const Value: int32);
         Procedure mov_reg32_reg32(const RegA, RegB: TRegister32);
         Procedure mov_reg32_mem32(const Reg: TRegister32; const Mem: VMReference);
@@ -99,13 +101,25 @@ Unit JITAsm;
         Procedure mul_reg32(const Reg: TRegister32);
 
         // cmp
+        Procedure cmp_reg32_imm32(const Reg: TRegister32; const Value: int32);
+        Procedure cmp_reg32_mem32(const Reg: TRegister32; const Mem: VMReference);
+
         Procedure cmp_mem8_imm8(const Mem: VMReference; const Value: int8);
+        Procedure cmp_mem32_imm32(const Mem: VMReference; const Value: int32);
+        Procedure cmp_mem32_reg32(const Mem: VMReference; const Reg: TRegister32);
 
         // jumps
-        Procedure jmp(const Address: int32);
+        Function jmp(const Address: int32): uint32;
         Procedure jmp(const Reg: TRegister32);
 
-        Procedure je(const Address: int32);
+        Function jne(const Address: int32): uint32;
+        Function jna(const Address: int32): uint32;
+        Function jnae(const Address: int32): uint32;
+        Function jnb(const Address: int32): uint32;
+        Function jnbe(const Address: int32): uint32;
+        Function je(const Address: int32): uint32;
+        Function jg(const Address: int32): uint32;
+        Function jl(const Address: int32): uint32;
 
         // call
         Procedure call_internalproc(const Handler: Pointer);
@@ -203,6 +217,29 @@ End;
 Procedure TJITAsm.ret;
 Begin
  emit_uint8($C3);
+End;
+
+(* TJITAsm.mov_reg8_mem8 *)
+{
+ mov reg, byte [mem]
+}
+Procedure TJITAsm.mov_reg8_mem8(const Reg: TRegister8; const Mem: VMReference);
+Var ModRM: TModRM;
+Begin
+ if (Reg = reg_al) Then
+ Begin
+  emit_uint8($A0);
+  emit_uint32(Mem);
+ End Else
+ Begin
+  ModRM.Mode := 0;
+  ModRM.Reg  := ord(Reg);
+  ModRM.RM   := 5;
+
+  emit_uint8($8A);
+  emit_uint8(puint8(@ModRM)^);
+  emit_uint32(Mem);
+ End;
 End;
 
 (* TJITAsm.mov_reg32_imm32 *)
@@ -449,6 +486,45 @@ Begin
  emit_uint8($E0+ord(Reg));
 End;
 
+(* TJITAsm.cmp_reg32_imm32 *)
+{
+ cmp reg, value
+}
+Procedure TJITAsm.cmp_reg32_imm32(const Reg: TRegister32; const Value: int32);
+Var ModRM: TModRM;
+Begin
+ if (Reg = reg_eax) Then
+ Begin
+  emit_uint8($3D);
+  emit_int32(Value);
+ End Else
+ Begin
+  ModRM.Mode := 3;
+  ModRM.Reg  := 7;
+  ModRM.RM   := ord(Reg);
+
+  emit_uint8($81);
+  emit_modrm(ModRM);
+  emit_int32(Value);
+ End;
+End;
+
+(* TJITAsm.cmp_reg32_mem32 *)
+{
+ cmp reg, dword [mem]
+}
+Procedure TJITAsm.cmp_reg32_mem32(const Reg: TRegister32; const Mem: VMReference);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := ord(Reg);
+ ModRM.RM   := 5;
+
+ emit_uint8($3B);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
+End;
+
 (* TJITAsm.cmp_mem8_imm8 *)
 {
  cmp byte [mem], value
@@ -461,13 +537,49 @@ Begin
  emit_uint8(Value);
 End;
 
+(* TJITAsm.cmp_mem32_imm32 *)
+{
+ cmp dword [mem], value
+}
+Procedure TJITAsm.cmp_mem32_imm32(const Mem: VMReference; const Value: int32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := 7;
+ ModRM.RM   := 5;
+
+ emit_uint8($81);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
+ emit_int32(Value);
+End;
+
+(* TJITAsm.cmp_mem32_reg32 *)
+{
+ cmp dword [mem], reg
+}
+Procedure TJITAsm.cmp_mem32_reg32(const Mem: VMReference; const Reg: TRegister32);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := ord(Reg);
+ ModRM.RM   := 5;
+
+ emit_uint8($39);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
+End;
+
 (* TJITAsm.jmp *)
 {
  jmp address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
 }
-Procedure TJITAsm.jmp(const Address: int32);
+Function TJITAsm.jmp(const Address: int32): uint32;
 Begin
  emit_uint8($E9);
+ Result := getData.Position;
  emit_int32(Address);
 End;
 
@@ -486,14 +598,115 @@ Begin
  emit_modrm(ModRM);
 End;
 
+(* TJITAsm.jne *)
+{
+ jne address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITAsm.jne(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($85);
+ Result := getData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITAsm.jna *)
+{
+ jna address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITAsm.jna(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($86);
+ Result := getData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITAsm.jnae *)
+{
+ jnae address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITAsm.jnae(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($82);
+ Result := getData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITAsm.jnb *)
+{
+ jnb address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITAsm.jnb(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($83);
+ Result := getData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITAsm.jnbe *)
+{
+ jnbe address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITAsm.jnbe(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($87);
+ Result := getData.Position;
+ emit_int32(Address);
+End;
+
 (* TJITAsm.je *)
 {
  je address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
 }
-Procedure TJITAsm.je(const Address: int32);
+Function TJITAsm.je(const Address: int32): uint32;
 Begin
  emit_uint8($0F);
  emit_uint8($84);
+ Result := getData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITAsm.jg *)
+{
+ jg address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITAsm.jg(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($8F);
+ Result := getData.Position;
+ emit_int32(Address);
+End;
+
+(* TJITAsm.jl *)
+{
+ jl address
+
+ Function returns address of the beginning of disp32 field in generated opcode.
+}
+Function TJITAsm.jl(const Address: int32): uint32;
+Begin
+ emit_uint8($0F);
+ emit_uint8($8C);
+ Result := getData.Position;
  emit_int32(Address);
 End;
 

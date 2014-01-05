@@ -10,17 +10,29 @@ Unit JITOpcodes;
  { TJITOpcodeKind }
  Type TJITOpcodeKind = // don't change order of these!
       (
-       jo_ipush, // ipush(int register/memory/contant)
-       jo_spush, // spush(string register/memory); string constants are automatically allocated and reported as "memory"
+       // r -> register, m -> memory, c -> constant, ^ -> ditto
 
-       jo_bbmov, // bbmov(bool register/memory, bool register/memory/constant)
-       jo_iimov, // iimov(int register/memory, int register/memory/constant)
+       jo_bpush, // bpush(bool r/m/c)
+       jo_cpush, // cpush(char ^)
+       jo_ipush, // ipush(int ^)
+       jo_fpush, // fpush(float ^)
+       jo_spush, // spush(string r/m); string constants are automatically allocated and reported as "memory"
 
-       jo_iiadd, // iiadd(int register/memory, int register/memory/constant)
+       jo_bbmov, // bbmov(bool r/m, bool r/m/c)
+       jo_iimov, // iimov(int r/m, int r/m/c)
+
+       jo_iiadd, // iiadd(int r/m, int r/m/c)
        jo_iisub, // iisub(^)
        jo_iimul, // iimul(^)
        jo_iidiv, // iidiv(^)
        jo_iimod, // iimod(^)
+
+       jo_iicmpe, // iicmpe(int r/m, int r/m/c)
+       jo_iicmpne, // iicmpne(^)
+       jo_iicmpg, // iicmpg(^)
+       jo_iicmpl, // iicmpl(^)
+       jo_iicmpge, // iicmpge(^)
+       jo_iicmple, // iicmple(^)
 
        ji_ifcast, // @params? int -> float
        ji_ficast, // @params? float -> int
@@ -41,14 +53,17 @@ Unit JITOpcodes;
  Const JITOpcodeParamCount:
        Array[TJITOpcodeKind] of uint8 =
        (
-        // i/s  push
-        1, 1,
+        // b/c/i/f/s  push
+        1, 1, 1, 1, 1,
 
         // **mov
         2, 2,
 
         // ii  add/sub/mul/div/mod
         2, 2, 2, 2, 2,
+
+        // ii  cmpe/cmpne/cmpg/cmpl/cmpge/cmple
+        2, 2, 2, 2, 2, 2,
 
         // **cast
         2, 2,

@@ -32,6 +32,8 @@ Unit JITCPU;
        Private
         Procedure ResolveJumps;
 
+        Procedure int_compare(const Opcode: TJITOpcodeKind; const Number0, Number1: int64; const Addr0, Addr1: VMReference);
+
        Public
         Constructor Create(const fVM: PVM);
         Destructor Destroy; override;
@@ -99,6 +101,179 @@ Begin
  Data.Position := 0;
 End;
 
+(* TJITCPU.int_compare *)
+Procedure TJITCPU.int_compare(const Opcode: TJITOpcodeKind; const Number0, Number1: int64; const Addr0, Addr1: VMReference);
+Var CompareMode: (cmConstConst, cmConstMem, cmMemConst, cmMemMem);
+    CmpResult  : Boolean;
+
+    LabelTrue, LabelFalse, LabelOut   : uint32;
+    TrueChange, FalseChange, OutChange: Array[0..2] of uint32;
+
+    Data: TStream;
+
+    Tmp, TmpPos: uint32;
+Begin
+ Data := JAsm.getData;
+
+ For Tmp := Low(FalseChange) To High(FalseChange) Do
+ Begin
+  TrueChange[Tmp]  := 0;
+  FalseChange[Tmp] := 0;
+  OutChange[Tmp]   := 0;
+ End;
+
+ if (Addr0 = nil) Then
+ Begin
+  if (Addr1 = nil) Then
+   CompareMode := cmConstConst Else
+   CompareMode := cmConstMem;
+ End Else
+ Begin
+  if (Addr1 = nil) Then
+   CompareMode := cmMemConst Else
+   CompareMode := cmMemMem;
+ End;
+
+ if (CompareMode = cmConstConst) Then // both operands are known
+ Begin
+  CmpResult := False;
+
+  Case Opcode of
+   jo_iicmpe : CmpResult := (Number0 = Number1);
+   jo_iicmpne: CmpResult := (Number0 <> Number1);
+   jo_iicmpg : CmpResult := (Number0 > Number1);
+   jo_iicmpl : CmpResult := (Number0 < Number1);
+   jo_iicmpge: CmpResult := (Number0 >= Number1);
+   jo_iicmple: CmpResult := (Number0 <= Number1);
+  End;
+
+  JAsm.mov_mem8_imm8(@getVM^.Regs.b[5], ord(CmpResult));
+  Exit;
+ End;
+
+ if (CompareMode = cmMemMem) and (Addr0 = Addr1) Then // both addresses are the same (comparing the same number with itself)
+ Begin
+  CmpResult := Opcode in [jo_iicmpe, jo_iicmpge, jo_iicmple];
+
+  JAsm.mov_mem8_imm8(@getVM^.Regs.b[5], ord(CmpResult));
+  Exit;
+ End;
+
+ Case CompareMode of
+  // const, mem
+  cmConstMem:
+  Begin
+   JAsm.mov_reg32_imm32(reg_eax, lo(Number0)); // mov eax, lo(Number0)
+   JAsm.cmp_reg32_mem32(reg_eax, Addr1+0); // cmp eax, dword [Addr1+0]
+  End;
+
+  // mem, const
+  cmMemConst:
+  Begin
+   JAsm.cmp_mem32_imm32(Addr0+0, lo(Number1)); // cmp [Addr0+0], lo(Number1)
+  End;
+
+  // mem, mem
+  cmMemMem:
+  Begin
+   JAsm.mov_reg32_mem32(reg_eax, Addr1+0); // mov eax, [Addr1+0]
+   JAsm.cmp_mem32_reg32(Addr0+0, reg_eax); // cmp [Addr0+0], eax
+  End;
+ End;
+
+ Case Opcode of // first branch
+  jo_iicmpe : FalseChange[0] := JAsm.jne(0); // jne @false
+  jo_iicmpne: TrueChange[0] := JAsm.jne(0); // jne @true
+
+  jo_iicmpg, jo_iicmpge:
+  Begin
+   TrueChange[0]  := JAsm.jg(0); // jg @true
+   FalseChange[0] := JAsm.jl(0); // jl @false
+  End;
+
+  jo_iicmpl, jo_iicmple:
+  Begin
+   TrueChange[0]  := JAsm.jl(0); // jl @true
+   FalseChange[0] := JAsm.jg(0); // jg @false
+  End;
+
+  else
+   raise Exception.CreateFmt('TJITCPU.int_compare() -> unknown opcode=%d', [ord(Opcode)]);
+ End;
+
+ Case CompareMode of
+  // const, mem
+  cmConstMem:
+  Begin
+   JAsm.mov_reg32_imm32(reg_eax, hi(Number0)); // mov eax, hi(Number0)
+   JAsm.cmp_reg32_mem32(reg_eax, Addr1+4); // cmp eax, dword [Addr1+4]
+  End;
+
+  // mem, const
+  cmMemConst:
+  Begin
+   JAsm.cmp_mem32_imm32(Addr0+4, hi(Number1)); // cmp [Addr0+4], hi(Number1)
+  End;
+
+  // mem, mem
+  cmMemMem:
+  Begin
+   JAsm.mov_reg32_mem32(reg_eax, Addr1+4); // mov eax, [Addr1+0]
+   JAsm.cmp_mem32_reg32(Addr0+4, reg_eax); // cmp [Addr0+4], eax
+  End;
+ End;
+
+ Case Opcode of // second branch
+  jo_iicmpe : FalseChange[1] := JAsm.jne(0); // jne @false
+  jo_iicmpne: FalseChange[1] := JAsm.je(0); // je @false
+  jo_iicmpg : FalseChange[1] := JAsm.jna(0); // jna @false
+  jo_iicmpge: FalseChange[1] := JAsm.jnae(0); // jnae @false
+  jo_iicmpl : FalseChange[1] := JAsm.jnb(0); // jnb @false
+  jo_iicmple: FalseChange[1] := JAsm.jnbe(0); // jnbe @false
+ End;
+
+ // @true:
+ LabelTrue := Data.Position;
+ JAsm.mov_mem8_imm8(@getVM^.Regs.b[5], 1); // mov byte [IF-register-address], 1
+ OutChange[2] := JAsm.jmp(0); // jmp @out
+
+ // @false:
+ LabelFalse := Data.Position;
+ JAsm.mov_mem8_imm8(@getVM^.Regs.b[5], 0); // mov byte [IF-register-address], 0
+
+ // @out:
+ LabelOut := Data.Position;
+
+ { replace dummy address with their real values }
+ TmpPos := Data.Position;
+
+ // replace @true
+ For Tmp in TrueChange Do
+  if (Tmp > 0) Then
+  Begin
+   Data.Position := Tmp;
+   Data.write_int32(LabelTrue - Tmp - 4);
+  End;
+
+ // replace @false
+ For Tmp in FalseChange Do
+  if (Tmp > 0) Then
+  Begin
+   Data.Position := Tmp;
+   Data.write_int32(LabelFalse - Tmp - 4);
+  End;
+
+ // replace @out
+ For Tmp in OutChange Do
+  if (Tmp > 0) Then
+  Begin
+   Data.Position := Tmp;
+   Data.write_uint32(LabelOut - Tmp - 4);
+  End;
+
+ Data.Position := TmpPos;
+End;
+
 (* TJITCPU.Create *)
 Constructor TJITCPU.Create(const fVM: PVM);
 Begin
@@ -160,6 +335,29 @@ Begin
 
    With JAsm do
    Case Opcode.ID of
+    { bpush }
+    jo_bpush:
+    Begin
+     mov_reg32_imm32(reg_eax, uint32(getVM));
+
+     Case Arg0.Kind of
+      // memory
+      joa_memory:
+      Begin
+       mov_reg32_imm32(reg_edx, 0);
+       mov_reg8_mem8(reg_dl, Arg0.MemoryAddr);
+      End;
+
+      // constant
+      joa_constant:
+      Begin
+       mov_reg32_imm32(reg_edx, ord(Boolean(Arg0.Constant)));
+      End;
+     End;
+
+     call_internalproc(@r__push_bool);
+    End;
+
     { ipush }
     jo_ipush:
     Begin
@@ -346,6 +544,37 @@ Begin
      End Else
 
       InvalidOpcodeException;
+    End;
+
+    { iicmp* }
+    jo_iicmpe, jo_iicmpne, jo_iicmpg, jo_iicmpl, jo_iicmpge, jo_iicmple:
+    Begin
+     Case Arg0.Kind of
+      joa_constant:
+      Begin
+       if (Arg1.Kind = joa_constant) Then
+        int_compare(Opcode.ID, Arg0.Constant, Arg1.Constant, nil, nil) Else
+
+       if (Arg1.Kind = joa_memory) Then
+        int_compare(Opcode.ID, Arg0.Constant, 0, nil, Arg1.MemoryAddr) Else
+
+        InvalidOpcodeException;
+      End;
+
+      joa_memory:
+      Begin
+       if (Arg1.Kind = joa_constant) Then
+        int_compare(Opcode.ID, 0, Arg1.Constant, Arg0.MemoryAddr, nil) Else
+
+       if (Arg1.Kind = joa_memory) Then
+        int_compare(Opcode.ID, 0, 0, Arg0.MemoryAddr, Arg1.MemoryAddr) Else
+
+        InvalidOpcodeException;
+      End;
+
+      else
+       InvalidOpcodeException;
+     End;
     End;
 
     { jmp, tjmp, fjmp, call }

@@ -1,5 +1,5 @@
 (*
- Copyright © by Patryk Wychowaniec, 2013
+ Copyright © by Patryk Wychowaniec, 2013-2014
  All rights reserved.
 *)
 {$DEFINE ENABLE_JIT} // when uncommenting, change also the compiler's unit path to point to "jit;jit/<selected architecture>"

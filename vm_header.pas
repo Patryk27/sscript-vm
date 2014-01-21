@@ -1,6 +1,6 @@
 (*
  SScript Virtual Machine Library Header
- Copyright © by Patryk Wychowaniec, 2013
+ Copyright © by Patryk Wychowaniec, 2013-2014
 
  -------------------------------------------------------------------------------
  SScript Compiler is free software; you can redistribute it and/or modify

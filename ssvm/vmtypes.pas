@@ -1,3 +1,7 @@
+(*
+ Copyright © by Patryk Wychowaniec, 2013-2014
+ All rights reserved.
+*)
 Unit VMTypes;
 
  Interface

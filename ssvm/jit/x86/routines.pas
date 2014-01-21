@@ -277,6 +277,20 @@ Begin
  End;
 End;
 
+{ r__mod_stackval_int }
+Procedure r__mod_stackval_int(const VM: PVM; const StackvalPos: int32; const Value: int64); register;
+Var MV: PMixedValue;
+Begin
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt: MV^.Value.Int := MV^.Value.Int mod Value;
+
+  else
+   raise Exception.CreateFmt('r__mod_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
 { r__set_stackval_bool }
 Procedure r__set_stackval_bool(const VM: PVM; const StackvalPos: int32; const NewValue: Boolean); register;
 Begin

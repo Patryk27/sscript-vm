@@ -636,6 +636,30 @@ Begin
       mov_mem32_reg32(Arg0.MemoryAddr+0, reg_esi);
      End Else
 
+     // iimul(stackval, const)
+     if (CheckArgs(joa_stackval, joa_constant)) Then
+     Begin
+      TmpInt := Arg1.Constant;
+
+      mov_reg32_imm32(reg_eax, uint32(getVM));
+      mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+      push_imm32(hi(TmpInt));
+      push_imm32(lo(TmpInt));
+
+      call_internalproc(@r__mul_stackval_int);
+     End Else
+
+     // iimul(stackval, mem)
+     if (CheckArgs(joa_stackval, joa_memory)) Then
+     Begin
+      mov_reg32_imm32(reg_eax, uint32(getVM));
+      mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+      push_mem32(Arg1.MemoryAddr+4);
+      push_mem32(Arg1.MemoryAddr+0);
+
+      call_internalproc(@r__mul_stackval_int);
+     End Else
+
       InvalidOpcodeException;
     End;
 
@@ -662,6 +686,34 @@ Begin
       if (Opcode.Kind = jo_iidiv) Then
        call_internalproc(@r__div_imem_iconst) Else
        call_internalproc(@r__mod_imem_iconst);
+     End Else
+
+     // opcode(stackval, const)
+     if (CheckArgs(joa_stackval, joa_constant)) Then
+     Begin
+      TmpInt := Arg1.Constant;
+
+      mov_reg32_imm32(reg_eax, uint32(getVM));
+      mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+      push_imm32(hi(TmpInt));
+      push_imm32(lo(TmpInt));
+
+      if (Opcode.Kind = jo_iidiv) Then
+       call_internalproc(@r__div_stackval_int) Else
+       call_internalproc(@r__mod_stackval_int);
+     End Else
+
+     // opcode(stackval, mem)
+     if (CheckArgs(joa_stackval, joa_memory)) Then
+     Begin
+      mov_reg32_imm32(reg_eax, uint32(getVM));
+      mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+      push_mem32(Arg1.MemoryAddr+4);
+      push_mem32(Arg1.MemoryAddr+0);
+
+      if (Opcode.Kind = jo_iidiv) Then
+       call_internalproc(@r__div_stackval_int) Else
+       call_internalproc(@r__mod_stackval_int);
      End Else
 
       InvalidOpcodeException;

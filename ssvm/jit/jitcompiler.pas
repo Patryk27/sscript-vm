@@ -97,9 +97,10 @@ Begin
    Arg.Kind := ArgTypes[I];
 
    Case Arg.Kind of
-    joa_register: Arg.RegisterID := StrToInt(VarToStr(Args[I]));
-    joa_memory  : Arg.MemoryAddr := VMReference(uint64(StrToInt64(VarToStr(Args[I]))));
-    joa_constant: Arg.Constant := Args[I];
+    joa_register: Arg.RegisterID  := StrToInt(VarToStr(Args[I]));
+    joa_memory  : Arg.MemoryAddr  := VMReference(uint64(StrToInt64(VarToStr(Args[I]))));
+    joa_constant: Arg.Constant    := Args[I];
+    joa_stackval: Arg.StackvalPos := StrToInt(VarToStr(Args[I]));
 
     else
      raise Exception.CreateFmt('TJITCompiler.PutOpcode() -> unknown (invalid) argument type (arg #%d): #%d', [I, ord(Arg.Kind)]);
@@ -154,18 +155,12 @@ Var Reader   : TBytecodeReader;
     Opcode   : TOpcode_E;
     Args     : TOpcodeArgArray;
     OpcodePos: uint32;
-    RegAddr  : uint32;
 
     JITOpcode         : TJITOpcodeKind;
     Arg0, Arg1        : Variant;
     Arg0Kind, Arg1Kind: TJITOpcodeArgKind;
 
-    TmpArg : Variant;
-    TmpKind: TJITOpcodeArgKind;
-
     icall: PCall;
-
-    I: Integer;
 
   { InvalidOpcodeException }
   Procedure InvalidOpcodeException; inline;
@@ -173,16 +168,78 @@ Var Reader   : TBytecodeReader;
    raise Exception.CreateFmt('Invalid opcode: [0x%x] %s', [OpcodePos, Reader.OpcodeToString(Opcode, Args)]);
   End;
 
-  { CheckArgs }
-  Function CheckArgs(const Arg1: TOpcodeArgType): Boolean; inline;
+  { ParseArgument }
+  Procedure ParseArgument(out ArgKind: TJITOpcodeArgKind; out Arg: Variant; const OpArg: TOpcodeArg);
   Begin
-   Result := (Args[0].ArgType = Arg1);
+   // imm bool
+   if (OpArg.ArgType = ptBool) Then
+   Begin
+    Arg     := OpArg.ImmBool;
+    ArgKind := joa_constant;
+   End Else
+
+   // imm char
+   if (OpArg.ArgType = ptChar) Then
+   Begin
+    Arg     := OpArg.ImmChar;
+    ArgKind := joa_constant;
+   End Else
+
+   // imm int
+   if (OpArg.ArgType = ptInt) Then
+   Begin
+    Arg     := OpArg.ImmInt;
+    ArgKind := joa_constant;
+   End Else
+
+   // imm float
+   if (OpArg.ArgType = ptFloat) Then
+   Begin
+    Arg     := OpArg.ImmFloat;
+    ArgKind := joa_constant;
+   End Else
+
+   // imm string
+   if (OpArg.ArgType = ptString) Then
+   Begin
+    Arg     := AllocateString(OpArg.ImmString);
+    ArgKind := joa_memory;
+   End Else
+
+   // reg bool/char/int/float/string/reference
+   if (OpArg.ArgType in [ptBoolReg..ptReferenceReg]) Then
+   Begin
+    if (CPU.isRegNative(OpArg)) Then
+    Begin
+     Arg     := OpArg.RegID;
+     ArgKind := joa_register;
+    End Else
+    Begin
+     Arg     := getRegisterAddress(OpArg);
+     ArgKind := joa_memory;
+    End;
+   End Else
+
+   // stackval
+   if (OpArg.ArgType = ptStackval) Then
+   Begin
+    Arg     := OpArg.StackvalPos;
+    ArgKind := joa_stackval;
+   End Else
+
+    raise Exception.CreateFmt('TJITCompiler.Compile::ParseArgument() called with invalid opcode argument type #%d', [ord(OpArg.ArgType)]);
   End;
 
   { CheckArgs }
-  Function CheckArgs(const Arg1, Arg2: TOpcodeArgType): Boolean; inline;
+  Function CheckArgs(const Arg0: TOpcodeArgType): Boolean; inline;
   Begin
-   Result := (Args[0].ArgType = Arg1) and (Args[1].ArgType = Arg2);
+   Result := (Args[0].ArgType = Arg0);
+  End;
+
+  { CheckArgs }
+  Function CheckArgs(const Arg0, Arg1: TOpcodeArgType): Boolean; inline;
+  Begin
+   Result := (Args[0].ArgType = Arg0) and (Args[1].ArgType = Arg1);
   End;
 
 Begin
@@ -204,6 +261,15 @@ Begin
    if (isLocationOpcode(Opcode)) Then // skip the location opcodes
     Continue;
 
+   if (Length(Args) > 0) Then
+    ParseArgument(Arg0Kind, Arg0, Args[0]);
+
+   if (Length(Args) > 1) Then
+    ParseArgument(Arg1Kind, Arg1, Args[1]);
+
+   if (Length(Args) > 2) Then
+    raise Exception.Create('TODO: Length(Args) > 2');
+
    { compile code to the JIT microcode }
    Case Opcode of
     { nop }
@@ -218,55 +284,39 @@ Begin
     { push }
     o_push:
     Begin
-     // push(reg bool)
-     if (CheckArgs(ptBoolReg)) Then
+     // push(reg/imm bool)
+     if (Args[0].ArgType in [ptBool, ptBoolReg]) Then
      Begin
-      if (CPU.isRegNative(Args[0])) Then
-      Begin
-       PutOpcode(jo_bpush,
-                [joa_register],
-                [Args[0].RegID]);
-      End Else
-      Begin
-       PutOpcode(jo_bpush,
-                [joa_memory],
-                [getRegisterAddress(Args[0])]);
-      End;
+      JITOpcode := jo_bpush;
      End Else
 
-     // push(const int)
-     if (CheckArgs(ptInt)) Then
+     // push(reg/imm char)
+     if (Args[0].ArgType in [ptChar, ptCharReg]) Then
      Begin
-      PutOpcode(jo_ipush,
-               [joa_constant],
-               [Args[0].ImmInt]);
+      JITOpcode := jo_cpush;
      End Else
 
-     // push(reg int)
-     if (CheckArgs(ptIntReg)) Then
+     // push(reg/imm int)
+     if (Args[0].ArgType in [ptInt, ptIntReg]) Then
      Begin
-      if (CPU.isRegNative(Args[0])) Then
-      Begin
-       PutOpcode(jo_ipush, // ipush(reg)
-                [joa_register],
-                [Args[0].RegID]);
-      End Else
-      Begin
-       PutOpcode(jo_ipush, // ipush(mem)
-                [joa_memory],
-                [getRegisterAddress(Args[0])]);
-      End;
+      JITOpcode := jo_ipush;
      End Else
 
-     // push(const string)
-     if (CheckArgs(ptString)) Then
+     // push(reg/imm string)
+     if (Args[0].ArgType in [ptString, ptStringReg]) Then
      Begin
-      PutOpcode(jo_spush,
-               [joa_memory],
-               [AllocateString(Args[0].ImmString)]);
+      JITOpcode := jo_spush;
      End Else
+
+     {// push(reg reference)
+     if (CheckArgs(ptReferenceReg)) Then
+     Begin @TODO?
+      JITOpcode := jo_rpush;
+     End Else}
 
       InvalidOpcodeException;
+
+     PutOpcode(JITOpcode, [Arg0Kind], [Arg0]);
     End;
 
     { pop }
@@ -277,17 +327,7 @@ Begin
      Begin
       JITOpcode := TJITOpcodeKind(ord(jo_bpop) + ord(Args[0].ArgType) - ord(ptBoolReg));
 
-      if (CPU.isRegNative(Args[0])) Then
-      Begin
-       PutOpcode(JITOpcode,
-                [joa_register],
-                [Args[0].RegID]);
-      End Else
-      Begin
-       PutOpcode(JITOpcode,
-                [joa_memory],
-                [getRegisterAddress(Args[0])]);
-      End;
+      PutOpcode(JITOpcode, [Arg0Kind], [Arg0]);
      End Else
 
       InvalidOpcodeException;
@@ -296,43 +336,16 @@ Begin
     { add, sub, mul, div, mod }
     o_add, o_sub, o_mul, o_div, o_mod:
     Begin
-     // op(reg int, reg/imm int)
-     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptIntReg, ptInt]) Then
+     // op(reg int | stackval, reg/imm int | stackval)
+     if (Args[0].ArgType in [ptIntReg, ptStackval]) and (Args[1].ArgType in [ptIntReg, ptInt, ptStackval]) Then
      Begin
-      if (Opcode = o_mod) Then
+      if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptStackval) Then // @TODO
+       InvalidOpcodeException;
+
+      if (Opcode = o_mod) Then // special case - see opcode list
        JITOpcode := jo_iimod Else
        JITOpcode := TJITOpcodeKind(ord(jo_iiadd) + ord(Opcode)-ord(o_add));
 
-      // arg0
-      if (CPU.isRegNative(Args[0])) Then
-      Begin
-       Arg0     := Args[0].RegID;
-       Arg0Kind := joa_register;
-      End Else
-      Begin
-       Arg0     := getRegisterAddress(Args[0]);
-       Arg0Kind := joa_memory;
-      End;
-
-      // arg1
-      if (Args[1].ArgType = ptIntReg) Then
-      Begin
-       if (CPU.isRegNative(Args[1])) Then
-       Begin
-        Arg1     := Args[1].RegID;
-        Arg1Kind := joa_register;
-       End Else
-       Begin
-        Arg1     := getRegisterAddress(Args[1]);
-        Arg1Kind := joa_memory;
-       End;
-      End Else
-      Begin
-       Arg1     := Args[1].ImmInt;
-       Arg1Kind := joa_constant;
-      End;
-
-      // append opcode
       PutOpcode(JITOpcode, [Arg0Kind, Arg1Kind], [Arg0, Arg1]);
      End Else
 
@@ -342,41 +355,21 @@ Begin
     { mov }
     o_mov:
     Begin
-     RegAddr := getRegisterAddress(Args[0]);
-
-     // mov(reg bool, imm bool)
-     if (CheckArgs(ptBoolReg, ptBool)) Then
+     // mov(reg bool, reg/imm bool)
+     if (Args[0].ArgType = ptBoolReg) and (Args[1].ArgType in [ptBoolReg, ptBool]) Then
      Begin
-      if (CPU.isRegNative(Args[0])) Then
-      Begin
-       PutOpcode(jo_bbmov, // bbmov(reg, value)
-                [joa_register, joa_constant],
-                [Args[0].RegID, Args[1].ImmBool]);
-      End Else
-      Begin
-       PutOpcode(jo_bbmov, // bbmov(mem, value)
-                [joa_memory, joa_constant],
-                [RegAddr, Args[1].ImmBool]);
-      End;
+      JITOpcode := jo_bbmov;
      End Else
 
-     // mov(reg int, imm int)
-     if (CheckArgs(ptIntReg, ptInt)) Then
+     // mov(reg int, reg/imm int)
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptIntReg, ptInt]) Then
      Begin
-      if (CPU.isRegNative(Args[0])) Then
-      Begin
-       PutOpcode(jo_iimov, // iimov(reg, value)
-                [joa_register, joa_constant],
-                [Args[0].RegID, Args[1].ImmInt]);
-      End Else
-      Begin
-       PutOpcode(jo_iimov, // iimov(mem, value)
-                [joa_memory, joa_constant],
-                [RegAddr, Args[1].ImmInt]);
-      End;
+      JITOpcode := jo_iimov;
      End Else
 
       InvalidOpcodeException;
+
+     PutOpcode(JITOpcode, [Arg0Kind, Arg1Kind], [Arg0, Arg1]);
     End;
 
     { jmp, tjmp, fjmp, call }
@@ -414,7 +407,7 @@ Begin
       if (icall = nil) Then
        raise Exception.CreateFmt('Unknown (unregistered) internal call: %s', [Args[0].ImmString]);
 
-      PutOpcode(jo_icall, // icall(mem)
+      PutOpcode(jo_icall,
                [joa_memory],
                [uint32(icall)]);
      End Else
@@ -425,7 +418,7 @@ Begin
     { ret }
     o_ret:
     Begin
-     PutOpcode(jo_ret, [], []); // ret()
+     PutOpcode(jo_ret, [], []);
     End;
 
     { if_* }
@@ -435,46 +428,8 @@ Begin
         (Args[1].ArgType in [ptInt, ptIntReg]) Then
      Begin
       JITOpcode := TJITOpcodeKind(ord(jo_iicmpe) + ord(Opcode) - ord(o_if_e));
-     End;
-
-     For I := 0 To 1 Do
-     Begin
-      Case Args[I].ArgType of
-       // imm int
-       ptInt:
-       Begin
-        TmpArg  := Args[I].ImmInt;
-        TmpKind := joa_constant;
-       End;
-
-       // reg int
-       ptIntReg:
-       Begin
-        if (CPU.isRegNative(Args[I])) Then
-        Begin
-         TmpArg  := Args[I].RegID;
-         TmpKind := joa_register;
-        End Else
-        Begin
-         TmpArg  := getRegisterAddress(Args[I]);
-         TmpKind := joa_memory;
-        End;
-       End;
-
-       else
-        InvalidOpcodeException;
-      End;
-
-      if (I = 0) Then
-      Begin
-       Arg0     := TmpArg;
-       Arg0Kind := TmpKind;
-      End Else
-      Begin
-       Arg1     := TmpArg;
-       Arg1Kind := TmpKind;
-      End;
-     End;
+     End Else
+      InvalidOpcodeException;
 
      PutOpcode(JITOpcode, [Arg0Kind, Arg1Kind], [Arg0, Arg1]);
     End;

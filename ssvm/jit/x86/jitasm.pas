@@ -61,8 +61,15 @@ Unit JITAsm;
         Procedure post_compilation;
 
        Public
+        // nop
         Procedure nop;
+
+        // ret
         Procedure ret;
+
+        // push
+        Procedure push_imm32(const Value: int32);
+        Procedure push_mem32(const Mem: VMReference);
 
         // mov
         Procedure mov_reg8_mem8(const Reg: TRegister8; const Mem: VMReference);
@@ -219,6 +226,27 @@ Begin
  emit_uint8($C3);
 End;
 
+(* TJITAsm.push_imm32 *)
+{
+ push dword value
+}
+Procedure TJITAsm.push_imm32(const Value: int32);
+Begin
+ emit_uint8($68);
+ emit_int32(Value);
+End;
+
+(* TJITAsm.push_mem32 *)
+{
+ push dword [mem]
+}
+Procedure TJITAsm.push_mem32(const Mem: VMReference);
+Begin
+ emit_uint8($FF);
+ emit_uint8($35);
+ emit_uint32(Mem);
+End;
+
 (* TJITAsm.mov_reg8_mem8 *)
 {
  mov reg, byte [mem]
@@ -259,6 +287,9 @@ End;
 Procedure TJITAsm.mov_reg32_reg32(const RegA, RegB: TRegister32);
 Var ModRM: TModRM;
 Begin
+ if (RegA = RegB) Then // skip no-ops
+  Exit;
+
  ModRM.Mode := 3;
  ModRM.Reg  := ord(RegB);
  ModRM.RM   := ord(RegA);

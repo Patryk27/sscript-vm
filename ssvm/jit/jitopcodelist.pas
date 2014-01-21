@@ -111,6 +111,7 @@ Begin
      joa_register: Write('reg: #', Op.Args[Q].RegisterID);
      joa_memory  : Write('mem: 0x', IntToHex(uint64(Op.Args[Q].MemoryAddr), sizeof(VMReference)*2));
      joa_constant: Write('const: `', Op.Args[Q].Constant, '`');
+     joa_stackval: Write('stackval: ', Op.Args[Q].StackvalPos);
     End;
 
     if (Q < Cnt-1) Then

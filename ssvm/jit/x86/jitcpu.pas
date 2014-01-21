@@ -33,6 +33,7 @@ Unit JITCPU;
         Procedure ResolveJumps;
 
         Procedure int_compare(const Opcode: TJITOpcodeKind; const Number0, Number1: int64; const Addr0, Addr1: VMReference);
+        Procedure FetchIntStackval(const DestLo, DestHi: TRegister32; const StackvalPos: int32);
 
        Public
         Constructor Create(const fVM: PVM);
@@ -274,6 +275,19 @@ Begin
  Data.Position := TmpPos;
 End;
 
+(* TJITCPU.FetchIntStackval *)
+Procedure TJITCPU.FetchIntStackval(const DestLo, DestHi: TRegister32; const StackvalPos: int32);
+Begin
+ With JAsm do
+ Begin
+  mov_reg32_imm32(reg_eax, uint32(getVM));
+  mov_reg32_imm32(reg_edx, StackvalPos);
+  call_internalproc(@r__stackval_fetch_int);
+  mov_reg32_reg32(DestLo, reg_eax);
+  mov_reg32_reg32(DestHi, reg_edx);
+ End;
+End;
+
 (* TJITCPU.Create *)
 Constructor TJITCPU.Create(const fVM: PVM);
 Begin
@@ -309,6 +323,18 @@ Var OpcodeID  : uint32;
   Procedure InvalidOpcodeException;
   Begin
    raise Exception.CreateFmt('TJITCPU.Compile() failed; invalid JIT opcode (opcode index=%d)', [OpcodeID]);
+  End;
+
+  { CheckArgs }
+  Function CheckArgs(const Arg0: TJITOpcodeArgKind): Boolean; inline;
+  Begin
+   Result := (Opcode.Args[0].Kind = Arg0);
+  End;
+
+  { CheckArgs }
+  Function CheckArgs(const Arg0, Arg1: TJITOpcodeArgKind): Boolean; inline;
+  Begin
+   Result := (Opcode.Args[0].Kind = Arg0) and (Opcode.Args[1].Kind = Arg1);
   End;
 
 Begin
@@ -409,7 +435,7 @@ Begin
     jo_bpop..jo_rpop:
     Begin
      // opcode(mem)
-     if (Arg0.Kind = joa_memory) Then
+     if (CheckArgs(joa_memory)) Then
      Begin
       mov_reg32_imm32(reg_eax, uint32(getVM));
       mov_reg32_imm32(reg_edx, uint32(Arg0.MemoryAddr));
@@ -431,7 +457,7 @@ Begin
     jo_bbmov:
     Begin
      // bbmov(mem, const)
-     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
+     if (CheckArgs(joa_memory, joa_constant)) Then
      Begin
       mov_mem8_imm8(Arg0.MemoryAddr, Arg1.Constant);
      End Else
@@ -443,7 +469,7 @@ Begin
     jo_iimov:
     Begin
      // iimov(mem, const)
-     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
+     if (CheckArgs(joa_memory, joa_constant)) Then
      Begin
       TmpInt := Arg1.Constant;
 
@@ -452,7 +478,7 @@ Begin
      End Else
 
      // iimov(mem, mem)
-     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
+     if (CheckArgs(joa_memory, joa_memory)) Then
      Begin
       mov_reg32_mem32(reg_eax, Arg0.MemoryAddr+0);
       mov_reg32_mem32(reg_ebx, Arg0.MemoryAddr+4);
@@ -463,49 +489,84 @@ Begin
       InvalidOpcodeException;
     End;
 
-    { iiadd }
-    jo_iiadd:
+    { iiadd, iisub }
+    jo_iiadd, jo_iisub:
     Begin
-     // iiadd(mem, int)
-     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
+     // opcode(mem, const)
+     if (CheckArgs(joa_memory, joa_constant)) Then
      Begin
       TmpInt := Arg1.Constant;
 
-      add_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
-      adc_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
+      if (Opcode.Kind = jo_iiadd) Then
+      Begin
+       add_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
+       adc_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
+      End Else
+      Begin
+       sub_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
+       sbb_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
+      End;
      End Else
 
-     // iiadd(mem, mem)
-     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_memory) Then
+     // opcode(mem, mem)
+     if (CheckArgs(joa_memory, joa_memory)) Then
      Begin
       mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+0);
       mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+4);
-      add_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
-      adc_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
+
+      if (Opcode.Kind = jo_iiadd) Then
+      Begin
+       add_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
+       adc_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
+      End Else
+      Begin
+       sub_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
+       sbb_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
+      End;
      End Else
 
-      InvalidOpcodeException;
-    End;
+     // opcode(mem, stackval)
+     if (CheckArgs(joa_memory, joa_stackval)) Then
+     Begin
+      FetchIntStackval(reg_eax, reg_edx, Arg1.StackvalPos);
 
-    { iisub }
-    jo_iisub:
-    Begin
-     // iisub(mem, int)
-     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
+      if (Opcode.Kind = jo_iiadd) Then
+      Begin
+       add_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
+       adc_mem32_reg32(Arg0.MemoryAddr+4, reg_edx);
+      End Else
+      Begin
+       sub_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
+       sbb_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
+      End;
+     End Else
+
+     // opcode(stackval, const)
+     if (CheckArgs(joa_stackval, joa_constant)) Then
      Begin
       TmpInt := Arg1.Constant;
 
-      sub_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
-      sbb_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
+      mov_reg32_imm32(reg_eax, uint32(getVM));
+      mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+      push_imm32(hi(TmpInt));
+      push_imm32(lo(TmpInt));
+
+      if (Opcode.Kind = jo_iiadd) Then
+       call_internalproc(@r__add_stackval_int) Else
+       call_internalproc(@r__sub_stackval_int);
      End Else
 
-     // iisub(mem, mem)
-     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_memory) Then
+     // opcode(stackval, mem)
+     if (CheckArgs(joa_stackval, joa_memory)) Then
      Begin
-      mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+4);
-      mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+0);
-      sub_mem32_reg32(Arg0.MemoryAddr+4, reg_eax);
-      sbb_mem32_reg32(Arg0.MemoryAddr+0, reg_ebx);
+      mov_reg32_imm32(reg_eax, uint32(getVM));
+      mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+      push_mem32(Arg1.MemoryAddr+4);
+      push_mem32(Arg1.MemoryAddr+0);
+
+      if (Opcode.Kind = jo_iiadd) Then
+       call_internalproc(@r__add_stackval_int) Else
+       call_internalproc(@r__sub_stackval_int);
      End Else
 
       InvalidOpcodeException;
@@ -514,7 +575,7 @@ Begin
     { iimul }
     jo_iimul:
     Begin
-     // iimul(mem, mem/int)
+     // iimul(mem, mem/const)
      if (Arg0.Kind = joa_memory) and (Arg1.Kind in [joa_memory, joa_constant]) Then
      Begin
       mov_reg32_mem32(reg_edi, Arg0.MemoryAddr+4);

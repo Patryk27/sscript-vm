@@ -41,9 +41,6 @@ Unit JITOpcodes;
        jo_iicmpge, // iicmpge(^)
        jo_iicmple, // iicmple(^)
 
-       ji_ifcast, // @params? int -> float
-       ji_ficast, // @params? float -> int
-
        jo_jmp, // jmp(const int) -> parameter is JIT opcode index where to jump
        jo_tjmp, // tjmp(^)
        jo_fjmp, // fjmp(^)
@@ -75,9 +72,6 @@ Unit JITOpcodes;
         // ii  cmpe/cmpne/cmpg/cmpl/cmpge/cmple
         2, 2, 2, 2, 2, 2,
 
-        // **cast
-        2, 2,
-
         // jmp, tjmp, fjmp
         1, 1, 1,
 
@@ -96,7 +90,8 @@ Unit JITOpcodes;
       (
        joa_register,
        joa_memory,
-       joa_constant
+       joa_constant,
+       joa_stackval
       );
 
  { TJITOpcodeArg }
@@ -104,9 +99,10 @@ Unit JITOpcodes;
       Record
        Kind: TJITOpcodeArgKind;
 
-       RegisterID: uint8; // joa_register (if supported by the CPU)
-       MemoryAddr: VMReference; // joa_memory
-       Constant  : Variant; // joa_constant
+       RegisterID : uint8; // joa_register (if supported by the CPU)
+       MemoryAddr : VMReference; // joa_memory
+       Constant   : Variant; // joa_constant
+       StackvalPos: int32; // joa_stackval
       End;
 
  { TJITOpcode }

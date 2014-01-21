@@ -160,3 +160,106 @@ Begin
  if (MV^.Typ <> mvNone) Then
   VM^.StackPush(MV^);
 End;
+
+(* ------------------ stackvals ------------------ *)
+{ getStackvalElement }
+Function getStackvalElement(const VM: PVM; const StackvalPos: int32): PMixedValue; inline; // helper function!
+Begin
+ Result := @VM^.Stack[VM^.Regs.i[5] + StackvalPos];
+End;
+
+{ r__stackval_fetch_bool }
+Function r__stackval_fetch_bool(const VM: PVM; const StackvalPos: int32): Boolean; register;
+Begin
+ Result := getBool(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__stackval_fetch_char }
+Function r__stackval_fetch_char(const VM: PVM; const StackvalPos: int32): Char; register;
+Begin
+ Result := getChar(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__stackval_fetch_int }
+Function r__stackval_fetch_int(const VM: PVM; const StackvalPos: int32): int64; register;
+Begin
+ Result := getInt(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__stackval_fetch_float }
+Function r__stackval_fetch_float(const VM: PVM; const StackvalPos: int32): Extended; register;
+Begin
+ Result := getFloat(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__stackval_fetch_string }
+Function r__stackval_fetch_string(const VM: PVM; const StackvalPos: int32): PChar; register;
+Begin
+ Result := getString(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__stackval_fetch_reference }
+Function r__stackval_fetch_reference(const VM: PVM; const StackvalPos: int32): Pointer; register;
+Begin
+ Result := getReference(getStackvalElement(VM, StackvalPos)^);
+End;
+
+{ r__add_stackval_int }
+Procedure r__add_stackval_int(const VM: PVM; const StackvalPos: int32; const Value: int64); register;
+Var MV: PMixedValue;
+Begin
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int += Value;
+  mvFloat: MV^.Value.Float += Value;
+
+  else
+   raise Exception.CreateFmt('r__add_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__sub_stackval_int }
+Procedure r__sub_stackval_int(const VM: PVM; const StackvalPos: int32; const Value: int64); register;
+Var MV: PMixedValue;
+Begin
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int -= Value;
+  mvFloat: MV^.Value.Float -= Value;
+
+  else
+   raise Exception.CreateFmt('r__sub_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__mul_stackval_int }
+Procedure r__mul_stackval_int(const VM: PVM; const StackvalPos: int32; const Value: int64); register;
+Var MV: PMixedValue;
+Begin
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int *= Value;
+  mvFloat: MV^.Value.Float *= Value;
+
+  else
+   raise Exception.CreateFmt('r__mul_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__div_stackval_int }
+Procedure r__div_stackval_int(const VM: PVM; const StackvalPos: int32; const Value: int64); register;
+Var MV: PMixedValue;
+Begin
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int := MV^.Value.Int div Value;
+  mvFloat: MV^.Value.Float /= Value;
+
+  else
+   raise Exception.CreateFmt('r__div_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;

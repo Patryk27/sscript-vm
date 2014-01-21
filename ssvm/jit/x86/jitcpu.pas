@@ -419,16 +419,22 @@ Begin
     Begin
      mov_reg32_imm32(reg_eax, uint32(getVM));
 
-     Case Arg0.Kind of
-      // memory
-      joa_memory: mov_reg32_imm32(reg_edx, uint32(Arg0.MemoryAddr));
-
-      // invalid
-      else
-       InvalidOpcodeException;
-     End;
+     if (Arg0.Kind = joa_memory) Then
+      mov_reg32_imm32(reg_edx, uint32(Arg0.MemoryAddr)) Else
+      InvalidOpcodeException;
 
      call_internalproc(@r__push_string);
+    End;
+
+    { vpush }
+    jo_vpush:
+    Begin
+     if (Arg0.Kind <> joa_stackval) Then
+      InvalidOpcodeException;
+
+     mov_reg32_imm32(reg_eax, uint32(getVM));
+     mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+     call_internalproc(@r__push_stackval);
     End;
 
     { bpop, cpop, ipop, fpop, spop, rpop }

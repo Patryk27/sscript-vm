@@ -314,6 +314,12 @@ Begin
       JITOpcode := jo_rpush;
      End Else}
 
+     // push(stackval)
+     if (CheckArgs(ptStackval)) Then
+     Begin
+      JITOpcode := jo_vpush;
+     End Else
+
       InvalidOpcodeException;
 
      PutOpcode(JITOpcode, [Arg0Kind], [Arg0]);

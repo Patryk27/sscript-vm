@@ -10,13 +10,15 @@ Unit JITOpcodes;
  { TJITOpcodeKind }
  Type TJITOpcodeKind = // don't change order of these!
       (
-       // r -> register, m -> memory, c -> constant, s -> stackval, ^ -> ditto
+       // mnemonics: b -> bool, c -> char, i -> int, f -> float, s -> string, r -> reference, v -> stackval
+       // arguments: r -> register, m -> memory, c -> constant, s -> stackval, ^ -> ditto
 
        jo_bpush, // bpush(bool r/m/c)
        jo_cpush, // cpush(char ^)
        jo_ipush, // ipush(int ^)
        jo_fpush, // fpush(float ^)
        jo_spush, // spush(string r/m); string constants are automatically allocated and reported as "memory"
+       jo_vpush, // vpush(s)
 
        jo_bpop, // bpop(bool r/m)
        jo_cpop, // cpop(char ^)
@@ -61,13 +63,13 @@ Unit JITOpcodes;
  Const JITOpcodeParamCount:
        Array[TJITOpcodeKind] of uint8 =
        (
-        // b/c/i/f/s  push
-        1, 1, 1, 1, 1,
+        // b/c/i/f/s/v  push
+        1, 1, 1, 1, 1, 1,
 
         // b/c/i/f/s/r  pop
         1, 1, 1, 1, 1, 1,
 
-        // bb/cc/ii/ff/ss/rr mov
+        // bb/cc/ii/ff/ss/rr  mov
         2, 2, 2, 2, 2, 2,
 
         // ii  add/sub/mul/div/mod

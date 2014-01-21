@@ -5,6 +5,12 @@
 
 {$ASMMODE INTEL}
 
+{ getStackvalElement }
+Function getStackvalElement(const VM: PVM; const StackvalPos: int32): PMixedValue; inline; // helper function!
+Begin
+ Result := @VM^.Stack[VM^.Regs.i[5] + StackvalPos];
+End;
+
 (* ------------------ integer operations ------------------ *)
 { r__div_imem_iconst }
 Procedure r__div_imem_iconst(const NumA: Pint64; const NumB_lo, NumB_hi: uint32); register;
@@ -49,13 +55,18 @@ Begin
  VM^.StackPush(MV);
 End;
 
-{ r__push_float_mem }
-Procedure r__push_float_mem(const VM: PVM; const Addr: PVMFloat); register;
-Var MV: TMixedValue;
+{ r__push_float }
+Procedure r__push_float(const VM: PVM); register;
+Var MV   : TMixedValue;
+    Float: Extended;
 Begin
+ asm
+  fstp Extended Float
+ end;
+
  MV.Reset;
  MV.Typ         := mvFloat;
- MV.Value.Float := Addr^;
+ MV.Value.Float := Float;
  VM^.StackPush(MV);
 End;
 
@@ -77,6 +88,12 @@ Begin
  MV.Typ       := mvReference;
  MV.Value.Int := Value;
  VM^.StackPush(MV);
+End;
+
+{ r__push_stackval }
+Procedure r__push_stackval(const VM: PVM; const StackvalPos: int32); register;
+Begin
+ VM^.StackPush(getStackvalElement(VM, StackvalPos)^);
 End;
 
 (* ------------------ pop ------------------ *)
@@ -164,12 +181,6 @@ Begin
 End;
 
 (* ------------------ stackvals ------------------ *)
-{ getStackvalElement }
-Function getStackvalElement(const VM: PVM; const StackvalPos: int32): PMixedValue; inline; // helper function!
-Begin
- Result := @VM^.Stack[VM^.Regs.i[5] + StackvalPos];
-End;
-
 { r__stackval_fetch_bool }
 Function r__stackval_fetch_bool(const VM: PVM; const StackvalPos: int32): Boolean; register;
 Begin

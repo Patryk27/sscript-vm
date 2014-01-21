@@ -244,7 +244,7 @@ Begin
  // @out:
  LabelOut := Data.Position;
 
- { replace dummy address with their real values }
+ { replace dummy addresses with their real values }
  TmpPos := Data.Position;
 
  // replace @true
@@ -395,10 +395,7 @@ Begin
 
      Case Arg0.Kind of
       // memory
-      joa_memory:
-      Begin
-       mov_reg32_imm32(reg_edx, uint32(Arg0.MemoryAddr));
-      End;
+      joa_memory: mov_reg32_imm32(reg_edx, uint32(Arg0.MemoryAddr));
 
       // invalid
       else
@@ -422,12 +419,22 @@ Begin
     { iimov }
     jo_iimov:
     Begin
-     if (Arg0.Kind = joa_memory) Then
+     // iimov(mem, const)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
      Begin
       TmpInt := Arg1.Constant;
 
       mov_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
       mov_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
+     End Else
+
+     // iimov(mem, mem)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
+     Begin
+      mov_reg32_mem32(reg_eax, Arg0.MemoryAddr+0);
+      mov_reg32_mem32(reg_ebx, Arg0.MemoryAddr+4);
+      mov_mem32_reg32(Arg1.MemoryAddr+0, reg_eax);
+      mov_mem32_reg32(Arg1.MemoryAddr+4, reg_ebx);
      End Else
 
       InvalidOpcodeException;
@@ -436,15 +443,6 @@ Begin
     { iiadd }
     jo_iiadd:
     Begin
-     // iiadd(mem, mem)
-     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_memory) Then
-     Begin
-      mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+0);
-      mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+4);
-      add_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
-      adc_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
-     End Else
-
      // iiadd(mem, int)
      if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
      Begin
@@ -454,21 +452,21 @@ Begin
       adc_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
      End Else
 
+     // iiadd(mem, mem)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_memory) Then
+     Begin
+      mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+0);
+      mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+4);
+      add_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
+      adc_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
+     End Else
+
       InvalidOpcodeException;
     End;
 
     { iisub }
     jo_iisub:
     Begin
-     // iisub(mem, mem)
-     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_memory) Then
-     Begin
-      mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+4);
-      mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+0);
-      sub_mem32_reg32(Arg0.MemoryAddr+4, reg_eax);
-      sbb_mem32_reg32(Arg0.MemoryAddr+0, reg_ebx);
-     End Else
-
      // iisub(mem, int)
      if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
      Begin
@@ -476,6 +474,15 @@ Begin
 
       sub_mem32_imm32(Arg0.MemoryAddr+4, hi(TmpInt));
       sbb_mem32_imm32(Arg0.MemoryAddr+0, lo(TmpInt));
+     End Else
+
+     // iisub(mem, mem)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_memory) Then
+     Begin
+      mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+4);
+      mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+0);
+      sub_mem32_reg32(Arg0.MemoryAddr+4, reg_eax);
+      sbb_mem32_reg32(Arg0.MemoryAddr+0, reg_ebx);
      End Else
 
       InvalidOpcodeException;
@@ -550,6 +557,7 @@ Begin
     jo_iicmpe, jo_iicmpne, jo_iicmpg, jo_iicmpl, jo_iicmpge, jo_iicmple:
     Begin
      Case Arg0.Kind of
+      // iicmp*(const, const/mem)
       joa_constant:
       Begin
        if (Arg1.Kind = joa_constant) Then
@@ -561,6 +569,7 @@ Begin
         InvalidOpcodeException;
       End;
 
+      // iicmp*(mem, const/mem)
       joa_memory:
       Begin
        if (Arg1.Kind = joa_constant) Then

@@ -71,7 +71,7 @@ End;
 (* TJITAbstractCPU.isRegNative *)
 Function TJITAbstractCPU.isRegNative(const Arg: TOpcodeArg): Boolean;
 Begin
- Case Arg.ArgType of // @TODO: it's kinda DRY-breaker :P
+ Case Arg.ArgType of // @TODO: it's kinda a DRY-breaker :P
   ptBoolReg     : Result := isRegNative(reg_eb, Arg.RegID);
   ptCharReg     : Result := isRegNative(reg_ec, Arg.RegID);
   ptIntReg      : Result := isRegNative(reg_ei, Arg.RegID);

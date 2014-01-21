@@ -97,9 +97,9 @@ Begin
  Begin
   Op := Data[I];
 
-  Write('[', I, '] ', Copy(GetEnumName(TypeInfo(Op.ID), ord(Op.ID)), 4, 50));
+  Write('[', I, '] ', Copy(GetEnumName(TypeInfo(Op.Kind), ord(Op.Kind)), 4, 50));
 
-  Cnt := JITOpcodeParamCount[Op.ID];
+  Cnt := JITOpcodeParamCount[Op.KInd];
 
   if (Cnt > 0) Then
   Begin

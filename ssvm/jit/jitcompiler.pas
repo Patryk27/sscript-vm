@@ -33,7 +33,7 @@ Unit JITCompiler;
 
        Private
         Function getRegisterAddress(const Arg: TOpcodeArg): uint64;
-        Procedure PutOpcode(const ID: TJITOpcodeKind; const ArgTypes: Array of TJITOpcodeArgKind; const Args: Array of Variant);
+        Procedure PutOpcode(const Kind: TJITOpcodeKind; const ArgTypes: Array of TJITOpcodeArgKind; const Args: Array of Variant);
 
         Procedure ResolveJITJumps;
 
@@ -80,15 +80,15 @@ Begin
 End;
 
 (* TJITCompiler.PutOpcode *)
-Procedure TJITCompiler.PutOpcode(const ID: TJITOpcodeKind; const ArgTypes: Array of TJITOpcodeArgKind; const Args: Array of Variant);
+Procedure TJITCompiler.PutOpcode(const Kind: TJITOpcodeKind; const ArgTypes: Array of TJITOpcodeArgKind; const Args: Array of Variant);
 Var Opcode : TJITOpcode;
     Arg    : TJITOpcodeArg;
     I      : uint8;
 Begin
- if (Length(ArgTypes) <> Length(Args)) or (Length(Args) > High(TJITOpcode.Args)) or (Length(Args) <> JITOpcodeParamCount[ID]) Then // lenghts of the arrays are not the same (or too high)
-  raise Exception.CreateFmt('TJITCompiler.PutOpcode() -> shouldn''t happen! (Length(ArgTypes)=%d, Length(Args)=%d, High(TJITOpcode.Args)=%d, JITOpcodeParamCount[ID]=%d)', [Length(ArgTypes), Length(Args), High(TJITOpcode.Args), JITOpcodeParamCount[ID]]);
+ if (Length(ArgTypes) <> Length(Args)) or (Length(Args) > High(TJITOpcode.Args)) or (Length(Args) <> JITOpcodeParamCount[Kind]) Then // lenghts of the arrays are not the same (or too high)
+  raise Exception.CreateFmt('TJITCompiler.PutOpcode() -> shouldn''t happen! (%d, %d, %d, %d)', [Length(ArgTypes), Length(Args), High(TJITOpcode.Args), JITOpcodeParamCount[Kind]]);
 
- Opcode.ID := ID;
+ Opcode.Kind := Kind;
 
  if (Length(Args) > 0) Then
  Begin
@@ -234,12 +234,12 @@ Begin
       End;
      End Else
 
-     // push(const string)
-     if (CheckArgs(ptString)) Then
+     // push(const int)
+     if (CheckArgs(ptInt)) Then
      Begin
-      PutOpcode(jo_spush,
-               [joa_memory],
-               [AllocateString(Args[0].ImmString)]);
+      PutOpcode(jo_ipush,
+               [joa_constant],
+               [Args[0].ImmInt]);
      End Else
 
      // push(reg int)
@@ -253,6 +253,38 @@ Begin
       End Else
       Begin
        PutOpcode(jo_ipush, // ipush(mem)
+                [joa_memory],
+                [getRegisterAddress(Args[0])]);
+      End;
+     End Else
+
+     // push(const string)
+     if (CheckArgs(ptString)) Then
+     Begin
+      PutOpcode(jo_spush,
+               [joa_memory],
+               [AllocateString(Args[0].ImmString)]);
+     End Else
+
+      InvalidOpcodeException;
+    End;
+
+    { pop }
+    o_pop:
+    Begin
+     // pop(reg bool/char/int/float/string/reference)
+     if (Args[0].ArgType in [ptBoolReg..ptReferenceReg]) Then
+     Begin
+      JITOpcode := TJITOpcodeKind(ord(jo_bpop) + ord(Args[0].ArgType) - ord(ptBoolReg));
+
+      if (CPU.isRegNative(Args[0])) Then
+      Begin
+       PutOpcode(JITOpcode,
+                [joa_register],
+                [Args[0].RegID]);
+      End Else
+      Begin
+       PutOpcode(JITOpcode,
                 [joa_memory],
                 [getRegisterAddress(Args[0])]);
       End;
@@ -446,6 +478,9 @@ Begin
 
      PutOpcode(JITOpcode, [Arg0Kind, Arg1Kind], [Arg0, Arg1]);
     End;
+
+    else
+     InvalidOpcodeException;
    End;
   End;
 

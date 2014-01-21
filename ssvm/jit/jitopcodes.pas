@@ -18,6 +18,13 @@ Unit JITOpcodes;
        jo_fpush, // fpush(float ^)
        jo_spush, // spush(string r/m); string constants are automatically allocated and reported as "memory"
 
+       jo_bpop, // bpop(bool r/m)
+       jo_cpop, // cpop(char ^)
+       jo_ipop, // ipop(int ^)
+       jo_fpop, // fpop(float ^)
+       jo_spop, // spop(string ^)
+       jo_rpop, // rpop(reference ^)
+
        jo_bbmov, // bbmov(bool r/m, bool r/m/c)
        jo_iimov, // iimov(int r/m, int r/m/c)
 
@@ -55,6 +62,9 @@ Unit JITOpcodes;
        (
         // b/c/i/f/s  push
         1, 1, 1, 1, 1,
+
+        // b/c/i/f/s/r pop
+        1, 1, 1, 1, 1, 1,
 
         // **mov
         2, 2,
@@ -103,7 +113,7 @@ Unit JITOpcodes;
  Type PJITOpcode = ^TJITOpcode;
       TJITOpcode =
       Record
-       ID  : TJITOpcodeKind;
+       Kind: TJITOpcodeKind;
        Args: Array[0..2] of TJITOpcodeArg;
       End;
 

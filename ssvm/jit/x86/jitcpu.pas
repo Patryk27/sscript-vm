@@ -334,7 +334,7 @@ Begin
    JumpTable.AddJump(OpcodeID, JAsm.getData.Size);
 
    With JAsm do
-   Case Opcode.ID of
+   Case Opcode.Kind of
     { bpush }
     jo_bpush:
     Begin
@@ -405,10 +405,33 @@ Begin
      call_internalproc(@r__push_string);
     End;
 
+    { bpop, cpop, ipop, fpop, spop, rpop }
+    jo_bpop..jo_rpop:
+    Begin
+     // opcode(mem)
+     if (Arg0.Kind = joa_memory) Then
+     Begin
+      mov_reg32_imm32(reg_eax, uint32(getVM));
+      mov_reg32_imm32(reg_edx, uint32(Arg0.MemoryAddr));
+
+      Case Opcode.Kind of
+       jo_bpop: call_internalproc(@r__pop_bool_reg);
+       jo_cpop: call_internalproc(@r__pop_char_reg);
+       jo_ipop: call_internalproc(@r__pop_int_reg);
+       jo_fpop: call_internalproc(@r__pop_float_reg);
+       jo_spop: call_internalproc(@r__pop_string_reg);
+       jo_rpop: call_internalproc(@r__pop_reference_reg);
+      End;
+     End Else
+
+      InvalidOpcodeException;
+    End;
+
     { bbmov }
     jo_bbmov:
     Begin
-     if (Arg0.Kind = joa_memory) Then
+     // bbmov(mem, const)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind = joa_constant) Then
      Begin
       mov_mem8_imm8(Arg0.MemoryAddr, Arg1.Constant);
      End Else
@@ -545,7 +568,7 @@ Begin
        mov_reg32_imm32(reg_ecx, hi(TmpInt));
       End;
 
-      if (Opcode.ID = jo_iidiv) Then
+      if (Opcode.Kind = jo_iidiv) Then
        call_internalproc(@r__div_imem_iconst) Else
        call_internalproc(@r__mod_imem_iconst);
      End Else
@@ -561,10 +584,10 @@ Begin
       joa_constant:
       Begin
        if (Arg1.Kind = joa_constant) Then
-        int_compare(Opcode.ID, Arg0.Constant, Arg1.Constant, nil, nil) Else
+        int_compare(Opcode.Kind, Arg0.Constant, Arg1.Constant, nil, nil) Else
 
        if (Arg1.Kind = joa_memory) Then
-        int_compare(Opcode.ID, Arg0.Constant, 0, nil, Arg1.MemoryAddr) Else
+        int_compare(Opcode.Kind, Arg0.Constant, 0, nil, Arg1.MemoryAddr) Else
 
         InvalidOpcodeException;
       End;
@@ -573,10 +596,10 @@ Begin
       joa_memory:
       Begin
        if (Arg1.Kind = joa_constant) Then
-        int_compare(Opcode.ID, 0, Arg1.Constant, Arg0.MemoryAddr, nil) Else
+        int_compare(Opcode.Kind, 0, Arg1.Constant, Arg0.MemoryAddr, nil) Else
 
        if (Arg1.Kind = joa_memory) Then
-        int_compare(Opcode.ID, 0, 0, Arg0.MemoryAddr, Arg1.MemoryAddr) Else
+        int_compare(Opcode.Kind, 0, 0, Arg0.MemoryAddr, Arg1.MemoryAddr) Else
 
         InvalidOpcodeException;
       End;
@@ -595,13 +618,13 @@ Begin
      {$DEFINE JTR := JumpsToResolve}
      {$DEFINE Last := JTR[High(JTR)]}
      SetLength(JTR, Length(JTR)+1);
-     Last.Opcode       := Opcode.ID;
+     Last.Opcode       := Opcode.Kind;
      Last.JumpAddress  := Arg0.Constant;
      Last.DataPosition := JumpTable.getLast.CodeAddress;
      {$UNDEF JTR}
      {$UNDEF Last}
 
-     Case Opcode.ID of
+     Case Opcode.Kind of
       jo_jmp          : I := asm_jmp_size;
       jo_call         : I := asm_call_size;
       jo_tjmp, jo_fjmp: I := asm_condjmp_size;
@@ -660,7 +683,7 @@ Begin
 
     { invalid opcode }
     else
-     raise Exception.CreateFmt('TJITCPU.Compile() -> invalid opcode (kind=#%d)', [ord(Opcode.ID)]);
+     raise Exception.CreateFmt('TJITCPU.Compile() -> invalid opcode (kind=#%d)', [ord(Opcode.Kind)]);
    End;
   End;
 

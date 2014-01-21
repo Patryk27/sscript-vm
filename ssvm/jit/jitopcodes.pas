@@ -10,7 +10,7 @@ Unit JITOpcodes;
  { TJITOpcodeKind }
  Type TJITOpcodeKind = // don't change order of these!
       (
-       // r -> register, m -> memory, c -> constant, ^ -> ditto
+       // r -> register, m -> memory, c -> constant, s -> stackval, ^ -> ditto
 
        jo_bpush, // bpush(bool r/m/c)
        jo_cpush, // cpush(char ^)
@@ -25,16 +25,20 @@ Unit JITOpcodes;
        jo_spop, // spop(string ^)
        jo_rpop, // rpop(reference ^)
 
-       jo_bbmov, // bbmov(bool r/m, bool r/m/c)
-       jo_iimov, // iimov(int r/m, int r/m/c)
+       jo_bbmov, // bbmov(bool r/m/s, bool r/m/c/s)
+       jo_ccmov, // ccmov(char ^, char ^)
+       jo_iimov, // iimov(int ^, int ^)
+       jo_ffmov, // ffmov(float ^, float ^)
+       jo_ssmov, // ssmov(string ^, string ^)
+       jo_rrmov, // rrmov(reference r, reference r/s)
 
-       jo_iiadd, // iiadd(int r/m, int r/m/c)
+       jo_iiadd, // iiadd(int r/m/s, int r/m/c/s) -> no double stackval-reference though
        jo_iisub, // iisub(^)
        jo_iimul, // iimul(^)
        jo_iidiv, // iidiv(^)
        jo_iimod, // iimod(^)
 
-       jo_iicmpe, // iicmpe(int r/m, int r/m/c)
+       jo_iicmpe, // iicmpe(int r/m/s, int r/m/c/s) -> no double stackval-reference
        jo_iicmpne, // iicmpne(^)
        jo_iicmpg, // iicmpg(^)
        jo_iicmpl, // iicmpl(^)
@@ -60,11 +64,11 @@ Unit JITOpcodes;
         // b/c/i/f/s  push
         1, 1, 1, 1, 1,
 
-        // b/c/i/f/s/r pop
+        // b/c/i/f/s/r  pop
         1, 1, 1, 1, 1, 1,
 
-        // **mov
-        2, 2,
+        // bb/cc/ii/ff/ss/rr mov
+        2, 2, 2, 2, 2, 2,
 
         // ii  add/sub/mul/div/mod
         2, 2, 2, 2, 2,

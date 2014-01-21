@@ -367,6 +367,22 @@ Begin
       JITOpcode := jo_iimov;
      End Else
 
+     // mov(stackval, imm/reg bool/char/int/float/string/reference)
+     if (Args[0].ArgType = ptStackval) Then
+     Begin
+      Case Args[1].ArgType of
+       ptBool, ptBoolReg    : JITOpcode := jo_bbmov;
+       ptChar, ptCharReg    : JITOpcode := jo_ccmov;
+       ptInt, ptIntReg      : JITOpcode := jo_iimov;
+       ptFloat, ptFloatReg  : JITOpcode := jo_ffmov;
+       ptString, ptStringReg: JITOpcode := jo_ssmov;
+       ptReferenceReg       : JITOpcode := jo_rrmov;
+
+       else
+        InvalidOpcodeException;
+      End;
+     End Else
+
       InvalidOpcodeException;
 
      PutOpcode(JITOpcode, [Arg0Kind, Arg1Kind], [Arg0, Arg1]);

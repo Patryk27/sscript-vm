@@ -3,6 +3,8 @@
  All rights reserved.
 *)
 
+{$ASMMODE INTEL}
+
 (* ------------------ integer operations ------------------ *)
 { r__div_imem_iconst }
 Procedure r__div_imem_iconst(const NumA: Pint64; const NumB_lo, NumB_hi: uint32); register;
@@ -261,5 +263,70 @@ Begin
 
   else
    raise Exception.CreateFmt('r__div_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__set_stackval_bool }
+Procedure r__set_stackval_bool(const VM: PVM; const StackvalPos: int32; const NewValue: Boolean); register;
+Begin
+ With getStackvalElement(VM, StackvalPos)^ do
+ Begin
+  ReleaseData;
+
+  Typ        := mvBool;
+  Value.Bool := NewValue;
+ End;
+End;
+
+{ r__set_stackval_char }
+Procedure r__set_stackval_char(const VM: PVM; const StackvalPos: int32; const NewValue: Char); register;
+Begin
+ With getStackvalElement(VM, StackvalPos)^ do
+ Begin
+  ReleaseData;
+
+  Typ        := mvChar;
+  Value.Char := NewValue;
+ End;
+End;
+
+{ r__set_stackval_int }
+Procedure r__set_stackval_int(const VM: PVM; const StackvalPos: int32; const NewValue: int64); register;
+Begin
+ With getStackvalElement(VM, StackvalPos)^ do
+ Begin
+  ReleaseData;
+
+  Typ       := mvInt;
+  Value.Int := NewValue;
+ End;
+End;
+
+{ r__set_stackval_float }
+Procedure r__set_stackval_float(const VM: PVM; const StackvalPos: int32); register;
+Var NewValue: Extended;
+Begin
+ asm
+  fstp Extended NewValue
+ end;
+
+ With getStackvalElement(VM, StackvalPos)^ do
+ Begin
+  ReleaseData;
+
+  Typ         := mvFloat;
+  Value.Float := NewValue;
+ End;
+End;
+
+{ r__set_stackval_string }
+Procedure r__set_stackval_string(const VM: PVM; const StackvalPos: int32; const NewValue: PChar); register;
+Begin
+ With getStackvalElement(VM, StackvalPos)^ do
+ Begin
+  ReleaseData;
+
+  Typ       := mvString;
+  Value.Str := PChar(StrPas(NewValue)); // @TODO: is it safe?
  End;
 End;

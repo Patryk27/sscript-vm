@@ -605,8 +605,8 @@ Begin
     { iimul }
     jo_iimul:
     Begin
-     // iimul(mem, mem/const)
-     if (Arg0.Kind = joa_memory) and (Arg1.Kind in [joa_memory, joa_constant]) Then
+     // iimul(mem, mem/const/stackval)
+     if (Arg0.Kind = joa_memory) and (Arg1.Kind in [joa_memory, joa_constant, joa_stackval]) Then
      Begin
       mov_reg32_mem32(reg_edi, Arg0.MemoryAddr+4);
       mov_reg32_mem32(reg_esi, Arg0.MemoryAddr+0);
@@ -616,11 +616,17 @@ Begin
        mov_reg32_mem32(reg_ecx, Arg1.MemoryAddr+4);
        mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+0);
       End Else
+
+      if (Arg1.Kind = joa_constant) Then
       Begin
        TmpInt := Arg1.Constant;
 
        mov_reg32_imm32(reg_ecx, hi(TmpInt));
        mov_reg32_imm32(reg_ebx, lo(TmpInt));
+      End Else
+
+      Begin
+       FetchIntStackval(reg_ebx, reg_ecx, Arg1.StackvalPos);
       End;
 
       mov_reg32_reg32(reg_eax, reg_edi);
@@ -682,6 +688,17 @@ Begin
        mov_reg32_imm32(reg_edx, lo(TmpInt));
        mov_reg32_imm32(reg_ecx, hi(TmpInt));
       End;
+
+      if (Opcode.Kind = jo_iidiv) Then
+       call_internalproc(@r__div_imem_iconst) Else
+       call_internalproc(@r__mod_imem_iconst);
+     End Else
+
+     // opcode(mem, stackval)
+     if (CheckArgs(joa_memory, joa_stackval)) Then
+     Begin
+      FetchIntStackval(reg_edx, reg_ecx, Arg1.StackvalPos);
+      mov_reg32_imm32(reg_eax, uint32(Arg0.MemoryAddr));
 
       if (Opcode.Kind = jo_iidiv) Then
        call_internalproc(@r__div_imem_iconst) Else

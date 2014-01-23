@@ -40,7 +40,7 @@ Uses SysUtils, TypInfo;
 
 (* TJITOpcodeList.Create *)
 {
- Creates a new object instance.
+ Creates a new class instance.
 }
 Constructor TJITOpcodeList.Create;
 Begin
@@ -71,7 +71,7 @@ End;
 
 (* TJITOpcodeList.Dump *)
 {
- Prints opcode list in the console.
+ Prints opcode list to the console.
 }
 Procedure TJITOpcodeList.Dump;
 Var I, Q: uint32;

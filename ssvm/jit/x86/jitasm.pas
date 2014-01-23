@@ -48,6 +48,8 @@ Unit JITAsm;
         Procedure emit_uint32(const Value: uint32);
         Procedure emit_uint32(const Value: VMReference);
 
+        Procedure emit_int8(const Value: int8);
+        Procedure emit_int16(const Value: int16);
         Procedure emit_int32(const Value: int32);
 
         Procedure emit_modrm(const Value: TModRM);
@@ -61,6 +63,7 @@ Unit JITAsm;
         Procedure post_compilation;
 
        Public
+    { >> CPU << }
         // nop
         Procedure nop;
 
@@ -71,14 +74,17 @@ Unit JITAsm;
         Procedure push_imm32(const Value: int32);
         Procedure push_mem32(const Mem: VMReference);
 
-        // mov
+        // mov reg, ...
         Procedure mov_reg8_mem8(const Reg: TRegister8; const Mem: VMReference);
 
         Procedure mov_reg32_imm32(const Reg: TRegister32; const Value: int32);
         Procedure mov_reg32_reg32(const RegA, RegB: TRegister32);
         Procedure mov_reg32_mem32(const Reg: TRegister32; const Mem: VMReference);
 
+        // mov [mem], ...
         Procedure mov_mem8_imm8(const Mem: VMReference; const Value: int8);
+
+        Procedure mov_mem16_imm16(const Mem: VMReference; const Value: int16);
 
         Procedure mov_mem32_imm32(const Mem: VMReference; const Value: int32);
         Procedure mov_mem32_reg32(const Mem: VMReference; const Reg: TRegister32);
@@ -131,6 +137,29 @@ Unit JITAsm;
         // call
         Procedure call_internalproc(const Handler: Pointer);
 
+    { >> FPU << }
+
+        // fld
+        Procedure fld_memfloat(const Mem: VMReference);
+
+        // fild
+        Procedure fild_memint(const Mem: VMReference);
+
+        // fstp
+        Procedure fstp_memfloat(const Mem: VMReference);
+
+        // faddp
+        Procedure faddp_st0(const Reg: TRegisterFPU);
+
+        // fsubp
+        Procedure fsubp_st0(const Reg: TRegisterFPU);
+
+        // fmulp
+        Procedure fmulp_st0(const Reg: TRegisterFPU);
+
+        // fdivp
+        Procedure fdivp_st0(const Reg: TRegisterFPU);
+
        Public
         Property getData: TStream read Data;
        End;
@@ -153,6 +182,18 @@ End;
 Procedure TJITAsm.emit_uint32(const Value: VMReference);
 Begin
  Data.write_uint32(uint32(Value));
+End;
+
+(* TJITAsm.emit_int8 *)
+Procedure TJITAsm.emit_int8(const Value: int8);
+Begin
+ Data.write_int8(Value);
+End;
+
+(* TJITAsm.emit_int16 *)
+Procedure TJITAsm.emit_int16(const Value: int16);
+Begin
+ Data.write_int16(Value);
 End;
 
 (* TJITAsm.emit_int32 *)
@@ -331,6 +372,19 @@ Begin
  emit_uint8($05);
  emit_uint32(Mem);
  emit_uint8(Value);
+End;
+
+(* TJITAsm.mov_mem16_imm16 *)
+{
+ mov word [mem], value
+}
+Procedure TJITAsm.mov_mem16_imm16(const Mem: VMReference; const Value: int16);
+Begin
+ emit_uint8($66);
+ emit_uint8($C7);
+ emit_uint8($05);
+ emit_uint32(Mem);
+ emit_int16(Value);
 End;
 
 (* TJITAsm.mov_mem32_imm32 *)
@@ -754,5 +808,78 @@ Begin
 
  emit_uint8($E8);
  emit_uint32(uint32(Handler));
+End;
+
+(* TJITAsm.fld_memfloat *)
+{
+ fld tword [mem]
+}
+Procedure TJITAsm.fld_memfloat(const Mem: VMReference);
+Begin
+ emit_uint8($DB);
+ emit_uint8($2D);
+ emit_uint32(Mem);
+End;
+
+(* TJITAsm.fild_memint *)
+{
+ fild qword [mem]
+}
+Procedure TJITAsm.fild_memint(const Mem: VMReference);
+Begin
+ emit_uint8($DF);
+ emit_uint8($2D);
+ emit_uint32(Mem);
+End;
+
+(* TJITAsm.fstp_memfloat *)
+{
+ fstp tword [mem]
+}
+Procedure TJITAsm.fstp_memfloat(const Mem: VMReference);
+Begin
+ emit_uint8($DB);
+ emit_uint8($3D);
+ emit_uint32(Mem);
+End;
+
+(* TJITAsm.faddp_st0 *)
+{
+ faddp st0, reg
+}
+Procedure TJITAsm.faddp_st0(const Reg: TRegisterFPU);
+Begin
+ emit_uint8($DE);
+ emit_uint8($C0 + ord(Reg));
+End;
+
+(* TJITAsm.fsubp_st0 *)
+{
+ fsubp st0, reg
+}
+Procedure TJITAsm.fsubp_st0(const Reg: TRegisterFPU);
+Begin
+ emit_uint8($DE);
+ emit_uint8($E8 + ord(Reg));
+End;
+
+(* TJITAsm.fmulp_st0 *)
+{
+ fmulp st0, reg
+}
+Procedure TJITAsm.fmulp_st0(const Reg: TRegisterFPU);
+Begin
+ emit_uint8($DE);
+ emit_uint8($C8 + ord(Reg));
+End;
+
+(* TJITAsm.fdivp_st0 *)
+{
+ fdivp st0, reg
+}
+Procedure TJITAsm.fdivp_st0(const Reg: TRegisterFPU);
+Begin
+ emit_uint8($DE);
+ emit_uint8($F8 + ord(Reg));
 End;
 End.

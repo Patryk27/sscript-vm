@@ -40,6 +40,11 @@ Unit JITOpcodes;
        jo_iidiv, // iidiv(^)
        jo_iimod, // iimod(^)
 
+       jo_ffadd, // ffadd(float r/m/s, float r/m/c/s) -> no double stackval-reference
+       jo_ffsub, // ffsub(^)
+       jo_ffmul, // ffmul(^)
+       jo_ffdiv, // ffdiv(^)
+
        jo_iicmpe, // iicmpe(int r/m/s, int r/m/c/s) -> no double stackval-reference
        jo_iicmpne, // iicmpne(^)
        jo_iicmpg, // iicmpg(^)
@@ -74,6 +79,9 @@ Unit JITOpcodes;
 
         // ii  add/sub/mul/div/mod
         2, 2, 2, 2, 2,
+
+        // ff  add/sub/mul/div
+        2, 2, 2, 2,
 
         // ii  cmpe/cmpne/cmpg/cmpl/cmpge/cmple
         2, 2, 2, 2, 2, 2,

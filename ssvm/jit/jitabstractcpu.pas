@@ -5,7 +5,7 @@
 Unit JITAbstractCPU;
 
  Interface
- Uses VM, Opcodes, JITOpcodeList;
+ Uses VM, VMTYpes, Opcodes, JITOpcodeList;
 
  {$MACRO ON}
  {$DEFINE va := virtual abstract}
@@ -27,7 +27,13 @@ Unit JITAbstractCPU;
        Public
         Function JITMemAlloc(const Size: uint32): Pointer;
 
+        Function AllocateFloat(const Value: VMFloat): VMReference;
+        Function AllocateString(const Value: String): VMReference;
+
        Public
+        Function AllocateFloatConstants: Boolean; va; // if 'true', *every* float constant will be reported as 'joa_memory' rather than 'joa_constant'
+        Function AllocateStringConstants: Boolean; va; // if 'true', every string constant will be reported as 'joa_memory' rather than 'joa_constant'
+
         Function isRegNative(const Kind: TBytecodeRegister; const ID: uint8): Boolean; va;
         Function isRegNative(const Arg: TOpcodeArg): Boolean;
 
@@ -66,6 +72,26 @@ Begin
  SetLength(AB, Length(AB)+1);
  AB[High(AB)] := Result;
  {$UNDEF AB}
+End;
+
+(* TJITAbstractCPU.AllocateFloat *)
+Function TJITAbstractCPU.AllocateFloat(const Value: VMFloat): VMReference;
+Begin
+ Result            := JITMemAlloc(sizeof(Value));
+ PVMFloat(Result)^ := Value;
+End;
+
+(* TJITAbstractCPU.AllocateString *)
+Function TJITAbstractCPU.AllocateString(const Value: String): VMReference;
+Var I, Len: uint32;
+Begin
+ Result := JITMemAlloc(Length(Value)+1);
+ Len    := Length(Value);
+
+ For I := 1 To Len Do
+  PChar(Result + I-1)^ := Value[I];
+
+ PChar(Result + Len)^ := #0;
 End;
 
 (* TJITAbstractCPU.isRegNative *)

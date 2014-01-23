@@ -29,9 +29,6 @@ Unit JITCompiler;
         JumpsToResolve: TJumpsToResolveArray;
 
        Private
-        Function AllocateString(const Value: String): uint64;
-
-       Private
         Function getRegisterAddress(const Arg: TOpcodeArg): uint64;
         Procedure PutOpcode(const Kind: TJITOpcodeKind; const ArgTypes: Array of TJITOpcodeArgKind; const Args: Array of Variant);
 
@@ -46,20 +43,6 @@ Unit JITCompiler;
 
  Implementation
 Uses Variants, SysUtils;
-
-(* TJITCompiler.AllocateString *)
-Function TJITCompiler.AllocateString(const Value: String): uint64;
-Var I, Len: uint32;
-Begin
- Result := uint64(CPU.JITMemAlloc(Length(Value)+1));
-
- Len := Length(Value);
-
- For I := 1 To Len Do
-  PChar(Result + I-1)^ := Value[I];
-
- PChar(Result + Len)^ := #0;
-End;
 
 (* TJITCompiler.getRegisterAddress *)
 Function TJITCompiler.getRegisterAddress(const Arg: TOpcodeArg): uint64;
@@ -195,15 +178,29 @@ Var Reader   : TBytecodeReader;
    // imm float
    if (OpArg.ArgType = ptFloat) Then
    Begin
-    Arg     := OpArg.ImmFloat;
-    ArgKind := joa_constant;
+    if (CPU.AllocateFloatConstants) Then
+    Begin
+     Arg     := VMIReference(CPU.AllocateFloat(OpArg.ImmFloat));
+     ArgKind := joa_memory;
+    End Else
+    Begin
+     Arg     := OpArg.ImmFloat;
+     ArgKind := joa_constant;
+    End;
    End Else
 
    // imm string
    if (OpArg.ArgType = ptString) Then
    Begin
-    Arg     := AllocateString(OpArg.ImmString);
-    ArgKind := joa_memory;
+    if (CPU.AllocateStringConstants) Then
+    Begin
+     Arg     := VMIReference(CPU.AllocateString(OpArg.ImmString));
+     ArgKind := joa_memory;
+    End Else
+    Begin
+     Arg     := OpArg.ImmString;
+     ArgKind := joa_constant;
+    End;
    End Else
 
    // reg bool/char/int/float/string/reference
@@ -268,7 +265,7 @@ Begin
     ParseArgument(Arg1Kind, Arg1, Args[1]);
 
    if (Length(Args) > 2) Then
-    raise Exception.Create('TODO: Length(Args) > 2');
+    raise Exception.Create('@TODO: Length(Args) > 2');
 
    { compile code to the JIT microcode }
    Case Opcode of
@@ -300,6 +297,12 @@ Begin
      if (Args[0].ArgType in [ptInt, ptIntReg]) Then
      Begin
       JITOpcode := jo_ipush;
+     End Else
+
+     // push(reg/imm float)
+     if (Args[0].ArgType in [ptFloat, ptFloatReg]) Then
+     Begin
+      JITOpcode := jo_fpush;
      End Else
 
      // push(reg/imm string)
@@ -342,20 +345,28 @@ Begin
     { add, sub, mul, div, mod }
     o_add, o_sub, o_mul, o_div, o_mod:
     Begin
+     if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptStackval) Then // @TODO
+      InvalidOpcodeException;
+
      // op(reg int | stackval, reg/imm int | stackval)
      if (Args[0].ArgType in [ptIntReg, ptStackval]) and (Args[1].ArgType in [ptIntReg, ptInt, ptStackval]) Then
      Begin
-      if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptStackval) Then // @TODO
-       InvalidOpcodeException;
-
       if (Opcode = o_mod) Then // special case - see opcode list
        JITOpcode := jo_iimod Else
        JITOpcode := TJITOpcodeKind(ord(jo_iiadd) + ord(Opcode)-ord(o_add));
+     End Else
 
-      PutOpcode(JITOpcode, [Arg0Kind, Arg1Kind], [Arg0, Arg1]);
+     // op(reg float | stackval, reg/imm float | imm int | stackval)
+     if (Args[0].ArgType in [ptFloatReg, ptStackval]) and (Args[1].ArgType in [ptFloatReg, ptFloat, ptInt, ptStackval]) Then
+     Begin
+      if (Opcode = o_mod) Then
+       InvalidOpcodeException { no "mod" operation for floating point types } Else
+       JITOpcode := TJITOpcodeKind(ord(jo_ffadd) + ord(Opcode)-ord(o_add));
      End Else
 
       InvalidOpcodeException;
+
+     PutOpcode(JITOpcode, [Arg0Kind, Arg1Kind], [Arg0, Arg1]);
     End;
 
     { mov }
@@ -371,6 +382,12 @@ Begin
      if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptIntReg, ptInt]) Then
      Begin
       JITOpcode := jo_iimov;
+     End Else
+
+     // mov(reg float, reg/imm float | imm int)
+     if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType in [ptFloatReg, ptFloat, ptInt]) Then
+     Begin
+      JITOpcode := jo_ffmov;
      End Else
 
      // mov(stackval, imm/reg bool/char/int/float/string/reference)

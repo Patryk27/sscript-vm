@@ -21,6 +21,29 @@
   call_internalproc(@r__push_bool);
  End;
 
+ { cpush }
+ jo_cpush:
+ Begin
+  mov_reg32_imm32(reg_eax, uint32(getVM));
+
+  Case Arg0.Kind of
+   // memory
+   joa_memory:
+   Begin
+    mov_reg32_imm32(reg_edx, 0);
+    mov_reg8_mem8(reg_dl, Arg0.MemoryAddr);
+   End;
+
+   // constant
+   joa_constant:
+   Begin
+    mov_reg32_imm32(reg_edx, ord(Char(Arg0.Constant)));
+   End;
+  End;
+
+  call_internalproc(@r__push_char);
+ End;
+
  { ipush }
  jo_ipush:
  Begin

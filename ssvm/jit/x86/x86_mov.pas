@@ -7,6 +7,13 @@
    mov_mem8_imm8(Arg0.MemoryAddr, Arg1.Constant);
   End Else
 
+  // bbmov(mem, mem)
+  if (CheckArgs(joa_memory, joa_memory)) Then
+  Begin
+   mov_reg8_mem8(reg_al, Arg1.MemoryAddr);
+   mov_mem8_reg8(Arg0.MemoryAddr, reg_al);
+  End Else
+
    InvalidOpcodeException;
  End;
 
@@ -25,18 +32,18 @@
   // iimov(mem, mem)
   if (CheckArgs(joa_memory, joa_memory)) Then
   Begin
-   mov_reg32_mem32(reg_eax, Arg0.MemoryAddr+0);
-   mov_reg32_mem32(reg_ebx, Arg0.MemoryAddr+4);
-   mov_mem32_reg32(Arg1.MemoryAddr+0, reg_eax);
-   mov_mem32_reg32(Arg1.MemoryAddr+4, reg_ebx);
+   mov_reg32_mem32(reg_eax, Arg1.MemoryAddr+0);
+   mov_reg32_mem32(reg_ebx, Arg1.MemoryAddr+4);
+   mov_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
+   mov_mem32_reg32(Arg0.MemoryAddr+4, reg_ebx);
   End Else
 
   // iimov(mem, stackval)
   if (CheckArgs(joa_memory, joa_stackval)) Then
   Begin
    FetchIntStackval(reg_eax, reg_edx, Arg1.StackvalPos);
-   mov_mem32_reg32(Arg1.MemoryAddr+0, reg_eax);
-   mov_mem32_reg32(Arg1.MemoryAddr+4, reg_edx);
+   mov_mem32_reg32(Arg0.MemoryAddr+0, reg_eax);
+   mov_mem32_reg32(Arg0.MemoryAddr+4, reg_edx);
   End Else
 
   // iimov(stackval, const)

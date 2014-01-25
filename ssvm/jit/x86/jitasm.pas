@@ -83,6 +83,7 @@ Unit JITAsm;
 
         // mov [mem], ...
         Procedure mov_mem8_imm8(const Mem: VMReference; const Value: int8);
+        Procedure mov_mem8_reg8(const Mem: VMReference; const Reg: TRegister8);
 
         Procedure mov_mem16_imm16(const Mem: VMReference; const Value: int16);
 
@@ -372,6 +373,22 @@ Begin
  emit_uint8($05);
  emit_uint32(Mem);
  emit_uint8(Value);
+End;
+
+(* TJITAsm.mov_mem8_reg8 *)
+{
+ mov byte [mem], reg
+}
+Procedure TJITAsm.mov_mem8_reg8(const Mem: VMReference; const Reg: TRegister8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.Reg  := ord(Reg);
+ ModRM.RM   := 5;
+
+ emit_uint8($88);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
 End;
 
 (* TJITAsm.mov_mem16_imm16 *)

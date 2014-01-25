@@ -58,10 +58,10 @@ End;
 { r__push_float }
 Procedure r__push_float(const VM: PVM); register;
 Var MV   : TMixedValue;
-    Float: Extended;
+    Float: VMFloat;
 Begin
  asm
-  fstp Extended Float
+  fstp VMFloat Float
  end;
 
  MV.Reset;
@@ -135,7 +135,7 @@ Begin
 End;
 
 { r__pop_float_reg }
-Procedure r__pop_float_reg(const VM: PVM; const RegAddr: PExtended); register;
+Procedure r__pop_float_reg(const VM: PVM; const RegAddr: PVMFloat); register;
 Begin
  RegAddr^ := getFloat(VM^.Stack[VM^.Regs.i[5]]);
  Dec(VM^.Regs.i[5]);
@@ -200,7 +200,7 @@ Begin
 End;
 
 { r__stackval_fetch_float }
-Function r__stackval_fetch_float(const VM: PVM; const StackvalPos: int32): Extended; register;
+Function r__stackval_fetch_float(const VM: PVM; const StackvalPos: int32): VMFloat; register;
 Begin
  Result := getFloat(getStackvalElement(VM, StackvalPos)^);
 End;
@@ -291,6 +291,86 @@ Begin
  End;
 End;
 
+{ r__add_stackval_float }
+Procedure r__add_stackval_float(const VM: PVM; const StackvalPos: int32); register;
+Var MV   : PMixedValue;
+    Value: VMFloat;
+Begin
+ asm
+  fstp VMFloat Value
+ end;
+
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int += Round(Value);
+  mvFloat: MV^.Value.Float += Value;
+
+  else
+   raise Exception.CreateFmt('r__add_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__sub_stackval_float }
+Procedure r__sub_stackval_float(const VM: PVM; const StackvalPos: int32); register;
+Var MV   : PMixedValue;
+    Value: VMFloat;
+Begin
+ asm
+  fstp VMFloat Value
+ end;
+
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int -= Round(Value);
+  mvFloat: MV^.Value.Float -= Value;
+
+  else
+   raise Exception.CreateFmt('r__sub_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__mul_stackval_float }
+Procedure r__mul_stackval_float(const VM: PVM; const StackvalPos: int32); register;
+Var MV   : PMixedValue;
+    Value: VMFloat;
+Begin
+ asm
+  fstp VMFloat Value
+ end;
+
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int *= Round(Value);
+  mvFloat: MV^.Value.Float *= Value;
+
+  else
+   raise Exception.CreateFmt('r__mul_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
+{ r__div_stackval_float }
+Procedure r__div_stackval_float(const VM: PVM; const StackvalPos: int32); register;
+Var MV   : PMixedValue;
+    Value: VMFloat;
+Begin
+ asm
+  fstp VMFloat Value
+ end;
+
+ MV := getStackvalElement(VM, StackvalPos);
+
+ Case MV^.Typ of
+  mvInt  : MV^.Value.Int := MV^.Value.Int div Round(Value);
+  mvFloat: MV^.Value.Float /= Value;
+
+  else
+   raise Exception.CreateFmt('r__div_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+ End;
+End;
+
 { r__set_stackval_bool }
 Procedure r__set_stackval_bool(const VM: PVM; const StackvalPos: int32; const NewValue: Boolean); register;
 Begin
@@ -329,10 +409,10 @@ End;
 
 { r__set_stackval_float }
 Procedure r__set_stackval_float(const VM: PVM; const StackvalPos: int32); register;
-Var NewValue: Extended;
+Var NewValue: VMFloat;
 Begin
  asm
-  fstp Extended NewValue
+  fstp VMFloat NewValue
  end;
 
  With getStackvalElement(VM, StackvalPos)^ do

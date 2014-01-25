@@ -5,7 +5,7 @@
 Unit JITAbstractCPU;
 
  Interface
- Uses VM, VMTYpes, Opcodes, JITOpcodeList;
+ Uses VM, VMTypes, Opcodes, JITOpcodeList;
 
  {$MACRO ON}
  {$DEFINE va := virtual abstract}

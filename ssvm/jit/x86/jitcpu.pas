@@ -33,7 +33,9 @@ Unit JITCPU;
         Procedure ResolveJumps;
 
         Procedure int_compare(const Opcode: TJITOpcodeKind; const Number0, Number1: int64; const Addr0, Addr1: VMReference);
+
         Procedure FetchIntStackval(const DestLo, DestHi: TRegister32; const StackvalPos: int32);
+        Procedure FetchFloatStackval(const StackvalPos: int32);
 
         Procedure MoveConstantFloatToMemory(const DestMemory: VMReference; const Value: VMFloat);
 
@@ -61,6 +63,9 @@ Const asm_jmp_size     = 5;
 // ------------------------ //
 
 (* TJITCPU.ResolveJumps *)
+{
+ Resolves jumps; called at the end of the compilation process.
+}
 Procedure TJITCPU.ResolveJumps;
 Var Jump   : TJumpToResolve;
     JumpRec: TJITJumpRecord;
@@ -108,6 +113,9 @@ Begin
 End;
 
 (* TJITCPU.int_compare *)
+{
+ Compares two ints - by theirs values or numbers at given addresses.
+}
 Procedure TJITCPU.int_compare(const Opcode: TJITOpcodeKind; const Number0, Number1: int64; const Addr0, Addr1: VMReference);
 Var CompareMode: (cmConstConst, cmConstMem, cmMemConst, cmMemMem);
     CmpResult  : Boolean;
@@ -140,7 +148,7 @@ Begin
    CompareMode := cmMemMem;
  End;
 
- if (CompareMode = cmConstConst) Then // both operands are known
+ if (CompareMode = cmConstConst) Then // optimization: both operands are constant
  Begin
   CmpResult := False;
 
@@ -157,7 +165,7 @@ Begin
   Exit;
  End;
 
- if (CompareMode = cmMemMem) and (Addr0 = Addr1) Then // both addresses are the same (comparing the same number with itself)
+ if (CompareMode = cmMemMem) and (Addr0 = Addr1) Then // optimization: both addresses are the same (comparing the same number with itself)
  Begin
   CmpResult := Opcode in [jo_iicmpe, jo_iicmpge, jo_iicmple];
 
@@ -169,38 +177,38 @@ Begin
   // const, mem
   cmConstMem:
   Begin
-   JAsm.mov_reg32_imm32(reg_eax, lo(Number0)); // mov eax, lo(Number0)
-   JAsm.cmp_reg32_mem32(reg_eax, Addr1+0); // cmp eax, dword [Addr1+0]
+   JAsm.mov_reg32_imm32(reg_eax, lo(Number0));
+   JAsm.cmp_reg32_mem32(reg_eax, Addr1+0);
   End;
 
   // mem, const
   cmMemConst:
   Begin
-   JAsm.cmp_mem32_imm32(Addr0+0, lo(Number1)); // cmp [Addr0+0], lo(Number1)
+   JAsm.cmp_mem32_imm32(Addr0+0, lo(Number1));
   End;
 
   // mem, mem
   cmMemMem:
   Begin
-   JAsm.mov_reg32_mem32(reg_eax, Addr1+0); // mov eax, [Addr1+0]
-   JAsm.cmp_mem32_reg32(Addr0+0, reg_eax); // cmp [Addr0+0], eax
+   JAsm.mov_reg32_mem32(reg_eax, Addr1+0);
+   JAsm.cmp_mem32_reg32(Addr0+0, reg_eax);
   End;
  End;
 
  Case Opcode of // first branch
-  jo_iicmpe : FalseChange[0] := JAsm.jne(0); // jne @false
-  jo_iicmpne: TrueChange[0] := JAsm.jne(0); // jne @true
+  jo_iicmpe : FalseChange[0] := JAsm.jne(0);
+  jo_iicmpne: TrueChange[0] := JAsm.jne(0);
 
   jo_iicmpg, jo_iicmpge:
   Begin
-   TrueChange[0]  := JAsm.jg(0); // jg @true
-   FalseChange[0] := JAsm.jl(0); // jl @false
+   TrueChange[0]  := JAsm.jg(0);
+   FalseChange[0] := JAsm.jl(0);
   End;
 
   jo_iicmpl, jo_iicmple:
   Begin
-   TrueChange[0]  := JAsm.jl(0); // jl @true
-   FalseChange[0] := JAsm.jg(0); // jg @false
+   TrueChange[0]  := JAsm.jl(0);
+   FalseChange[0] := JAsm.jg(0);
   End;
 
   else
@@ -211,41 +219,41 @@ Begin
   // const, mem
   cmConstMem:
   Begin
-   JAsm.mov_reg32_imm32(reg_eax, hi(Number0)); // mov eax, hi(Number0)
-   JAsm.cmp_reg32_mem32(reg_eax, Addr1+4); // cmp eax, dword [Addr1+4]
+   JAsm.mov_reg32_imm32(reg_eax, hi(Number0));
+   JAsm.cmp_reg32_mem32(reg_eax, Addr1+4);
   End;
 
   // mem, const
   cmMemConst:
   Begin
-   JAsm.cmp_mem32_imm32(Addr0+4, hi(Number1)); // cmp [Addr0+4], hi(Number1)
+   JAsm.cmp_mem32_imm32(Addr0+4, hi(Number1));
   End;
 
   // mem, mem
   cmMemMem:
   Begin
-   JAsm.mov_reg32_mem32(reg_eax, Addr1+4); // mov eax, [Addr1+0]
-   JAsm.cmp_mem32_reg32(Addr0+4, reg_eax); // cmp [Addr0+4], eax
+   JAsm.mov_reg32_mem32(reg_eax, Addr1+4);
+   JAsm.cmp_mem32_reg32(Addr0+4, reg_eax);
   End;
  End;
 
  Case Opcode of // second branch
-  jo_iicmpe : FalseChange[1] := JAsm.jne(0); // jne @false
-  jo_iicmpne: FalseChange[1] := JAsm.je(0); // je @false
-  jo_iicmpg : FalseChange[1] := JAsm.jna(0); // jna @false
-  jo_iicmpge: FalseChange[1] := JAsm.jnae(0); // jnae @false
-  jo_iicmpl : FalseChange[1] := JAsm.jnb(0); // jnb @false
-  jo_iicmple: FalseChange[1] := JAsm.jnbe(0); // jnbe @false
+  jo_iicmpe : FalseChange[1] := JAsm.jne(0);
+  jo_iicmpne: FalseChange[1] := JAsm.je(0);
+  jo_iicmpg : FalseChange[1] := JAsm.jna(0);
+  jo_iicmpge: FalseChange[1] := JAsm.jnae(0);
+  jo_iicmpl : FalseChange[1] := JAsm.jnb(0);
+  jo_iicmple: FalseChange[1] := JAsm.jnbe(0);
  End;
 
  // @true:
  LabelTrue := Data.Position;
- JAsm.mov_mem8_imm8(@getVM^.Regs.b[5], 1); // mov byte [IF-register-address], 1
- OutChange[2] := JAsm.jmp(0); // jmp @out
+ JAsm.mov_mem8_imm8(@getVM^.Regs.b[5], 1);
+ OutChange[2] := JAsm.jmp(0);
 
  // @false:
  LabelFalse := Data.Position;
- JAsm.mov_mem8_imm8(@getVM^.Regs.b[5], 0); // mov byte [IF-register-address], 0
+ JAsm.mov_mem8_imm8(@getVM^.Regs.b[5], 0);
 
  // @out:
  LabelOut := Data.Position;
@@ -281,6 +289,9 @@ Begin
 End;
 
 (* TJITCPU.FetchIntStackval *)
+{
+ Loads stackval from VM stack and moves it into 2 given x86 registers.
+}
 Procedure TJITCPU.FetchIntStackval(const DestLo, DestHi: TRegister32; const StackvalPos: int32);
 Begin
  With JAsm do
@@ -290,6 +301,20 @@ Begin
   call_internalproc(@r__stackval_fetch_int);
   mov_reg32_reg32(DestLo, reg_eax);
   mov_reg32_reg32(DestHi, reg_edx);
+ End;
+End;
+
+(* TJITCPU.FetchFloatStackval *)
+{
+ Loads stackval from VM stack and pushes it onto x86 FPU stack.
+}
+Procedure TJITCPU.FetchFloatStackval(const StackvalPos: int32);
+Begin
+ With JAsm do
+ Begin
+  mov_reg32_imm32(reg_eax, uint32(getVM));
+  mov_reg32_imm32(reg_edx, StackvalPos);
+  call_internalproc(@r__stackval_fetch_float);
  End;
 End;
 

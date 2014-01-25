@@ -56,9 +56,13 @@
  Begin
   mov_reg32_imm32(reg_eax, uint32(getVM));
 
-  if (Arg0.Kind = joa_memory) Then
-   fld_memfloat(Arg0.MemoryAddr) Else
-   InvalidOpcodeException;
+  Case Arg0.Kind of
+   joa_constant: fld_memfloat(AllocateFloat(Arg0.Constant));
+   joa_memory  : fld_memfloat(Arg0.MemoryAddr);
+
+   else
+    InvalidOpcodeException;
+  End;
 
   call_internalproc(@r__push_float);
  End;

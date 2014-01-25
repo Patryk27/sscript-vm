@@ -228,7 +228,7 @@ Begin
   mvFloat: MV^.Value.Float += Value;
 
   else
-   raise Exception.CreateFmt('r__add_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+   raise Exception.CreateFmt('r__add_stackval_int() cannot be executed on a non-numeric type #%d', [ord(MV^.Typ)]);
  End;
 End;
 
@@ -243,7 +243,7 @@ Begin
   mvFloat: MV^.Value.Float -= Value;
 
   else
-   raise Exception.CreateFmt('r__sub_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+   raise Exception.CreateFmt('r__sub_stackval_int() cannot be executed on a non-numeric type #%d', [ord(MV^.Typ)]);
  End;
 End;
 
@@ -258,7 +258,7 @@ Begin
   mvFloat: MV^.Value.Float *= Value;
 
   else
-   raise Exception.CreateFmt('r__mul_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+   raise Exception.CreateFmt('r__mul_stackval_int() cannot be executed on a non-numeric type #%d', [ord(MV^.Typ)]);
  End;
 End;
 
@@ -273,7 +273,7 @@ Begin
   mvFloat: MV^.Value.Float /= Value;
 
   else
-   raise Exception.CreateFmt('r__div_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+   raise Exception.CreateFmt('r__div_stackval_int() cannot be executed on a non-numeric type #%d', [ord(MV^.Typ)]);
  End;
 End;
 
@@ -287,7 +287,7 @@ Begin
   mvInt: MV^.Value.Int := MV^.Value.Int mod Value;
 
   else
-   raise Exception.CreateFmt('r__mod_stackval_int() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+   raise Exception.CreateFmt('r__mod_stackval_int() cannot be executed on a non-numeric type #%d', [ord(MV^.Typ)]);
  End;
 End;
 
@@ -307,7 +307,7 @@ Begin
   mvFloat: MV^.Value.Float += Value;
 
   else
-   raise Exception.CreateFmt('r__add_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+   raise Exception.CreateFmt('r__add_stackval_float() cannot be executed on a non-numeric type #%d', [ord(MV^.Typ)]);
  End;
 End;
 
@@ -327,7 +327,7 @@ Begin
   mvFloat: MV^.Value.Float -= Value;
 
   else
-   raise Exception.CreateFmt('r__sub_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+   raise Exception.CreateFmt('r__sub_stackval_float() cannot be executed on a non-numeric type #%d', [ord(MV^.Typ)]);
  End;
 End;
 
@@ -347,7 +347,7 @@ Begin
   mvFloat: MV^.Value.Float *= Value;
 
   else
-   raise Exception.CreateFmt('r__mul_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+   raise Exception.CreateFmt('r__mul_stackval_float() cannot be executed on a non-numeric type #%d', [ord(MV^.Typ)]);
  End;
 End;
 
@@ -367,7 +367,7 @@ Begin
   mvFloat: MV^.Value.Float /= Value;
 
   else
-   raise Exception.CreateFmt('r__div_stackval_float() cannot be executed on a non-numeric type `%d`', [ord(MV^.Typ)]);
+   raise Exception.CreateFmt('r__div_stackval_float() cannot be executed on a non-numeric type #%d', [ord(MV^.Typ)]);
  End;
 End;
 

@@ -75,6 +75,7 @@ Unit JITAsm;
         Procedure push_mem32(const Mem: VMReference);
 
         // mov reg, ...
+        Procedure mov_reg8_reg8(const RegA, RegB: TRegister8);
         Procedure mov_reg8_mem8(const Reg: TRegister8; const Mem: VMReference);
 
         Procedure mov_reg32_imm32(const Reg: TRegister32; const Value: int32);
@@ -287,6 +288,24 @@ Begin
  emit_uint8($FF);
  emit_uint8($35);
  emit_uint32(Mem);
+End;
+
+(* TJITAsm.mov_reg8_reg8 *)
+{
+ mov regA, regB
+}
+Procedure TJITAsm.mov_reg8_reg8(const RegA, RegB: TRegister8);
+Var ModRM: TModRM;
+Begin
+ if (RegA = RegB) Then
+  Exit;
+
+ ModRM.Mode := 3;
+ ModRM.Reg  := ord(RegB);
+ ModRM.RM   := ord(RegA);
+
+ emit_uint8($88);
+ emit_modrm(ModRM);
 End;
 
 (* TJITAsm.mov_reg8_mem8 *)

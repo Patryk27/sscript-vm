@@ -247,7 +247,6 @@ Begin
 
  Try
   (* Stage 1: bytecode -> JIT bytecode *)
-
   While (Reader.AnyOpcodeLeft) Do
   Begin
    OpcodePos := Reader.getBytecodeData.Position;
@@ -372,20 +371,20 @@ Begin
     { mov }
     o_mov:
     Begin
-     // mov(reg bool, reg/imm bool)
-     if (Args[0].ArgType = ptBoolReg) and (Args[1].ArgType in [ptBoolReg, ptBool]) Then
+     // mov(reg bool, reg/imm bool | stackval)
+     if (Args[0].ArgType = ptBoolReg) and (Args[1].ArgType in [ptBoolReg, ptBool, ptStackval]) Then
      Begin
       JITOpcode := jo_bbmov;
      End Else
 
-     // mov(reg int, reg/imm int)
-     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptIntReg, ptInt]) Then
+     // mov(reg int, reg/imm int | stackval)
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptIntReg, ptInt, ptStackval]) Then
      Begin
       JITOpcode := jo_iimov;
      End Else
 
-     // mov(reg float, reg/imm float | imm int)
-     if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType in [ptFloatReg, ptFloat, ptInt]) Then
+     // mov(reg float, reg/imm float | imm int | stackval)
+     if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType in [ptFloatReg, ptFloat, ptInt, ptStackval]) Then
      Begin
       JITOpcode := jo_ffmov;
      End Else

@@ -31,6 +31,14 @@
    mov_mem32_reg32(Arg1.MemoryAddr+4, reg_ebx);
   End Else
 
+  // iimov(mem, stackval)
+  if (CheckArgs(joa_memory, joa_stackval)) Then
+  Begin
+   FetchIntStackval(reg_eax, reg_edx, Arg1.StackvalPos);
+   mov_mem32_reg32(Arg1.MemoryAddr+0, reg_eax);
+   mov_mem32_reg32(Arg1.MemoryAddr+4, reg_edx);
+  End Else
+
   // iimov(stackval, const)
   if (CheckArgs(joa_stackval, joa_constant)) Then
   Begin
@@ -67,7 +75,20 @@
    MoveConstantFloatToMemory(Arg0.MemoryAddr, Arg1.Constant);
   End Else
 
-  // ffmov(mem, mem) @TODO
+  // ffmov(mem, mem)
+  if (CheckArgs(joa_memory, joa_memory)) Then
+  Begin
+   // @TODO: it can be also done using 3 mov-s; consider it?
+   fld_memfloat(Arg1.MemoryAddr);
+   fstp_memfloat(Arg0.MemoryAddr);
+  End Else
+
+  // ffmov(mem, stackval)
+  if (CheckArgs(joa_memory, joa_stackval)) Then
+  Begin
+   FetchFloatStackval(Arg1.StackvalPos);
+   fstp_memfloat(Arg0.MemoryAddr);
+  End Else
 
    InvalidOpcodeException;
  End;

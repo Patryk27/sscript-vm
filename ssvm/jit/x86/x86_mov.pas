@@ -25,7 +25,8 @@
   if (CheckArgs(joa_stackval, joa_constant)) Then
   Begin
    mov_reg32_imm32(reg_eax, uint32(getVM));
-   mov_reg32_imm32(reg_edx, Arg1.Constant);
+   mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+   mov_reg32_imm32(reg_ecx, Arg1.Constant);
 
    call_internalproc(@r__set_stackval_bool);
   End Else
@@ -34,10 +35,58 @@
   if (CheckArgs(joa_stackval, joa_memory)) Then
   Begin
    mov_reg32_imm32(reg_eax, uint32(getVM));
-   mov_reg32_imm32(reg_edx, 0);
-   mov_reg8_mem8(reg_dl, Arg1.MemoryAddr);
+   mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+   mov_reg32_imm32(reg_ecx, 0);
+   mov_reg8_mem8(reg_cl, Arg1.MemoryAddr);
 
    call_internalproc(@r__set_stackval_bool);
+  End Else
+
+   InvalidOpcodeException;
+ End;
+
+ { ccmov }
+ jo_ccmov:
+ Begin
+  // ccmov(mem, const)
+  if (CheckArgs(joa_memory, joa_constant)) Then
+  Begin
+   mov_mem8_imm8(Arg0.MemoryAddr, ord(Char(Arg1.Constant)));
+  End Else
+
+  // ccmov(mem, mem)
+  if (CheckArgs(joa_memory, joa_memory)) Then
+  Begin
+   mov_reg8_mem8(reg_al, Arg1.MemoryAddr);
+   mov_mem8_reg8(Arg0.MemoryAddr, reg_al);
+  End Else
+
+  // ccmov(mem, stackval)
+  if (CheckArgs(joa_memory, joa_stackval)) Then
+  Begin
+   FetchCharStackval(reg_al, Arg1.StackvalPos);
+   mov_mem8_reg8(Arg0.MemoryAddr, reg_al);
+  End Else
+
+  // ccmov(stackval, const)
+  if (CheckArgs(joa_stackval, joa_constant)) Then
+  Begin
+   mov_reg32_imm32(reg_eax, uint32(getVM));
+   mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+   mov_reg32_imm32(reg_ecx, ord(Char(Arg1.Constant)));
+
+   call_internalproc(@r__set_stackval_char);
+  End Else
+
+  // ccmov(stackval, mem)
+  if (CheckArgs(joa_stackval, joa_memory)) Then
+  Begin
+   mov_reg32_imm32(reg_eax, uint32(getVM));
+   mov_reg32_imm32(reg_edx, Arg0.StackvalPos);
+   mov_reg32_imm32(reg_ecx, 0);
+   mov_reg8_mem8(reg_cl, Arg1.MemoryAddr);
+
+   call_internalproc(@r__set_stackval_char);
   End Else
 
    InvalidOpcodeException;

@@ -35,6 +35,7 @@ Unit JITCPU;
         Procedure int_compare(const Opcode: TJITOpcodeKind; const Number0, Number1: int64; const Addr0, Addr1: VMReference);
 
         Procedure FetchBoolStackval(const Dest: TRegister8; const StackvalPos: int32);
+        Procedure FetchCharStackval(const Dest: TRegister8; const StackvalPos: int32);
         Procedure FetchIntStackval(const DestLo, DestHi: TRegister32; const StackvalPos: int32);
         Procedure FetchFloatStackval(const StackvalPos: int32);
 
@@ -300,6 +301,21 @@ Begin
   mov_reg32_imm32(reg_eax, uint32(getVM));
   mov_reg32_imm32(reg_edx, StackvalPos);
   call_internalproc(@r__stackval_fetch_bool);
+  mov_reg8_reg8(Dest, reg_al);
+ End;
+End;
+
+(* TJITCPU.FetchCharStackval *)
+{
+ Loads stackval from VS stack and moves it into given x86 register.
+}
+Procedure TJITCPU.FetchCharStackval(const Dest: TRegister8; const StackvalPos: int32);
+Begin
+ With JAsm do
+ Begin
+  mov_reg32_imm32(reg_eax, uint32(getVM));
+  mov_reg32_imm32(reg_edx, StackvalPos);
+  call_internalproc(@r__stackval_fetch_char);
   mov_reg8_reg8(Dest, reg_al);
  End;
 End;

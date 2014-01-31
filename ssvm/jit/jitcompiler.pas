@@ -377,6 +377,12 @@ Begin
       JITOpcode := jo_bbmov;
      End Else
 
+     // mov(reg char, reg/imm char | stackval)
+     if (Args[0].ArgType = ptCharReg) and (Args[1].ArgType in [ptCharReg, ptChar, ptStackval]) Then
+     Begin
+      JITOpcode := jo_ccmov;
+     End Else
+
      // mov(reg int, reg/imm int | stackval)
      if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptIntReg, ptInt, ptStackval]) Then
      Begin

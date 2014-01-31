@@ -394,7 +394,7 @@ End;
 
 (* TMixedValue.RelaseData *)
 {
- Releases string data, if 'Typ' = 'mvString'
+ Releases string data, if 'Typ' equals 'mvString'
 }
 Procedure TMixedValue.ReleaseData;
 Begin

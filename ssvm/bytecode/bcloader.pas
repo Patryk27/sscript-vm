@@ -34,6 +34,8 @@ Unit BCLoader;
  Type TBCLoader =
       Class
        Private
+        ErrorMsg: String;
+
         FileName  : String;
         LoaderData: PBCLoaderData;
 
@@ -46,7 +48,11 @@ Unit BCLoader;
 
        Public
         Constructor Create(const fFileName: String);
-        Function Load: PBCLoaderData;
+
+        Function Load: Boolean;
+
+        Property getLoaderData: PBCLoaderData read LoaderData;
+        Property getErrorMsg: String read ErrorMsg;
        End;
 
  Implementation
@@ -78,13 +84,13 @@ End;
 }
 Procedure TBCLoader.ParseHeader(AStream: TStream);
 
-    { EndingZero }
-    Function EndingZero(const Text: String): String;
-    Begin
-     if (Length(Text) = 1) Then
-      Exit(Text+'0') Else
-      Exit(Text);
-    End;
+  { EndingZero }
+  Function EndingZero(const Text: String): String;
+  Begin
+   if (Length(Text) = 1) Then
+    Exit(Text+'0') Else
+    Exit(Text);
+  End;
 
 Begin
  With LoaderData^ do
@@ -94,12 +100,18 @@ Begin
   VersionMajor := AStream.ReadByte;
   VersionMinor := AStream.ReadByte;
 
-  if (MagicNumber <> $0DEFACED) Then
-   raise Exception.CreateFmt('Invalid magic number: %i', [MagicNumber]);
+  if (MagicNumber <> $0DEFACED) Then // error: invalid magic number
+  Begin
+   ErrorMsg := Format('Invalid magic number: %i', [MagicNumber]);
+   Exit;
+  End;
 
-  if (VersionMajor <> BytecodeMajor) or (VersionMinor <> BytecodeMinor) Then
-   raise Exception.CreateFmt('Unsupported bytecode version: %s.%s, expecting %s.%s', [IntToStr(VersionMajor), EndingZero(IntToStr(VersionMinor)),
-                                                                                      IntToStr(BytecodeMajor), EndingZero(IntToStr(BytecodeMinor))]);
+  if (VersionMajor <> BytecodeMajor) or (VersionMinor <> BytecodeMinor) Then // error: invalid bytecode version
+  Begin
+   ErrorMsg := Format('Unsupported bytecode version: %s.%s, expecting %s.%s', [IntToStr(VersionMajor), EndingZero(IntToStr(VersionMinor)),
+                                                                               IntToStr(BytecodeMajor), EndingZero(IntToStr(BytecodeMinor))]);
+   Exit;
+  End;
  End;
 End;
 
@@ -113,7 +125,10 @@ Begin
  With LoaderData^ do
  Begin
   if (AStream.Size = 0) Then
-   raise Exception.Create('No bytecode to be loaded!');
+  Begin
+   ErrorMsg := 'No bytecode to be loaded!';
+   Exit;
+  End;
 
   CodeData := AllocMem(AStream.Size);
   For I := 0 To AStream.Size-1 Do // @TODO: AStream.Read/AStream.ReadBuffer
@@ -121,28 +136,40 @@ Begin
  End;
 End;
 
-// -------------------------------------------------------------------------- //
 (* TBCLoader.Create *)
 Constructor TBCLoader.Create(const fFileName: String);
 Begin
  FileName := fFileName;
+ ErrorMsg := '';
 End;
 
 (* TBCLoader.Load *)
 {
  Loads bytecode from specified file.
 }
-Function TBCLoader.Load: PBCLoaderData;
+Function TBCLoader.Load: Boolean;
 Var Zip     : TUnzipper;
     FileList: TStringList;
+
+  { UnzipAndParse }
+  Function UnzipAndParse(const FileName: String): Boolean; inline;
+  Begin
+   FileList.Clear;
+   FileList.Add(FileName);
+   Zip.UnzipFiles(FileList);
+
+   if (Length(ErrorMsg) > 0) Then
+    Exit(False) Else
+    Exit(True);
+  End;
+
 Begin
- New(Result);
- LoaderData := Result;
+ New(LoaderData);
 
  if (not FileExists(FileName)) Then // file doesn't exist
  Begin
-  Result^.State := lsFileNotFound;
-  Exit;
+  LoaderData^.State := lsFileNotFound;
+  Exit(False);
  End;
 
  Zip          := TUnzipper.Create;
@@ -150,31 +177,27 @@ Begin
 
  FileList := TStringList.Create;
 
- Result^.State := lsSuccess;
+ LoaderData^.State := lsSuccess;
 
  Try
-  Try
-   Result^.CodeData := nil;
+  LoaderData^.CodeData := nil;
 
-   Zip.Examine;
-   Zip.OnCreateStream := @OnCreateStream;
-   Zip.OnDoneStream   := @OnDoneStream;
+  Zip.Examine;
+  Zip.OnCreateStream := @OnCreateStream;
+  Zip.OnDoneStream   := @OnDoneStream;
 
-   { unzip and parse files }
-   FileList.Clear;
-   FileList.Add('.header');
-   Zip.UnzipFiles(FileList);
+  Result := UnzipAndParse('.header') and UnzipAndParse('.bytecode');
 
-   FileList.Clear;
-   FileList.Add('.bytecode');
-   Zip.UnzipFiles(FileList);
-  Finally
-   FileList.Free;
-   Zip.Free;
+  if (not Result) Then
+  Begin
+   LoaderData^.State := lsFailed;
+   Exit(False);
   End;
- Except
-  Result^.State := lsFailed;
-  Exit;
+ Finally
+  FileList.Free;
+  Zip.Free;
  End;
+
+ Exit(True);
 End;
 End.

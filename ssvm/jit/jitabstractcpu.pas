@@ -5,7 +5,7 @@
 Unit JITAbstractCPU;
 
  Interface
- Uses VM, VMTypes, Opcodes, JITOpcodeList;
+ Uses VMStruct, VMTypes, Opcodes, JITOpcodeList;
 
  {$MACRO ON}
  {$DEFINE va := virtual abstract}
@@ -28,6 +28,7 @@ Unit JITAbstractCPU;
         Function JITMemAlloc(const Size: uint32): Pointer;
 
         Function AllocateFloat(const Value: VMFloat): VMReference;
+        Function AllocatePChar(const Value: String): VMReference;
         Function AllocateString(const Value: String): VMReference;
 
        Public
@@ -66,7 +67,7 @@ End;
 (* TJITAbstractCPU.JITMemAlloc *)
 Function TJITAbstractCPU.JITMemAlloc(const Size: uint32): Pointer;
 Begin
- Result := AllocMem(Size);
+ Result := GetMem(Size);
 
  {$DEFINE AB := AllocatedBlocks}
  SetLength(AB, Length(AB)+1);
@@ -81,8 +82,8 @@ Begin
  PVMFloat(Result)^ := Value;
 End;
 
-(* TJITAbstractCPU.AllocateString *)
-Function TJITAbstractCPU.AllocateString(const Value: String): VMReference;
+(* TJITAbstractCPU.AllocatePChar *)
+Function TJITAbstractCPU.AllocatePChar(const Value: String): VMReference;
 Var I, Len: uint32;
 Begin
  Result := JITMemAlloc(Length(Value)+1);
@@ -90,8 +91,15 @@ Begin
 
  For I := 1 To Len Do
   PChar(Result + I-1)^ := Value[I];
+End;
 
- PChar(Result + Len)^ := #0;
+(* TJITAbstractCPU.AllocateString *)
+Function TJITAbstractCPU.AllocateString(const Value: String): VMReference;
+Var Data: Pointer;
+Begin
+ Result := JITMemAlloc(sizeof(VMString));
+
+
 End;
 
 (* TJITAbstractCPU.isRegNative *)

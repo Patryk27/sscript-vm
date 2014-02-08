@@ -5,7 +5,7 @@
 Unit JITCPU;
 
  Interface
- Uses VM, Stack, Opcodes, VMTypes, JITAbstractCPU, JITOpcodes, JITOpcodeList, JITAsm, JITJumpTable, Stream;
+ Uses VMStruct, VMStack, VMTypes, VMICall, JITAbstractCPU, JITOpcodes, JITOpcodeList, JITAsm, JITJumpTable, Opcodes, Stream;
 
  {$MACRO ON}
  {$DEFINE ov := override}
@@ -392,7 +392,7 @@ Function TJITCPU.Compile(const OpcodeList: TJITOpcodeList): Pointer;
 Var OpcodeID  : uint32;
     Opcode    : TJITOpcode;
     Arg0, Arg1: TJITOpcodeArg;
-    icall     : PCall;
+    icall     : PInternalCall;
 
     ResultMV, ParamsMV: PMixedValue;
 

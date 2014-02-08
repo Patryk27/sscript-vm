@@ -4,10 +4,10 @@
 
  A simple mark-and-sweep garbage collector for the SScript Virtual Machine.
 *)
-Unit GC;
+Unit GarbageCollector;
 
  Interface
- Uses Classes, SysUtils, FGL, VM, Objects;
+ Uses Classes, SysUtils, FGL, VMStruct, VMObjects;
 
  Const ObjectListCount = 1; // Number of object allocation lists; keep in mind that the higher number you put here, the higher amount of threads will be executed during the GC's mark stage (1 object list = 1 thread) and that doesn't mean it will be any faster. In fact, more than 2 sweeping-threads will most likely just slow down everything.
 
@@ -37,7 +37,7 @@ Unit GC;
        End;
 
  Implementation
-Uses Stack;
+Uses VMStack;
 
 { TGCSweepWorker }
 Type TGCSweepWorker =

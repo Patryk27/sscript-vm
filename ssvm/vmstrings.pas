@@ -6,52 +6,81 @@
 Unit VMStrings;
 
  Interface
+ Uses VMTypes;
 
- { TVMString }
- Type PVMString = ^TVMString;
-      TVMString =
-      Record
-       Length: uint32; // string length
-       Data  : PChar; // string data
-      End;
+ Function StringToPChar(const S: String; const AddNullChar: Boolean=True): PChar;
 
- Function CopyStringToPChar(const S: String): PChar;
+ Operator := (const Value: String): VMString;
 
- Procedure SaveString(const VMString: PVMString; const Data: String);
- Function FetchString(const VMString: PVMString): String;
- Procedure ReleaseString(const VMString: PVMString);
+ Operator = (const A, B: VMString): Boolean;
+ Operator + (const A, B: VMString): VMString;
+ Operator + (const A: VMString; const B: Char): VMString;
 
  Implementation
 
-(* CopyStringToPChar *)
-Function CopyStringToPChar(const S: String): PChar;
+(* StringToPChar *)
+Function StringToPChar(const S: String; const AddNullChar: Boolean=True): PChar;
 Var I: uint32;
 Begin
- Result := AllocMem(Length(S)+1);
+ Result := AllocMem(Length(S)+ord(AddNullChar));
 
  For I := 1 To Length(S) Do
   Result[I-1] := S[I];
 End;
 
-(* SaveString *)
-Procedure SaveString(const VMString: PVMString; const Data: String);
+(* VMString := String *)
+Operator := (const Value: String): VMString;
 Begin
- VMString^.Length := Length(Data);
- VMString^.Data   := CopyStringToPChar(Data);
+ Result.Length := Length(Value);
+ Result.Data   := StringToPChar(Value, False);
 End;
 
-(* FetchString *)
-Function FetchString(const VMString: PVMString): String;
+(* VMString = VMString *)
+Operator = (const A, B: VMString): Boolean;
+Var I: uint32;
 Begin
- if (VMString^.Data = nil) Then
-  Result := '' Else
-  Result := VMString^.Data;
+ Result := (A.Length = B.Length);
+
+ if (Result) and (A.Length > 0) Then
+ Begin
+  For I := 0 To A.Length-1 Do
+   if (A.Data[I] <> B.Data[I]) Then
+    Exit(False);
+ End;
 End;
 
-(* ReleaseString *)
-Procedure ReleaseString(const VMString: PVMString);
+(* VMString + VMString *)
+Operator + (const A, B: VMString): VMString;
+Var I, D: uint32;
 Begin
- FreeMem(VMString^.Data);
- FreeMem(VMString);
+ Result.Length := A.Length + B.Length;
+ Result.Data   := GetMem(Result.Length);
+
+ D := 0;
+
+ if (A.Length > 0) Then
+  For I := 0 To A.Length-1 Do
+  Begin
+   Result.Data[D] := A.Data[I];
+   Inc(D);
+  End;
+
+ if (B.Length > 0) Then
+  For I := 0 To B.Length-1 Do
+  Begin
+   Result.Data[D] := B.Data[I];
+   Inc(D);
+  End;
+End;
+
+(* VMString + Char *)
+Operator + (const A: VMString; const B: Char): VMString;
+Begin
+ Result.Length := A.Length+1;
+ Result.Data   := GetMem(Result.Length);
+
+ Move(A.Data[0], Result.Data[0], A.Length);
+
+ Result.Data[A.Length] := B;
 End;
 End.

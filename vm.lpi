@@ -31,7 +31,7 @@
     <RunParams>
       <local>
         <FormatVersion Value="1"/>
-        <CommandLineParams Value="hello_world.ssc -wait"/>
+        <CommandLineParams Value="project.ssc -wait"/>
       </local>
     </RunParams>
     <RequiredPackages Count="1">
@@ -62,7 +62,6 @@
       <Optimizations>
         <VariablesInRegisters Value="True"/>
         <UncertainOptimizations Value="True"/>
-        <OptimizationLevel Value="3"/>
       </Optimizations>
     </CodeGeneration>
     <Other>

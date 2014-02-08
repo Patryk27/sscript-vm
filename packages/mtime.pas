@@ -22,6 +22,6 @@ End;
 // -------------------------------------------------------------------------- //
 Procedure Init(VM: Pointer);
 Begin
- AddInternalCall(VM, 'time', 'get_milliseconds', 0, @_get_milliseconds);
+ SSAddInternalCall(VM, 'time', 'get_milliseconds', 0, @_get_milliseconds);
 End;
 End.

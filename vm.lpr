@@ -79,7 +79,6 @@ End;
 Label VMEnd;
 Var VM       : Pointer;
     Time     : int64;
-    JITState : TJITCompiledState;
     JITStream: TMemoryStream;
     JITCode  : Pointer;
     I        : Integer;
@@ -89,7 +88,7 @@ Begin
  DecimalSeparator := '.';
  if (ParamCount < 1) Then
  Begin
-  Writeln('SScript Virtual Machine ', getVersion);
+  Writeln('SScript Virtual Machine (ssvm.dll version: ', SSGetVMVersion, ')');
   Writeln;
 
   Writeln('Usage:');
@@ -116,18 +115,17 @@ Begin
 
  if (ParamStr(1) = '-logo') Then
  Begin
-  Writeln('SScript Virtual Machine ', getVersion);
+  Writeln('SScript Virtual Machine (ssvm.dll version: ', SSGetVMVersion, ')');
  End Else
  Begin
   if (opt_verbose) Then
    Writeln('-> Loading bytecode from ''', ParamStr(1), '''');
 
-  VM := LoadProgram(PChar(ParamStr(1)), GCMemoryLimit); // load program
+  VM := SSCreateAndLoad(PChar(ParamStr(1)), GCMemoryLimit); // load program
 
   if (VM = nil) Then
   Begin
-   Writeln('LoadProgam() falied!');
-   Writeln('#', GetErrorID, ': ', GetErrorMsg);
+   Writeln('Couldn''t load specified file.');
    goto VMEnd;
   End;
 
@@ -145,17 +143,15 @@ Begin
    if (opt_verbose) Then
     Writeln('-> Running JIT compiler...');
 
-   JITState := JITCompile(VM);
-
-   if (JITState <> csDone) Then
+   if (not SSJITCompile(VM)) Then
    Begin
-    Writeln('JITCompile() failed!');
-    Writeln(JITState, ' -> ', GetLastJITError(VM));
+    Writeln('JIT compiling failed!');
+    Writeln(SSGetJITError(VM));
     goto VMEnd;
    End;
 
    if (opt_verbose) Then
-    Writeln('-> Bytecode has been compiled! JIT compiled size: ', GetJITCodeSize(VM), ' bytes');
+    Writeln('-> Bytecode has been compiled! JIT compiled size: ', SSGetJITCodeSize(VM), ' bytes');
   End;
 
   // save JIT output?
@@ -166,8 +162,8 @@ Begin
 
    JITStream := TMemoryStream.Create;
    Try
-    JITCode := GetJITCode(VM);
-    For I := 0 To GetJITCodeSize(VM)-1 Do
+    JITCode := SSGetJITCodeData(VM);
+    For I := 0 To SSGetJITCodeSize(VM)-1 Do
      JITStream.WriteByte(PByte(JITCode+I)^);
     JITStream.SaveToFile(JITSaveTo);
    Finally
@@ -176,22 +172,22 @@ Begin
   End;
 
   if (opt_verbose) Then
-   Writeln('-> Running program...');
+   Writeln('-> Executing VM...');
 
-  Run(VM);
+  SSExecuteVM(VM);
 
   if (opt_verbose) Then
    Writeln('-> Program stopped/finished executing!');
 
-  if (VM <> nil) and (getStopReason(VM) = srException) Then
+  if (VM <> nil) and (SSGetStopReason(VM) = srException) Then
   Begin
    Writeln('Virtual machine exception has been thrown:');
    Writeln;
-   Writeln(PChar(getException(VM).Data));
+   Writeln(PChar(SSGetException(VM).Data));
   End;
 
   if (VM <> nil) Then
-   Free(VM);
+   SSFreeVM(VM);
  End;
 
 VMEnd:

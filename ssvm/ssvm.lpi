@@ -68,8 +68,8 @@
       <Filename Value="../ssvm"/>
     </Target>
     <SearchPaths>
-      <IncludeFiles Value="$(ProjOutDir);jit"/>
-      <OtherUnitFiles Value="bytecode;gc;jit;jit\x86"/>
+      <IncludeFiles Value="$(ProjOutDir);jit;bytecode\interpreter"/>
+      <OtherUnitFiles Value="bytecode;bytecode\interpreter;gc;jit;jit\x86"/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

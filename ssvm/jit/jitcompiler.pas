@@ -6,7 +6,7 @@
 Unit JITCompiler;
 
  Interface
- Uses VM, VMTypes, BCReader, Opcodes, JITOpcodes, JITOpcodeList, JITAbstractCPU, JITCPU, JITJumpTable;
+ Uses VMStruct, VMTypes, VMICall, BCReader, JITOpcodes, JITOpcodeList, JITAbstractCPU, JITCPU, JITJumpTable, Opcodes;
 
  { TJumpToResolve }
  Type TJumpToResolve =
@@ -143,12 +143,12 @@ Var Reader   : TBytecodeReader;
     Arg0, Arg1        : Variant;
     Arg0Kind, Arg1Kind: TJITOpcodeArgKind;
 
-    icall: PCall;
+    icall: PInternalCall;
 
   { InvalidOpcodeException }
   Procedure InvalidOpcodeException; inline;
   Begin
-   raise Exception.CreateFmt('Invalid opcode: [0x%x] %s', [OpcodePos, Reader.OpcodeToString(Opcode, Args)]);
+   VM^.ThrowException('JIT: invalid opcode: [0x%x] %s', [OpcodePos, Reader.OpcodeToString(Opcode, Args)]);
   End;
 
   { ParseArgument }
@@ -224,7 +224,7 @@ Var Reader   : TBytecodeReader;
     ArgKind := joa_stackval;
    End Else
 
-    raise Exception.CreateFmt('TJITCompiler.Compile::ParseArgument() called with invalid opcode argument type #%d', [ord(OpArg.ArgType)]);
+    VM^.ThrowException('TJITCompiler.Compile::ParseArgument() called with invalid opcode argument type #%d', [ord(OpArg.ArgType)]);
   End;
 
   { CheckArgs }
@@ -393,6 +393,12 @@ Begin
      if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType in [ptFloatReg, ptFloat, ptInt, ptStackval]) Then
      Begin
       JITOpcode := jo_ffmov;
+     End Else
+
+     // mov(reg string, reg/imm string | stackval)
+     if (Args[0].ArgType = ptStringReg) and (Args[1].ArgType in [ptStringReg, ptString, ptStackval]) Then
+     Begin
+      JITOpcode := jo_ssmov;
      End Else
 
      // mov(stackval, imm/reg bool/char/int/float/string/reference)

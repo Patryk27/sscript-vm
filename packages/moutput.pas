@@ -32,8 +32,9 @@ Begin
   mvChar     : Str := Params[0].Value.Char;
   mvInt      : Str := IntToStr(Params[0].Value.Int);
   mvFloat    : Str := FloatToStr(Params[0].Value.Float);
-  mvString   : Str := Params[0].Value.Str;
+  mvString   : Str := SSGetString(Params[0].Value.Str);
   mvReference: Str := '<object: 0x'+IntToHex(Params[0].Value.Int, 8)+'>';
+
   else
    raise Exception.CreateFmt('Invalid "output.print" icall: unknown parameter type: %d', [ord(Params[0].Typ)]);
  End;
@@ -54,13 +55,13 @@ End;
 { output.set_size }
 Procedure _set_size(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
- SetConsoleSize(getInt(Params[0]), getInt(Params[1]), getInt(Params[2]), getInt(Params[3]));
+ SetConsoleSize(SSGetInt(Params[0]), SSGetInt(Params[1]), SSGetInt(Params[2]), SSGetInt(Params[3]));
 End;
 
 { output.set_buffered }
 Procedure _set_buffered(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
- isBuffered := getBool(Params[0]);
+ isBuffered := SSGetBool(Params[0]);
 End;
 
 { output.flush }
@@ -85,12 +86,12 @@ End;
 // -------------------------------------------------------------------------- //
 Procedure Init(VM: Pointer);
 Begin
- AddInternalCall(VM, 'output', 'print', 1, @_print);
- AddInternalCall(VM, 'output', 'clear', 0, @_clear);
- AddInternalCall(VM, 'output', 'set_size', 4, @_set_size);
- AddInternalCall(VM, 'output', 'set_buffered', 1, @_set_buffered);
- AddInternalCall(VM, 'output', 'flush', 0, @_flush);
- AddInternalCall(VM, 'output', 'cursor_hide', 0, @_cursor_hide);
- AddInternalCall(VM, 'output', 'cursor_show', 0, @_cursor_show);
+ SSAddInternalCall(VM, 'output', 'print', 1, @_print);
+ SSAddInternalCall(VM, 'output', 'clear', 0, @_clear);
+ SSAddInternalCall(VM, 'output', 'set_size', 4, @_set_size);
+ SSAddInternalCall(VM, 'output', 'set_buffered', 1, @_set_buffered);
+ SSAddInternalCall(VM, 'output', 'flush', 0, @_flush);
+ SSAddInternalCall(VM, 'output', 'cursor_hide', 0, @_cursor_hide);
+ SSAddInternalCall(VM, 'output', 'cursor_show', 0, @_cursor_show);
 End;
 End.

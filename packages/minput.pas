@@ -16,13 +16,13 @@ Uses CRT, mOutput;
 { input.keypressed }
 Procedure _keypressed(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
- StackPush(VM, KeyPressed);
+ SSStackPush(VM, KeyPressed);
 End;
 
 { input.getchar }
 Procedure _getchar(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register;
 Begin
- StackPush(VM, ReadKey);
+ SSStackPush(VM, ReadKey);
 End;
 
 { input.readchar }
@@ -45,9 +45,9 @@ End;
 // -------------------------------------------------------------------------- //
 Procedure Init(VM: Pointer);
 Begin
- AddInternalCall(VM, 'input', 'keypressed', 0, @_keypressed);
- AddInternalCall(VM, 'input', 'getchar', 0, @_getchar);
- AddInternalCall(VM, 'input', 'readchar', 0, @_readchar);
- AddInternalCall(VM, 'input', 'read', 0, @_read);
+ SSAddInternalCall(VM, 'input', 'keypressed', 0, @_keypressed);
+ SSAddInternalCall(VM, 'input', 'getchar', 0, @_getchar);
+ SSAddInternalCall(VM, 'input', 'readchar', 0, @_readchar);
+ SSAddInternalCall(VM, 'input', 'read', 0, @_read);
 End;
 End.

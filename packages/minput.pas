@@ -39,7 +39,7 @@ Procedure _read(VM: Pointer; Params: PMixedValue; Result: PMixedValue); register
 Var Str: String;
 Begin
  Readln(Str);
- Result^ := Str;
+ Result^ := SSConvertString(VM, Str);
 End;
 
 // -------------------------------------------------------------------------- //

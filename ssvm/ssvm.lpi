@@ -69,7 +69,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir);jit;bytecode\interpreter"/>
-      <OtherUnitFiles Value="bytecode;bytecode\interpreter;gc;jit;jit\x86"/>
+      <OtherUnitFiles Value="bytecode;bytecode\interpreter;gc;jit;jit\x86;.."/>
       <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Parsing>

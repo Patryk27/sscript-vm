@@ -79,7 +79,7 @@ Begin
 End;
 
 { r__push_string }
-Procedure r__push_string(const VM: PVM; const Value: VMString); register;
+Procedure r__push_string(const VM: PVM; const Value: PVMString); register;
 Var MV: TMixedValue;
 Begin
  MV.Reset;
@@ -150,7 +150,7 @@ Begin
 End;
 
 { r__pop_string_reg }
-Procedure r__pop_string_reg(const VM: PVM; const RegAddr: PVMString); register;
+Procedure r__pop_string_reg(const VM: PVM; const RegAddr: PPVMString); register;
 Begin
  RegAddr^ := VM^.getString(VM^.Stack[VM^.Regs.i[5]]);
  Dec(VM^.Regs.i[5]);
@@ -214,7 +214,7 @@ Begin
 End;
 
 { r__stackval_fetch_string }
-Function r__stackval_fetch_string(const VM: PVM; const StackvalPos: int32): VMString; register;
+Function r__stackval_fetch_string(const VM: PVM; const StackvalPos: int32): PVMString; register;
 Begin
  Result := VM^.getString(getStackvalElement(VM, StackvalPos)^);
 End;
@@ -384,8 +384,6 @@ Procedure r__set_stackval_bool(const VM: PVM; const StackvalPos: int32; const Ne
 Begin
  With getStackvalElement(VM, StackvalPos)^ do
  Begin
-  ReleaseData;
-
   Typ        := mvBool;
   Value.Bool := NewValue;
  End;
@@ -396,8 +394,6 @@ Procedure r__set_stackval_char(const VM: PVM; const StackvalPos: int32; const Ne
 Begin
  With getStackvalElement(VM, StackvalPos)^ do
  Begin
-  ReleaseData;
-
   Typ        := mvChar;
   Value.Char := NewValue;
  End;
@@ -408,8 +404,6 @@ Procedure r__set_stackval_int(const VM: PVM; const StackvalPos: int32; const New
 Begin
  With getStackvalElement(VM, StackvalPos)^ do
  Begin
-  ReleaseData;
-
   Typ       := mvInt;
   Value.Int := NewValue;
  End;
@@ -425,20 +419,16 @@ Begin
 
  With getStackvalElement(VM, StackvalPos)^ do
  Begin
-  ReleaseData;
-
   Typ         := mvFloat;
   Value.Float := NewValue;
  End;
 End;
 
 { r__set_stackval_string }
-Procedure r__set_stackval_string(const VM: PVM; const StackvalPos: int32; const NewValue: VMString); register;
+Procedure r__set_stackval_string(const VM: PVM; const StackvalPos: int32; const NewValue: PVMString); register;
 Begin
  With getStackvalElement(VM, StackvalPos)^ do
  Begin
-  ReleaseData;
-
   Typ       := mvString;
   Value.Str := NewValue; // @TODO: is it safe?
  End;

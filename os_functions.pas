@@ -34,19 +34,23 @@ Unit os_functions;
 
  Implementation
 
-{ GetMilliseconds }
+(* GetMilliseconds *)
 Function GetMilliseconds: uint32;
 {$IF OS_LINUX}
  Var T: timespec;
 {$ENDIF}
 Begin
- {$IF OS_WINDOWS} { Windows }
+ {$IF OS_WINDOWS}
+  { Windows }
   Result := Windows.GetTickCount;
- {$ELSEIF OS_LINUX} { Linux }
+ {$ELSEIF OS_LINUX}
+  { Linux }
   clock_gettime(CLOCK_MONOTONIC, @T);
   Result := (T.tv_sec*1000)+(T.tv_nsec div 1000000);
- {$ELSE} { other }
-  {$WARNING GetTickCount -> unimplemented!}
+ {$ELSE}
+  { other }
+  // @TODO: rdtsc?
+  {$WARNING GetTickCount unimplemented!}
   Exit(0);
  {$ENDIF}
 End;
@@ -73,8 +77,7 @@ Begin
 End;
 {$ELSE} { other }
 Begin
- {$WARNING SetConsoleSize -> unimplemented!}
+ {$WARNING SetConsoleSize unimplemented!}
 End;
 {$ENDIF}
-
 End.

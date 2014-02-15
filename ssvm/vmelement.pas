@@ -12,7 +12,7 @@ Unit VMElement;
  Type TVMElement =
       Class
        Protected
-        VM: Pointer;
+        VMPnt: Pointer;
 
        Protected
         Function getLoaderData: TBCLoaderData;
@@ -21,15 +21,20 @@ Unit VMElement;
         Function getCharReg(const ID: uint8): VMChar;
         Function getIntReg(const ID: uint8): VMInt;
         Function getFloatReg(const ID: uint8): VMFloat;
-        Function getStringReg(const ID: uint8): VMString;
+        Function getStringReg(const ID: uint8): PVMString;
         Function getReferenceReg(const ID: uint8): VMReference;
 
         Function getStackPos: VMInt;
 
-        Function BytecodeRelativeToAbsolute(const Rel: Pointer): Pointer;
+        Procedure CheckMemory;
 
         Procedure ThrowException(const Message: String);
         Procedure ThrowException(const Format: String; const Args: Array of Const);
+
+        Procedure WriteLog(const Message: String);
+        Procedure WriteLog(const Format: String; const Args: Array of Const);
+
+        Function BytecodeRelativeToAbsolute(const Rel: Pointer): Pointer;
 
        Public
         Constructor Create(const fVM: Pointer);
@@ -44,7 +49,7 @@ Uses VMStruct;
 }
 Function TVMElement.getLoaderData: TBCLoaderData;
 Begin
- Result := PVM(VM)^.LoaderData;
+ Result := PVM(VMPnt)^.LoaderData;
 End;
 
 (* TVMElement.getBoolReg *)
@@ -53,7 +58,7 @@ End;
 }
 Function TVMElement.getBoolReg(const ID: uint8): VMBool;
 Begin
- Result := PVM(VM)^.Regs.b[ID];
+ Result := PVM(VMPnt)^.Regs.b[ID];
 End;
 
 (* TVMElement.getCharReg *)
@@ -62,7 +67,7 @@ End;
 }
 Function TVMElement.getCharReg(const ID: uint8): VMChar;
 Begin
- Result := PVM(VM)^.Regs.c[ID];
+ Result := PVM(VMPnt)^.Regs.c[ID];
 End;
 
 (* TVMElement.getIntReg *)
@@ -71,7 +76,7 @@ End;
 }
 Function TVMElement.getIntReg(const ID: uint8): VMInt;
 Begin
- Result := PVM(VM)^.Regs.i[ID];
+ Result := PVM(VMPnt)^.Regs.i[ID];
 End;
 
 (* TVMElement.getFloatReg *)
@@ -80,16 +85,16 @@ End;
 }
 Function TVMElement.getFloatReg(const ID: uint8): VMFloat;
 Begin
- Result := PVM(VM)^.Regs.f[ID];
+ Result := PVM(VMPnt)^.Regs.f[ID];
 End;
 
 (* TVMElement.getStringReg *)
 {
  Returns value of given VM string register.
 }
-Function TVMElement.getStringReg(const ID: uint8): VMString;
+Function TVMElement.getStringReg(const ID: uint8): PVMString;
 Begin
- Result := PVM(VM)^.Regs.s[ID];
+ Result := PVM(VMPnt)^.Regs.s[ID];
 End;
 
 (* TVMElement.getReferenceReg *)
@@ -98,13 +103,58 @@ End;
 }
 Function TVMElement.getReferenceReg(const ID: uint8): VMReference;
 Begin
- Result := PVM(VM)^.Regs.r[ID];
+ Result := PVM(VMPnt)^.Regs.r[ID];
 End;
 
 (* TVMElement.getStackPos *)
 Function TVMElement.getStackPos: VMInt;
 Begin
- Result := PVM(VM)^.StackPos^;
+ Result := PVM(VMPnt)^.StackPos^;
+End;
+
+(* TVMElement.CheckMemory *)
+{
+ See TVM.CheckMemory()
+}
+Procedure TVMElement.CheckMemory;
+Begin
+ PVM(VMPnt)^.CheckMemory;
+End;
+
+(* TVMElement.ThrowException *)
+{
+ Raises a VM error which halts the virtual machine and returns control back to the user.
+}
+Procedure TVMElement.ThrowException(const Message: String);
+Begin
+ PVM(VMPnt)^.ThrowException(Message);
+End;
+
+(* TVMElement.ThrowException *)
+{
+ Raises a VM error which halts the virtual machine and returns control back to the caller.
+}
+Procedure TVMElement.ThrowException(const Format: String; const Args: Array of const);
+Begin
+ PVM(VMPnt)^.ThrowException(Format, Args);
+End;
+
+(* TVMElement.WriteLog *)
+{
+ See TVM.WriteLog()
+}
+Procedure TVMElement.WriteLog(const Message: String);
+Begin
+ PVM(VMPnt)^.WriteLog(Message);
+End;
+
+(* TVMElement.WriteLog *)
+{
+ See TVM.WriteLog()
+}
+Procedure TVMElement.WriteLog(const Format: String; const Args: Array of const);
+Begin
+ PVM(VMPnt)^.WriteLog(Format, Args);
 End;
 
 (* TVMElement.BytecodeRelativeToAbsolute *)
@@ -116,27 +166,9 @@ Begin
  Result := Pointer(VMIReference(Rel) + VMIReference(@getLoaderData.CodeData[0]));
 End;
 
-(* TVMElement.ThrowException *)
-{
- Raises a VM error which halts the virtual machine and returns control back to the user.
-}
-Procedure TVMElement.ThrowException(const Message: String);
-Begin
- PVM(VM)^.ThrowException(Message);
-End;
-
-(* TVMElement.ThrowException *)
-{
- Raises a VM error which halts the virtual machine and returns control back to the caller.
-}
-Procedure TVMElement.ThrowException(const Format: String; const Args: Array of const);
-Begin
- PVM(VM)^.ThrowException(Format, Args);
-End;
-
 (* TVMElement.Create *)
 Constructor TVMElement.Create(const fVM: Pointer);
 Begin
- VM := fVM;
+ VMPnt := fVM;
 End;
 End.

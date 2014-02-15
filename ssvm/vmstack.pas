@@ -6,7 +6,7 @@
 Unit VMStack;
 
  Interface
- Uses VMElement, VMTypes, VMStrings;
+ Uses VMElement, VMTypes;
 
  Const ExceptionStackSize = 2*1024; // 2 KB
 
@@ -28,7 +28,7 @@ Unit VMStack;
         Char : VMChar;
         Int  : VMInt;
         Float: VMFloat;
-        Str  : VMString;
+        Str  : PVMString;
        End;
 
        isStackval: Boolean;
@@ -38,7 +38,7 @@ Unit VMStack;
        isReg   : Boolean;
        isMemRef: Boolean;
        RegIndex: uint8;
-       MemAddr : VMIReference;
+       MemAddr : VMReference;
 
        // VM-only functions
        Class Function Create(const NewValue: Int64): TMixedValue; static;
@@ -46,7 +46,6 @@ Unit VMStack;
 
        Function isLValue: Boolean;
        Procedure Reset;
-       Procedure ReleaseData;
       End;
 
  { TStackElement }
@@ -230,18 +229,6 @@ Begin
  isReg      := False;
  isMemRef   := False;
  RegIndex   := 0;
- MemAddr    := 0;
-
-// Value.Str.Free;
-End;
-
-(* TMixedValue.RelaseData *)
-{
- Releases string data, if 'Typ' equals 'mvString'
-}
-Procedure TMixedValue.ReleaseData;
-Begin
- if (Typ = mvString) Then
-  Value.Str.Free;
+ MemAddr    := nil;
 End;
 End.

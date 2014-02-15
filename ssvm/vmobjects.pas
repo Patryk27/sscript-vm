@@ -120,17 +120,17 @@ End;
 Destructor TMArray.Destroy;
 Var Mem, MemEnd: PPointer;
 Begin
- if (Typ = TYPE_STRING_id) Then // strings need special freeing
+ if (Typ = TYPE_STRING_id) Then // strings need special memory freeing
  Begin
   Mem    := Data;
-  MemEnd := Mem+MemSize;
+  MemEnd := PPointer(VMIReference(Mem) + VMIReference(MemSize));
 
   While (Mem < MemEnd) Do
   Begin
-   if (Mem^ <> nil) Then
-    PVMString(Mem)^.Free;
+   if (Mem^ <> nil) Then // if anything is assigned there...
+    VM^.VMStringList.Dispose(Mem^); // these strings are not automatically freed, so we must dispose them by ourselves
 
-   Inc(Mem, sizeof(VMString));
+   Inc(Mem);
   End;
  End;
 
@@ -140,6 +140,7 @@ End;
 (* TMArray.setValue *)
 Procedure TMArray.setValue(const Position: TIndexArray; NewValue: TMixedValue);
 Var DataPos: Pointer;
+    FreeStr: Boolean = True;
 Begin
  DataPos := getElement(Position);
 
@@ -147,19 +148,28 @@ Begin
  Begin
   With NewValue do
   Begin
-   Value.Str                                := PVMString(DataPos)^.Clone;
-   Value.Str.Data[Position[High(Position)]] := VM^.getChar(NewValue);
+   Value.Str                                 := DataPos;
+   Value.Str^.Data[Position[High(Position)]] := VM^.getChar(NewValue);
 
    Typ := mvString;
+
+   FreeStr := False;
   End;
  End;
 
  Case self.Typ of
-  TYPE_BOOL_id  : PVMBool(DataPos)^   := VM^.getBool(NewValue);
-  TYPE_CHAR_id  : PVMChar(DataPos)^   := VM^.getChar(NewValue);
-  TYPE_INT_id   : PVMInt(DataPos)^    := VM^.getInt(NewValue);
-  TYPE_FLOAT_id : PVMFloat(DataPos)^  := VM^.getFloat(NewValue);
-  TYPE_STRING_id: PVMString(DataPos)^ := VM^.getString(NewValue);
+  TYPE_BOOL_id  : PVMBool(DataPos)^  := VM^.getBool(NewValue);
+  TYPE_CHAR_id  : PVMChar(DataPos)^  := VM^.getChar(NewValue);
+  TYPE_INT_id   : PVMInt(DataPos)^   := VM^.getInt(NewValue);
+  TYPE_FLOAT_id : PVMFloat(DataPos)^ := VM^.getFloat(NewValue);
+  TYPE_STRING_id:
+  Begin
+   if (FreeStr) and (PPointer(DataPos)^ <> nil) Then // if some other string was previously assigned there, free it and then assign the new one
+    VM^.VMStringList.Dispose(PPointer(DataPos)^);
+
+   PPointer(DataPos)^ := VM^.VMStringList.CloneVMString(VM^.getString(NewValue));
+   VM^.VMStringList.Unbind(PPointer(DataPos)^); // we don't want our string to be "accidentally" freed
+  End;
 
   else
    VM^.ThrowException('Invalid array internal type (#%d)', [ord(Typ)]);
@@ -192,14 +202,14 @@ Begin
    mvChar  : Value.Char  := PVMChar(DataPos)^;
    mvInt   : Value.Int   := PVMInt(DataPos)^;
    mvFloat : Value.Float := PVMFloat(DataPos)^;
-   mvString: Value.Str   := PVMString(DataPos)^;
+   mvString: Value.Str   := VM^.VMStringList.CloneVMString(PPointer(DataPos)^);
   End;
 
   if (Length(Position) = Length(Sizes)+1) and (self.Typ = TYPE_STRING_id) Then
   Begin
    Typ := mvChar;
 
-   Value.Char := Value.Str.Data[Position[High(Position)]-1];
+   Value.Char := Value.Str^.Data[Position[High(Position)]-1];
   End;
  End;
 End;

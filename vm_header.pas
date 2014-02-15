@@ -31,11 +31,12 @@ Unit vm_header;
       VMReference = Pointer;
 
  { VMString }
- Type VMString =
-     Packed Record
-      Length: uint32;
-      Data  : PChar;
-     End;
+ Type PVMString = ^VMString;
+      VMString =
+      Record
+       Length: uint32;
+       Data  : PChar;
+      End;
 
  { TMixedValue }
  Type TMixedValueType = (mvNone=-1, mvBool, mvChar, mvInt, mvFloat, mvString, mvReference);
@@ -49,7 +50,7 @@ Unit vm_header;
         Char : VMChar;
         Int  : VMInt;
         Float: VMFloat;
-        Str  : VMString;
+        Str  : PVMString;
        End;
 
        VMInternalUse: Array[1..12] of uint8;
@@ -67,6 +68,19 @@ Unit vm_header;
        Data: Pointer;
       End;
 
+ { TLogMode }
+ Type TLogMode = (lmDisabled, lmConsole, lmFile);
+
+ { TVMDataStructure }
+ Type TVMDataStructure =
+      Packed Record
+       FileName : PChar;
+       GCMemSize: uint32;
+
+       LogMode: TLogMode;
+       LogFile: PChar;
+      End;
+
  { TCallHandler }
  Type TCallHandler = Procedure (VM: Pointer; Params: PMixedValue; Result: PMixedValue) register;
 
@@ -77,7 +91,7 @@ Unit vm_header;
  Const MixedValueTypeNames: Array[TMixedValueType] of String = ('none', 'bool', 'char', 'int', 'float', 'string', 'reference');
 
  (* ========== functions imported from the DLL ========== *)
- Function SSCreateAndLoad(const FileName: PChar; const GCMemoryLimit: uint32): Pointer;                                                                stdcall external 'ssvm.dll' name 'CreateAndLoad';
+ Function SSCreateAndLoad(const Struct: TVMDataStructure): Pointer;                                                                                    stdcall external 'ssvm.dll' name 'CreateAndLoad';
  Function SSExecuteVM(const VM: Pointer): Boolean;                                                                                                     stdcall external 'ssvm.dll' name 'ExecuteVM';
  Procedure SSFreeVM(const VM: Pointer);                                                                                                                stdcall external 'ssvm.dll' name 'FreeVM';
 
@@ -95,133 +109,147 @@ Unit vm_header;
  Function SSGetException(const VM: Pointer): TExceptionBlock;                                                                                          stdcall external 'ssvm.dll' name 'GetException';
  Function SSGetStopReason(const VM: Pointer): TStopReason;                                                                                             stdcall external 'ssvm.dll' name 'GetStopReason';
 
+ Function SSAllocateString(const VM: Pointer; const Content: PChar): PVMString                                                                         stdcall external 'ssvm.dll' name 'AllocateString';
+
  Function SSGetVMVersion: PChar;                                                                                                                       stdcall external 'ssvm.dll' name 'GetVMVersion';
 
  (* ========== auxiliary types ========== *)
  Type ESScriptException = Class(Exception);
 
  (* ========== auxiliary functions ========== *)
+ Function SSConvertBool(const Value: VMBool): TMixedValue;
+ Function SSConvertChar(const Value: VMChar): TMixedValue;
+ Function SSConvertInt(const Value: VMInt): TMixedValue;
+ Function SSConvertFloat(const Value: VMFloat): TMixedValue;
+ Function SSConvertString(const VM: Pointer; const Value: String): TMixedValue;
+
  Operator := (const Value: VMBool): TMixedValue;
  Operator := (const Value: VMChar): TMixedValue;
  Operator := (const Value: VMInt): TMixedValue;
  Operator := (const Value: VMFloat): TMixedValue;
- Operator := (const Value: String): TMixedValue;
 
  Procedure SSStackPush(const VM: Pointer; const Value: VMBool);
  Procedure SSStackPush(const VM: Pointer; const Value: VMChar);
  Procedure SSStackPush(const VM: Pointer; const Value: VMInt);
  Procedure SSStackPush(const VM: Pointer; const Value: VMFloat);
- Procedure SSStackPush(const VM: Pointer; const Value: VMString);
+ Procedure SSStackPush(const VM: Pointer; const Value: PVMString);
 
  Function SSGetBool(const MV: TMixedValue): VMBool;
  Function SSGetChar(const MV: TMixedValue): VMChar;
  Function SSGetInt(const MV: TMixedValue): VMInt;
  Function SSGetFloat(const MV: TMixedValue): VMFloat;
- Function SSGetString(const MV: TMixedValue): VMString;
- Function SSGetString(const VMStr: VMString): String;
+ Function SSGetString(const MV: TMixedValue): PVMString;
+ Function SSGetString(const VMStr: PVMString): String;
 
  Implementation
 
-(* TMixedValue := VMBool *)
-Operator := (const Value: VMBool): TMixedValue;
+(* SSConvertBool *)
+{
+ Converts a boolean value to mixed-value.
+}
+Function SSConvertBool(const Value: VMBool): TMixedValue;
 Begin
  FillByte(Result, sizeof(Result), 0);
  Result.Typ        := mvBool;
  Result.Value.Bool := Value;
 End;
 
-(* TMixedValue := VMChar *)
-Operator := (const Value: VMChar): TMixedValue;
+(* SSConvertChar *)
+{
+ Converts a char to mixed-value.
+}
+Function SSConvertChar(const Value: VMChar): TMixedValue;
 Begin
  FillByte(Result, sizeof(Result), 0);
  Result.Typ        := mvChar;
  Result.Value.Char := Value;
 End;
 
-(* TMixedValue := VMInt *)
-Operator := (const Value: VMInt): TMixedValue;
+(* SSConvertInt *)
+{
+ Converts an integer number to mixed-value.
+}
+Function SSConvertInt(const Value: VMInt): TMixedValue;
 Begin
  FillByte(Result, sizeof(Result), 0);
  Result.Typ       := mvInt;
  Result.Value.Int := Value;
 End;
 
-(* TMixedValue := VMFloat *)
-Operator := (const Value: VMFloat): TMixedValue;
+(* SSConvertFloat *)
+{
+ Converts a float number to mixed-value.
+}
+Function SSConvertFloat(const Value: VMFloat): TMixedValue;
 Begin
  FillByte(Result, sizeof(Result), 0);
  Result.Typ         := mvFloat;
  Result.Value.Float := Value;
+end;
+
+(* SSConvertString *)
+{
+ Converts a string to mixed-value.
+}
+Function SSConvertString(const VM: Pointer; const Value: String): TMixedValue;
+Begin
+ FillByte(Result, sizeof(Result), 0);
+ Result.Typ       := mvString;
+ Result.Value.Str := SSAllocateString(VM, PChar(Value));
 End;
 
-(* TMixedValue := String *)
-Operator := (const Value: String): TMixedValue;
-Var Str: VMString;
-    I  : uint32;
+(* TMixedValue := VMBool *)
+Operator := (const Value: VMBool): TMixedValue;
 Begin
- FillByte(Result.VMInternalUse[0], Length(TMixedValue.VMInternalUse), 0);
+ Result := SSConvertBool(Value);
+End;
 
- Str.Length := Length(Value);
- Str.Data   := GetMem(Str.Length);
+(* TMixedValue := VMChar *)
+Operator := (const Value: VMChar): TMixedValue;
+Begin
+ Result := SSConvertChar(Value);
+End;
 
- if (Str.Length > 0) Then
- Begin
-  For I := 0 To Str.Length-1 Do
-   Str.Data[I] := Value[I+1];
- End;
+(* TMixedValue := VMInt *)
+Operator := (const Value: VMInt): TMixedValue;
+Begin
+ Result := SSConvertInt(Value);
+End;
 
- Result.Typ       := mvString;
- Result.Value.Str := Str;
+(* TMixedValue := VMFloat *)
+Operator := (const Value: VMFloat): TMixedValue;
+Begin
+ Result := SSConvertFloat(Value);
 End;
 
 (* SSStackPush (VMBool) *)
 Procedure SSStackPush(const VM: Pointer; const Value: VMBool);
-Var E: TMixedValue;
 Begin
- E.Typ        := mvBool;
- E.Value.Bool := Value;
-
- SSStackPush(VM, E);
+ SSStackPush(VM, SSConvertBool(Value));
 End;
 
 (* SSStackPush (VMChar) *)
 Procedure SSStackPush(const VM: Pointer; const Value: VMChar);
-Var E: TMixedValue;
 Begin
- E.Typ        := mvChar;
- E.Value.Char := Value;
-
- SSStackPush(VM, E);
+ SSStackPush(VM, SSConvertChar(Value));
 End;
 
 (* SSStackPush (VMInt) *)
 Procedure SSStackPush(const VM: Pointer; const Value: VMInt);
-Var E: TMixedValue;
 Begin
- E.Typ       := mvInt;
- E.Value.Int := Value;
-
- SSStackPush(VM, E);
+ SSStackPush(VM, SSConvertInt(Value));
 End;
 
 (* SSStackPush (VMFloat) *)
 Procedure SSStackPush(const VM: Pointer; const Value: VMFloat);
-Var E: TMixedValue;
 Begin
- E.Typ         := mvFloat;
- E.Value.Float := Value;
-
- SSStackPush(VM, E);
+ SSStackPush(VM, SSConvertFloat(Value));
 End;
 
 (* SSStackPush (VMString) *)
-Procedure SSStackPush(const VM: Pointer; const Value: VMString);
-Var E: TMixedValue;
+Procedure SSStackPush(const VM: Pointer; const Value: PVMString);
 Begin
- E.Typ       := mvBool;
- E.Value.Str := Value;
-
- SSStackPush(VM, E);
+ SSStackPush(VM, Value);
 End;
 
 (* SSGetBool *)
@@ -264,7 +292,7 @@ Begin
 End;
 
 (* SSGetString *)
-Function SSGetString(const MV: TMixedValue): VMString;
+Function SSGetString(const MV: TMixedValue): PVMString;
 Begin
  if (MV.Typ <> mvString) Then
   raise ESScriptException.CreateFmt('Invalid type! Got `%s`, expected `%s`!', [MixedValueTypeNames[MV.Typ], 'string']);
@@ -273,13 +301,13 @@ Begin
 End;
 
 (* SSGetString *)
-Function SSGetString(const VMStr: VMString): String;
+Function SSGetString(const VMStr: PVMString): String;
 Var I: uint32;
 Begin
  Result := '';
 
- if (VMStr.Length > 0) Then
-  For I := 0 To VMStr.Length-1 Do
-   Result += VMStr.Data[I];
+ if (VMStr^.Length > 0) Then
+  For I := 0 To VMStr^.Length-1 Do
+   Result += VMStr^.Data[I];
 End;
 End.

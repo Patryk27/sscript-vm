@@ -7,7 +7,7 @@
 Unit Interpreter;
 
  Interface
- Uses VMStruct, VMTypes, VMStrings, Opcodes, SysUtils;
+ Uses VMStruct, VMTypes, Opcodes, SysUtils;
 
  Procedure op_(const VM: PVM);
 
@@ -87,23 +87,25 @@ Unit Interpreter;
   @op_ARGET,
   @op_ARCRT,
   @op_ARLEN,
-  @op_STRLEN,
-  @op_LOCATION,
-  @op_LOCATION,
-  @op_LOCATION
+  @op_STRLEN
  );
 
  Implementation
 Uses VMObjects, VMStack, VMICall, VMExceptions;
 
 { CheckStringBounds }
-Procedure CheckStringBounds(const VM: PVM; const Str: VMString; const Index: Integer);
+Procedure CheckStringBounds(const VM: PVM; const Str: PVMString; const Index: uint32);
+Var Len: uint32;
 Begin
  if (Index < 1) Then
   VM^.ThrowException('String index out of bounds. Tried to access char #%d, while strings starts from 1.', [Index]);
 
- if (Index > Str.Length) Then
-  VM^.ThrowException('String index out of bounds. Tried to access char #%d, while %d is the last one.', [Index, Str.Length]);
+ if (Str = nil) Then
+  Len := 1 Else
+  Len := Str^.Length;
+
+ if (Index > Len) Then
+  VM^.ThrowException('String index out of bounds. Tried to access char #%d, while %d is the last one.', [Index, Len]);
 End;
 
 { _ }
@@ -127,7 +129,7 @@ End;
 Procedure op_PUSH(const VM: PVM);
 Begin
  With VM^ do
-  Stack.Push(Bytecode.read_param);
+  Stack.Push(Bytecode.read_param(True));
 End;
 
 { POP (register) }
@@ -178,8 +180,8 @@ Begin
   Begin
    { ADD (memory reference, value) }
    Case param.Typ of
-    mvChar : PByte(reg.MemAddr)^     += getInt(param); { char }
-    mvInt  : PVMInt(reg.MemAddr)^    += getInt(param); { int }
+    mvChar : PByte(reg.MemAddr)^    += getInt(param); { char }
+    mvInt  : PVMInt(reg.MemAddr)^   += getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ += getFloat(param); { float }
 
     else
@@ -229,8 +231,8 @@ Begin
   Begin
    { SUB (memory reference, value) }
    Case param.Typ of
-    mvChar : PByte(reg.MemAddr)^     -= getInt(param); { char }
-    mvInt  : PVMInt(reg.MemAddr)^    -= getInt(param); { int }
+    mvChar : PByte(reg.MemAddr)^    -= getInt(param); { char }
+    mvInt  : PVMInt(reg.MemAddr)^   -= getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ -= getFloat(param); { float }
 
     else
@@ -280,8 +282,8 @@ Begin
   Begin
    { MUL (memory reference, value) }
    Case param.Typ of
-    mvChar : PByte(reg.MemAddr)^     *= getInt(param); { char }
-    mvInt  : PVMInt(reg.MemAddr)^    *= getInt(param); { int }
+    mvChar : PByte(reg.MemAddr)^    *= getInt(param); { char }
+    mvInt  : PVMInt(reg.MemAddr)^   *= getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ *= getFloat(param); { float }
 
     else
@@ -334,8 +336,8 @@ Begin
   Begin
    { DIV (memory reference, value) }
    Case param.Typ of
-    mvChar : PByte(reg.MemAddr)^     := PByte(reg.MemAddr)^ div getInt(param); { char }
-    mvInt  : PVMInt(reg.MemAddr)^    := PVMInt(reg.MemAddr)^ div getInt(param); { int }
+    mvChar : PByte(reg.MemAddr)^    := PByte(reg.MemAddr)^ div getInt(param); { char }
+    mvInt  : PVMInt(reg.MemAddr)^   := PVMInt(reg.MemAddr)^ div getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ /= getFloat(param); { float }
 
     else
@@ -409,7 +411,7 @@ Begin
  With VM^ do
  Begin
   reg := Bytecode.read_param;
-  val := Bytecode.read_param;
+  val := Bytecode.read_param(True);
 
   if (not reg.isLValue) Then
    VM^.ThrowException('''mov'' requires the first parameter to be an L-value.');
@@ -419,17 +421,17 @@ Begin
    { MOV (memory reference, value) }
    Case val.Typ of
     mvBool     : PVMBool(reg.MemAddr)^  := getBool(val); { bool }
-    mvChar     : PVMChar(reg.MemAddr)^     := getChar(val); { char }
-    mvInt      : PVMInt(reg.MemAddr)^    := getInt(val); { int }
+    mvChar     : PVMChar(reg.MemAddr)^  := getChar(val); { char }
+    mvInt      : PVMInt(reg.MemAddr)^   := getInt(val); { int }
     mvFloat    : PVMFloat(reg.MemAddr)^ := getFloat(val); { float }
-    mvString   : PVMString(reg.MemAddr)^    := getString(val); { string }
-    mvReference: PPointer(reg.MemAddr)^  := getReference(val); { reference }
+    mvString   : PPointer(reg.MemAddr)^ := getString(val); { string }
+    mvReference: PPointer(reg.MemAddr)^ := getReference(val); { reference }
 
     else
      VM^.ThrowException('''mov'' called with arguments: '+getTypeName(reg)+', '+getTypeName(val));
    End;
-
   End Else
+
   if (reg.isReg) Then
   Begin
    { MOV (register, value) }
@@ -445,6 +447,7 @@ Begin
      VM^.ThrowException('''mov'' called with arguments: '+getTypeName(reg)+', '+getTypeName(val));
    End;
   End Else
+
   Begin
    { MOV (stackval, value) }
    reg.Stackval^ := val;
@@ -454,52 +457,52 @@ End;
 
 { JMP (const int) }
 Procedure op_JMP(const VM: PVM);
-Var NewAddr: VMIReference;
+Var NewAddr: VMInt;
 Begin
  With VM^ do
  Begin
-  NewAddr := VMIReference(Bytecode.getPosition);
-  NewAddr += getInt(Bytecode.read_param)-1;
-  Bytecode.setPosition(PByte(NewAddr));
+  NewAddr := Bytecode.getRelativePosition;
+  NewAddr += getInt(Bytecode.read_param)-1; // '-1' because instruction pointer will be incremented after this JMP finishes executing and finally we'd jump one byte further than we want to
+  Bytecode.setRelativePosition(NewAddr);
  End;
 End;
 
 { TJMP (const int) }
 Procedure op_TJMP(const VM: PVM);
-Var NewAddr: VMIReference;
+Var NewAddr: VMInt;
 Begin
  With VM^ do
  Begin
-  NewAddr := VMIReference(Bytecode.getPosition);
+  NewAddr := Bytecode.getRelativePosition;
   NewAddr += getInt(Bytecode.read_param)-1;
 
   if (Regs.b[5]) Then
-   Bytecode.setPosition(PByte(NewAddr));
+   Bytecode.setRelativePosition(NewAddr);
  End;
 End;
 
 { FJMP (const int) }
 Procedure op_FJMP(const VM: PVM);
-Var NewAddr: VMIReference;
+Var NewAddr: VMInt;
 Begin
  With VM^ do
  Begin
-  NewAddr := VMIReference(Bytecode.getPosition);
+  NewAddr := Bytecode.getRelativePosition;
   NewAddr += getInt(Bytecode.read_param)-1;
 
   if (not Regs.b[5]) Then
-   Bytecode.setPosition(PByte(NewAddr));
+   Bytecode.setRelativePosition(NewAddr);
  End;
 End;
 
 { CALL (const int) }
 Procedure op_CALL(const VM: PVM);
-Var NewAddr: VMIReference;
+Var NewAddr: VMInt;
     Elem   : TStackElement;
 Begin
  With VM^ do
  Begin
-  NewAddr := VMIReference(Bytecode.getPosition);
+  NewAddr := Bytecode.getRelativePosition;
   NewAddr += getInt(Bytecode.read_param)-1;
 
   Elem.Reset;
@@ -507,14 +510,14 @@ Begin
   Elem.Value.Int := VMInt(Bytecode.getPosition);
   Stack.Push(Elem); // push the old position onto the stack
 
-  Bytecode.setPosition(PByte(NewAddr));
+  Bytecode.setRelativePosition(NewAddr);
  End;
 End;
 
 { ICALL (const string) }
 Procedure op_ICALL(const VM: PVM);
 Var Name  : String;
-    NameVS: VMString;
+    NameVS: PVMString;
     Call  : PInternalCall;
     Params: PMixedValue;
     Result: PMixedValue;
@@ -526,8 +529,9 @@ Begin
  Begin
   NameVS := getString(Bytecode.read_param);
 
-  Name := NameVS.asString;
-  NameVS.Free;
+  Name := NameVS^.asString;
+
+  // VM^.VMStringList.Remove(NameVS);
 
   if (Name[1] = 'v') and (Name[2] = 'm') and (Name[3] = '.') Then
   Begin
@@ -553,6 +557,7 @@ Begin
      Stack.Push(Result^);
 
     Dispose(Result);
+    Dispose(Params);
 
     Exit;
    End;
@@ -666,7 +671,6 @@ End;
 { STRJOIN (lvalue, char/string) }
 Procedure op_STRJOIN(const VM: PVM);
 Var reg, param: TMixedValue;
-    Tmp1, Tmp2: VMString;
 Begin
  With VM^ do
  Begin
@@ -678,28 +682,10 @@ Begin
 
   if (reg.isMemRef) Then
   Begin
-   Tmp1 := PVMString(reg.MemAddr)^;
-
    { STRJOIN (memory reference, char/string) }
    Case param.Typ of
-    { char }
-    mvChar:
-    Begin
-     PVMString(reg.MemAddr)^ := Tmp1 + getChar(Param);
-
-     Tmp1.Free;
-    End;
-
-    { string }
-    mvString:
-    Begin
-     Tmp2 := getString(param);
-
-     PVMString(reg.MemAddr)^ := Tmp1 + Tmp2;
-
-     Tmp1.Free;
-     Tmp2.Free;
-    End;
+    mvChar  : StringConcat(reg.MemAddr, getChar(Param)); // char
+    mvString: StringConcat(reg.MemAddr, getString(Param)); // string
 
     else
      VM^.ThrowException('''strjoin'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
@@ -708,28 +694,10 @@ Begin
 
   if (reg.isReg) Then
   Begin
-   Tmp1 := Regs.s[reg.RegIndex];
-
    { STRJOIN (register, char/string) }
    Case reg.Typ of
-    { char }
-    mvChar:
-    Begin
-     Regs.s[reg.RegIndex] := Tmp1 + getChar(param);
-
-     Tmp1.Free;
-    End;
-
-    { string }
-    mvString:
-    Begin
-     Tmp2 := getString(param);
-
-     Regs.s[reg.RegIndex] := Tmp1 + Tmp2;
-
-     Tmp1.Free;
-     Tmp2.Free;
-    End;
+    mvChar  : StringConcat(Regs.s[reg.RegIndex], getChar(param)); // char
+    mvString: StringConcat(Regs.s[reg.RegIndex], getString(param)); // string
 
     else
      VM^.ThrowException('''strjoin'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
@@ -740,27 +708,9 @@ Begin
    { STRJOIN (stackval, char/string) }
    With reg.Stackval^ do
    Begin
-    Tmp1 := Value.Str;
-
     Case reg.Typ of
-     { char }
-     mvChar:
-     Begin
-      Value.Str := Tmp1 + getChar(param);
-
-      Tmp1.Free;
-     End;
-
-     { string }
-     mvString:
-     Begin
-      Tmp2 := getString(param);
-
-      Value.Str := Tmp1 + Tmp2;
-
-      Tmp1.Free;
-      Tmp2.Free;
-     End;
+     mvChar  : StringConcat(Value.Str, getChar(param)); // char
+     mvString: StringConcat(Value.Str, getString(param)); // string
 
      else
       VM^.ThrowException('''strjoin'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
@@ -823,7 +773,7 @@ Begin
    { OR (memory reference, value) }
    Case param.Typ of
     mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ or getBool(param); { bool }
-    mvInt : PVMInt(reg.MemAddr)^   := PVMInt(reg.MemAddr)^ or getInt(Param); { int }
+    mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ or getInt(Param); { int }
 
     else
      VM^.ThrowException('''or'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
@@ -871,7 +821,7 @@ Begin
    { XOR (memory reference, value) }
    Case param.Typ of
     mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ xor getBool(param); { bool }
-    mvInt : PVMInt(reg.MemAddr)^   := PVMInt(reg.MemAddr)^ xor getInt(Param); { int }
+    mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ xor getInt(Param); { int }
 
     else
      VM^.ThrowException('''xor'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
@@ -919,7 +869,7 @@ Begin
    { AND (memory reference, value) }
    Case param.Typ of
     mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ and getBool(param); { bool }
-    mvInt : PVMInt(reg.MemAddr)^   := PVMInt(reg.MemAddr)^ and getInt(Param); { int }
+    mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ and getInt(Param); { int }
 
     else
      VM^.ThrowException('''and'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
@@ -1112,17 +1062,17 @@ Begin
   Begin
    { ARSET (register, index count, value) }
    Case refreg.Typ of
-    mvInt, mvReference: TMArray(CheckObject(getReference(refreg))).setValue(PosArray, new_value);
+    mvReference: TMArray(CheckObject(getReference(refreg))).setValue(PosArray, new_value); // reference reg
 
     mvString: // string reg
     Begin
      CheckStringBounds(VM, Regs.s[refreg.RegIndex], PosArray[0]);
-     Regs.s[refreg.RegIndex].Data[PosArray[0]] := getChar(new_value);
+     Regs.s[refreg.RegIndex]^.Data[PosArray[0]] := getChar(new_value);
     End;
 
     mvChar: // char reg
     Begin
-     CheckStringBounds(VM, ' ', PosArray[0]);
+     CheckStringBounds(VM, nil, PosArray[0]);
      Regs.c[refreg.RegIndex] := getChar(new_value);
     End;
 
@@ -1134,17 +1084,17 @@ Begin
    { ARSET (stackval, index count, value) }
    With refreg.Stackval^ do
     Case refreg.Typ of
-      mvInt, mvReference: TMArray(CheckObject(Pointer(Int32(Value.Int)))).setValue(PosArray, new_value);
+      mvReference: TMArray(CheckObject(Pointer(Int32(Value.Int)))).setValue(PosArray, new_value); // reference
 
-      mvString:
+      mvString: // string
       Begin
        CheckStringBounds(VM, Value.Str, PosArray[0]);
-       Value.Str.Data[PosArray[0]-1] := getChar(new_value); // `-1`, because we have `PVMChar` (which is counted from zero), not `AnsiString`.
+       Value.Str^.Data[PosArray[0]-1] := getChar(new_value); // `-1`, because we have `PVMChar` (which is counted from zero), not `AnsiString`.
       End;
 
-      mvChar: // char stackval
+      mvChar: // char
       Begin
-       CheckStringBounds(VM, ' ', PosArray[0]);
+       CheckStringBounds(VM, nil, PosArray[0]);
        Value.Char := getChar(new_value);
       End;
 
@@ -1166,7 +1116,7 @@ Var refreg, index_count, outreg: TMixedValue;
     PosArray                   : TIndexArray;
     I                          : uint32;
     AValue                     : TMixedValue;
-    TmpStr                     : VMString;
+    TmpStr                     : PVMString;
 Label Fail;
 Begin
  With VM^ do
@@ -1188,16 +1138,14 @@ Begin
   Begin
    { ARGET (register, index count, result register) }
    Case refreg.Typ of
-    mvInt, mvReference: AValue := TMArray(CheckObject(getReference(refreg))).getValue(PosArray); // int, reference
+    mvReference: AValue := TMArray(CheckObject(getReference(refreg))).getValue(PosArray); // reference
 
     mvString: // string
     Begin
      TmpStr := getString(refreg);
 
      AValue.Typ        := mvChar;
-     AValue.Value.Char := TmpStr.Data[PosArray[0]-1]; // `-1`, because we have `PVMChar` (which is counted from `0`), not `AnsiString` (which is counted from `1`).
-
-     TmpStr.Free;
+     AValue.Value.Char := TmpStr^.Data[PosArray[0]-1]; // `-1`, because we have `PVMChar` (which is counted from `0`), not `AnsiString` (which is counted from `1`).
     End;
 
     mvChar: // char
@@ -1214,19 +1162,19 @@ Begin
    { ARGET (stackval, index count, result register) }
    With refreg.Stackval^ do
     Case refreg.Typ of
-     mvInt, mvReference: AValue := TMArray(CheckObject(Pointer(Int32(Value.Int)))).getValue(PosArray);
+     mvReference: AValue := TMArray(CheckObject(Pointer(Value.Int))).getValue(PosArray); // reference
 
-     mvString: // string stackval
+     mvString: // string
      Begin
       CheckStringBounds(VM, Value.Str, PosArray[0]);
 
       AValue.Typ        := mvChar;
-      AValue.Value.Char := Value.Str.Data[PosArray[0]-1];
+      AValue.Value.Char := Value.Str^.Data[PosArray[0]-1];
      End;
 
-     mvChar: // char stackval
+     mvChar: // char
      Begin
-      CheckStringBounds(VM, ' ', PosArray[0]);
+      CheckStringBounds(VM, nil, PosArray[0]);
 
       AValue.Typ        := mvChar;
       AValue.Value.Char := Value.Char;
@@ -1285,7 +1233,6 @@ Begin
   ArrayObj := TMArray.Create(VM, getInt(typ), Sizes);
 
   Case refreg.Typ of
-   mvInt      : Regs.i[refreg.RegIndex] := uint32(Pointer(ArrayObj));
    mvReference: Regs.r[refreg.RegIndex] := ArrayObj;
 
    else
@@ -1327,7 +1274,7 @@ End;
 { STRLEN (string register, out int register/stackval) }
 Procedure op_STRLEN(const VM: PVM);
 Var strreg, outreg: TMixedValue;
-    TmpStr        : VMString;
+    TmpStr        : PVMString;
 Begin
  With VM^ do
  Begin
@@ -1345,13 +1292,11 @@ Begin
   if (outreg.isStackval) Then
   Begin
    outreg.Stackval^.Typ       := mvInt;
-   outreg.Stackval^.Value.Int := TmpStr.Length;
+   outreg.Stackval^.Value.Int := TmpStr^.Length;
   End Else
   Begin
-   Regs.i[outreg.RegIndex] := TmpStr.Length;
+   Regs.i[outreg.RegIndex] := TmpStr^.Length;
   End;
-
-  TmpStr.Free;
  End;
 End;
 

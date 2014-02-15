@@ -51,7 +51,7 @@
  { vm.throw }
  if (AnsiCompareStr(Name, 'vm.throw') = 0) Then
  Begin
-  ThrowException(getString(Stack.Pop).Data);
+  ThrowException(getPChar(Stack.Pop, True));
  End Else
 
  { vm.get_last_exception }
@@ -61,7 +61,7 @@
    ThrowException('VM internal error: interpreter_icalls.pas -> LatestException.Typ <> etByMessage');
 
   Param.Typ       := mvString;
-  Param.Value.Str := String(PChar(LatestException.Data));
+  Param.Value.Str := VMStringList.StringToVMString(PChar(LatestException.Data));
   Stack.Push(Param);
  End Else
 
@@ -69,7 +69,7 @@
  if (AnsiCompareStr(Name, 'vm.version') = 0) Then
  Begin
   Param.Typ       := mvString;
-  Param.Value.Str := VMVersion;
+  Param.Value.Str := VMStringList.StringToVMString(VMVersion);
   Stack.Push(Param);
  End Else
 

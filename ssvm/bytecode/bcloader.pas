@@ -37,7 +37,7 @@ Unit BCLoader;
         ErrorMsg: String;
 
         FileName  : String;
-        LoaderData: PBCLoaderData;
+        LoaderData: TBCLoaderData;
 
        Private
         Procedure OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
@@ -51,7 +51,7 @@ Unit BCLoader;
 
         Function Load: Boolean;
 
-        Property getLoaderData: PBCLoaderData read LoaderData;
+        Property getLoaderData: TBCLoaderData read LoaderData;
         Property getErrorMsg: String read ErrorMsg;
        End;
 
@@ -93,7 +93,7 @@ Procedure TBCLoader.ParseHeader(AStream: TStream);
   End;
 
 Begin
- With LoaderData^ do
+ With LoaderData do
  Begin
   MagicNumber  := BEtoN(AStream.ReadDWord);
   isRunnable   := Boolean(AStream.ReadByte);
@@ -122,7 +122,7 @@ End;
 Procedure TBCLoader.ParseBytecode(AStream: TStream);
 Var I: uint32;
 Begin
- With LoaderData^ do
+ With LoaderData do
  Begin
   if (AStream.Size = 0) Then
   Begin
@@ -164,11 +164,9 @@ Var Zip     : TUnzipper;
   End;
 
 Begin
- New(LoaderData);
-
  if (not FileExists(FileName)) Then // file doesn't exist
  Begin
-  LoaderData^.State := lsFileNotFound;
+  LoaderData.State := lsFileNotFound;
   Exit(False);
  End;
 
@@ -177,10 +175,10 @@ Begin
 
  FileList := TStringList.Create;
 
- LoaderData^.State := lsSuccess;
+ LoaderData.State := lsSuccess;
 
  Try
-  LoaderData^.CodeData := nil;
+  LoaderData.CodeData := nil;
 
   Zip.Examine;
   Zip.OnCreateStream := @OnCreateStream;
@@ -190,7 +188,7 @@ Begin
 
   if (not Result) Then
   Begin
-   LoaderData^.State := lsFailed;
+   LoaderData.State := lsFailed;
    Exit(False);
   End;
  Finally

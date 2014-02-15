@@ -24,13 +24,13 @@ Unit VMTypes;
       VMIReference = {$IFDEF CPU64} uint64 {$ELSE} uint32 {$ENDIF};
 
  Type VMString =
-      Packed Record
+      Record
        Length: uint32;
        Data  : PChar;
 
+       Procedure setNull;
+
        Function asString: String;
-       Function Clone: VMString;
-       Procedure Free;
       End;
 
  Type PVMBool      = ^VMBool;
@@ -40,17 +40,34 @@ Unit VMTypes;
       PVMString    = ^VMString;
       PVMReference = ^VMReference;
 
+ Type PPVMString = ^PVMString;
+
  Const TYPE_BOOL_id   = 0; // do not modify
        TYPE_CHAR_id   = 1;
        TYPE_INT_id    = 2;
        TYPE_FLOAT_id  = 3;
        TYPE_STRING_id = 4;
 
-       TypeSizes: Array[TYPE_BOOL_id..TYPE_STRING_id] of Byte = (sizeof(VMBool), sizeof(VMChar), sizeof(VMInt), sizeof(VMFloat), sizeof(VMString));
+       TypeSizes: Array[TYPE_BOOL_id..TYPE_STRING_id] of Byte = (sizeof(VMBool), sizeof(VMChar), sizeof(VMInt), sizeof(VMFloat), sizeof(PVMString));
 
  Implementation
 
+(* VMString.setNull *)
+{
+ Resets VMString.
+
+ Note: doesn't free any memory!
+}
+Procedure VMString.setNull;
+Begin
+ Length := 0;
+ Data   := nil;
+End;
+
 (* VMString.asString *)
+{
+ Returns string representation of VMString.
+}
 Function VMString.asString: String;
 Var I: uint32;
     P: PChar;
@@ -63,21 +80,5 @@ Begin
   Result += P^;
   Inc(P);
  End;
-End;
-
-(* VMString.Clone *)
-Function VMString.Clone: VMString;
-Begin
- Result.Length := Length;
- Result.Data   := GetMem(Length);
-
- Move(Data[0], Result.Data[0], Length);
-End;
-
-(* VMString.Free *)
-Procedure VMString.Free;
-Begin
- FreeMem(Data);
-// FreeMem(Pointer(@self));
 End;
 End.

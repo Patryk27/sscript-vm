@@ -6,7 +6,7 @@
 Unit VMBytecode;
 
  Interface
- Uses VMElement, VMStack, VMTypes, VMStrings, Opcodes;
+ Uses VMElement, VMStack, VMTypes, Opcodes;
 
  { TVMBytecode }
  Type TVMBytecode =
@@ -31,7 +31,7 @@ Unit VMBytecode;
         Function read_float: Extended; inline;
         Function read_string: String; inline;
 
-        Function read_param: TMixedValue; inline;
+        Function read_param(const CloneIfString: Boolean=False): TMixedValue; inline;
 
        Public
         Destructor Destroy; override;
@@ -39,6 +39,9 @@ Unit VMBytecode;
         Procedure Execute;
 
         Procedure setPosition(const Value: PByte);
+        Procedure setRelativePosition(const Value: VMIReference);
+
+        Function getRelativePosition: VMIReference;
 
         Property getData: PByte read Data;
         Property getPosition: PByte read Position;
@@ -156,9 +159,13 @@ End;
 
 (* TVMBytecode.read_param *)
 {
- Reads an opcode's param
+ Reads an opcode's parameters.
+
+ If "CloneIfString" equals 'true', when 'Typ = ptStringReg', there's returned a copy of that string, not it itself.
+ It's implemented only to lower the VM memory usage and also speed up execution a bit (lower number of memory allocations per instruction).
+ Used eg.in "push(string reg)" opcode.
 }
-Function TVMBytecode.read_param: TMixedValue;
+Function TVMBytecode.read_param(const CloneIfString: Boolean): TMixedValue;
 Var Typ: TOpcodeArgType;
 Begin
  Result.Reset;
@@ -189,16 +196,22 @@ Begin
   ptCharReg     : Result.Value.Char  := getCharReg(Result.RegIndex);
   ptIntReg      : Result.Value.Int   := getIntReg(Result.RegIndex);
   ptFloatReg    : Result.Value.Float := getFloatReg(Result.RegIndex);
-  ptStringReg   : Result.Value.Str   := getStringReg(Result.RegIndex).Clone;
   ptReferenceReg: Result.Value.Int   := VMInt(getReferenceReg(Result.RegIndex));
+
+  ptStringReg:
+  Begin
+   if (CloneIfString) Then
+    Result.Value.Str := PVM(VMPnt)^.VMStringList.CloneVMString(getStringReg(Result.RegIndex)) Else
+    Result.Value.Str := getStringReg(Result.RegIndex);
+  End;
 
   { constant value }
   ptBool          : Result.Value.Bool  := Boolean(read_uint8);
   ptChar          : Result.Value.Char  := chr(read_uint8);
   ptInt           : Result.Value.Int   := read_int64;
   ptFloat         : Result.Value.Float := read_float;
-  ptString        : Result.Value.Str   := read_string;
-  ptConstantMemRef: Result.MemAddr     := read_int64;
+  ptString        : Result.Value.Str   := PVM(VMPnt)^.VMStringList.StringToVMString(read_string);
+  ptConstantMemRef: Result.MemAddr     := Pointer(read_int64);
 
   else
    Result.Value.Int := read_int32;
@@ -209,14 +222,14 @@ Begin
 
  if (Result.isStackval) Then // if stackval
  Begin
-  Result.Stackval := PVM(VM)^.Stack.getPointer(getStackPos+Result.Value.Int-1);
+  Result.Stackval := PVM(VMPnt)^.Stack.getPointer(getStackPos+Result.Value.Int-1);
   Result.Typ      := Result.Stackval^.Typ;
   Result.Value    := Result.Stackval^.Value;
  End;
 
  if (Result.isMemRef) Then // if memory reference
  Begin
-  Result.MemAddr := VMIReference(BytecodeRelativeToAbsolute(Pointer(Result.MemAddr))); // make an absolute address from relative
+  Result.MemAddr := BytecodeRelativeToAbsolute(Result.MemAddr); // make an absolute address from relative
  End;
 End;
 
@@ -234,11 +247,11 @@ End;
 }
 Procedure TVMBytecode.Execute;
 Begin
- While (not PVM(VM)^.Stop) Do
+ While (not PVM(VMPnt)^.Stop) Do
  Begin
   CurrentOpcode := Position;
 
-  OpcodeTable[TOpcode_E(read_uint8)](VM);
+  OpcodeTable[TOpcode_E(read_uint8)](VMPnt);
  End;
 End;
 
@@ -246,5 +259,23 @@ End;
 Procedure TVMBytecode.setPosition(const Value: PByte);
 Begin
  Position := Value;
+End;
+
+(* TVMBytecode.setRelativePosition *)
+{
+ Sets instruction pointer relative to the first byte of bytecode data.
+}
+Procedure TVMBytecode.setRelativePosition(const Value: VMIReference);
+Begin
+ Position := VMReference(VMIReference(Data) + Value);
+End;
+
+(* TVMBytecode.getRelativePosition *)
+{
+ Returns instruction pointer relative to the first byte of bytecode data.
+}
+Function TVMBytecode.getRelativePosition: VMIReference;
+Begin
+ Result := VMIReference(Position) - VMIReference(Data);
 End;
 End.

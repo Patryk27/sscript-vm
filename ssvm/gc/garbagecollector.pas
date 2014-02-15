@@ -34,6 +34,9 @@ Unit GarbageCollector;
         Function FindObject(const Obj: TMObject): Boolean;
 
         Procedure DoGarbageCollection;
+
+        Function getObjectsCount: uint32;
+        Property getMemoryLimit: uint32 read MemoryLimit;
        End;
 
  Implementation
@@ -87,6 +90,9 @@ End;
 
 // -------------------------------------------------------------------------- //
 (* TGarbageCollector.Mark *)
+{
+ Does the "mark" stage of GC.
+}
 Procedure TGarbageCollector.Mark(const ObjectList: TObjectList);
 
   { TryToMark }
@@ -104,44 +110,50 @@ Begin
  For Obj in ObjectList Do
   Obj.isMarked := False;
 
- For I := VM^.Regs.i[5] Downto 0 Do // traverse the stack
-  if (VM^.Stack[I].Typ = mvReference) Then
-   TryToMark(Pointer(uint32(VM^.Stack[I].Value.Int)));
+ if (VM^.StackPos^ > 0) Then // traverse the stack, if it's not empty
+ Begin
+  For I := 0 To VM^.StackPos^-1 Do
+   if (VM^.Stack[I].Typ = mvReference) Then
+    TryToMark(Pointer(VM^.Stack[I].Value.Int));
+ End;
 
  For I := Low(VM^.Regs.r) To High(VM^.Regs.r) Do // check the reference registers
   TryToMark(VM^.Regs.r[i]);
 End;
 
 (* TGarbageCollector.Sweep *)
+{
+ Does the "sweep" stage of GC.
+}
 Procedure TGarbageCollector.Sweep;
 Var Workers: Array[1..ObjectListCount] of TGCSweepWorker;
     I      : uint8;
 
-    { isWorking }
-    Function isWorking: Boolean;
-    Var I: uint8;
-    Begin
-     Result := False;
+  { isWorking }
+  Function isWorking: Boolean;
+  Var I: uint8;
+  Begin
+   Result := False;
 
-     For I := Low(Workers) To High(Workers) Do
-      if (Workers[I].isWorking) Then
-       Exit(True);
-    End;
+   For I := Low(Workers) To High(Workers) Do
+    if (Workers[I].isWorking) Then
+     Exit(True);
+  End;
 
-    { CreateNewList }
-    Procedure CreateNewList(var ObjectList: TObjectList);
-    Var NewList: TObjectList;
-        I      : Integer;
-    Begin
-     NewList := TObjectList.Create;
+  { CreateNewList }
+  Procedure CreateNewList(var ObjectList: TObjectList);
+  Var NewList: TObjectList;
+      I      : Integer;
+  Begin
+   NewList := TObjectList.Create;
 
-     For I := 0 To ObjectList.Count-1 Do // usually creating an entire new list is faster than removing elements from the previous one (especially when a lot of objects were removed during the sweep stage).
-      if (ObjectList[I] <> nil) Then
-       NewList.Add(ObjectList[I]);
+   For I := 0 To ObjectList.Count-1 Do // usually creating an entire new list is faster than removing elements from the previous one (especially when a lot of objects were removed during the sweep stage).
+    if (ObjectList[I] <> nil) Then
+     NewList.Add(ObjectList[I]);
 
-     ObjectList.Free;
-     ObjectList := NewList;
-    End;
+   ObjectList.Free;
+   ObjectList := NewList;
+  End;
 
 Begin
  For I := Low(Workers) To High(Workers) Do
@@ -166,28 +178,44 @@ Begin
 
  For I := Low(ObjectLists) To High(ObjectLists) Do
   ObjectLists[I] := TObjectList.Create;
+
+ VM^.WriteLog('GC instance created - %d objects list(s) allocated.', [Length(ObjectLists)]);
 End;
 
 (* TGarbageCollector.Destroy *)
+{
+ Frees all the objects registered by the GC and then frees itself.
+}
 Destructor TGarbageCollector.Destroy;
 Var List: TObjectList;
     Obj : TMObject;
+    Mem : uint32;
 Begin
+ VM^.WriteLog('GC is about to be destroyed - %d objects left to free...', [getObjectsCount]);
+
+ Mem := GetFPCHeapStatus.CurrHeapFree;
+
  For List in ObjectLists Do
  Begin
   For Obj in List Do
    Obj.Free;
   List.Free;
  End;
+
+ Mem := GetFPCHeapStatus.CurrHeapFree - Mem;
+
+ VM^.WriteLog('Freed %d kB of memory (%d bytes), destroying GC instance...', [Mem div 1024, Mem]);
 End;
 
 (* TGarbageCollector.PutObject *)
+{
+ Puts an object instance on the list.
+}
 Procedure TGarbageCollector.PutObject(const Obj: TMObject);
 Var List: TObjectList;
     I   : uint8;
 Begin
- if (GetFPCHeapStatus.CurrHeapUsed > MemoryLimit) Then
-  DoGarbageCollection;
+ VM^.CheckMemory;
 
  List := ObjectLists[Low(ObjectLists)];
 
@@ -199,6 +227,9 @@ Begin
 End;
 
 (* TGarbageCollector.FindObject *)
+{
+ Returns "true" if given object is on the object list, i.e. - returns "true" if it's a valid object address.
+}
 Function TGarbageCollector.FindObject(const Obj: TMObject): Boolean;
 Var List: TObjectList;
 Begin
@@ -210,12 +241,35 @@ Begin
 End;
 
 (* TGarbageCollector.DoGarbageCollection *)
+{
+ Does mark-and-sweep.
+}
 Procedure TGarbageCollector.DoGarbageCollection;
 Var List: TObjectList;
+    Mem : uint32;
 Begin
+ VM^.WriteLog('Doing garbage collection...');
+
  For List in ObjectLists Do
   Mark(List);
 
+ Mem := GetFPCHeapStatus.CurrHeapFree;
  Sweep();
+ Mem := GetFPCHeapStatus.CurrHeapFree - Mem;
+
+ VM^.WriteLog('Freed %d kB of memory', [Mem div 1024]);
+End;
+
+(* TGarbageCollector.getObjectsCount *)
+{
+ Returns number of objects on the lists.
+}
+Function TGarbageCollector.getObjectsCount: uint32;
+Var List: TObjectList;
+Begin
+ Result := 0;
+
+ For List in ObjectLists Do
+  Result += List.Count;
 End;
 End.

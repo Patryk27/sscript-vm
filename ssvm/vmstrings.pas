@@ -2,21 +2,42 @@
  Copyright © by Patryk Wychowaniec, 2013-2014
  All rights reserved.
 *)
+// @Note: VMString itself is declared in VMTypes.pas (!)
 {$H+}
 Unit VMStrings;
 
  Interface
- Uses VMTypes;
+ Uses VMTypes, VMElement, FGL;
+
+ { VMStringList }
+ Type VMStringList = specialize TFPGList<PVMString>;
+
+ { TVMStringList }
+ Type TVMStringList =
+      Class(TVMElement)
+       Private
+        List: VMStringList;
+
+       Public
+        Constructor Create(const fVM: Pointer);
+        Destructor Destroy; override;
+
+        Function StringToVMString(const Value: String): PVMString;
+        Function CharToVMString(const Value: Char): PVMString;
+        Function CloneVMString(const Value: PVMString): PVMString;
+
+        Procedure Purge;
+        Procedure PurgeUnused;
+
+        Procedure Remove(const Str: PVMString);
+        Procedure Unbind(const Str: PVMString);
+        Procedure Dispose(const Str: PVMString);
+       End;
 
  Function StringToPChar(const S: String; const AddNullChar: Boolean=True): PChar;
 
- Operator := (const Value: String): VMString;
-
- Operator = (const A, B: VMString): Boolean;
- Operator + (const A, B: VMString): VMString;
- Operator + (const A: VMString; const B: Char): VMString;
-
  Implementation
+Uses VMStruct, VMStack;
 
 (* StringToPChar *)
 Function StringToPChar(const S: String; const AddNullChar: Boolean=True): PChar;
@@ -28,59 +49,175 @@ Begin
   Result[I-1] := S[I];
 End;
 
-(* VMString := String *)
-Operator := (const Value: String): VMString;
+// -------------------------------------------------------------------------- //
+(* TVMStringList.Create *)
+Constructor TVMStringList.Create(const fVM: Pointer);
 Begin
- Result.Length := Length(Value);
- Result.Data   := StringToPChar(Value, False);
+ inherited Create(fVM);
+
+ List := VMStringList.Create;
 End;
 
-(* VMString = VMString *)
-Operator = (const A, B: VMString): Boolean;
-Var I: uint32;
+(* TVMStringList.Destroy *)
+Destructor TVMStringList.Destroy;
 Begin
- Result := (A.Length = B.Length);
+ WriteLog('Destroying VMStringList instance...');
 
- if (Result) and (A.Length > 0) Then
+ Purge;
+ List.Free;
+
+ inherited Destroy;
+End;
+
+(* TVMStringList.StringToVMString *)
+{
+ Converts String to VMString and puts it onto the list.
+}
+Function TVMStringList.StringToVMString(const Value: String): PVMString;
+Begin
+ CheckMemory;
+
+ New(Result);
+ List.Add(Result);
+
+ Result^.Length := Length(Value);
+ Result^.Data   := StringToPChar(Value, False);
+End;
+
+(* TVMStringList.CharToVMString *)
+{
+ Converts Char to VMString and puts it onto the list.
+}
+Function TVMStringList.CharToVMString(const Value: Char): PVMString;
+Begin
+ Result := StringToVMString(Value); // affirmative - I'm lazy as hell
+End;
+
+(* TVMString.CloneVMString *)
+{
+ Clones VMString an puts it onto the list.
+}
+Function TVMStringList.CloneVMString(const Value: PVMString): PVMString;
+Begin
+ if (Value = nil) Then
+  ThrowException('TVMStringList.CloneVMString() -> Value = nil');
+
+ CheckMemory;
+
+ New(Result);
+ List.Add(Result);
+
+ Result^.Length := Value^.Length;
+ Result^.Data   := GetMem(Result^.Length);
+
+ Move(Value^.Data[0], Result^.Data[0], Result^.Length);
+End;
+
+(* TVMStringList.Purge *)
+{
+ Relases memory data of all registered VMStrings.
+}
+Procedure TVMStringList.Purge;
+Var Pnt: PVMString;
+    Mem: uint32;
+Begin
+ WriteLog('Purging all VMStrings data (%d VMString instances to free)', [List.Count]);
+
+ Mem := GetFPCHeapStatus.CurrHeapFree;
+ For Pnt in List Do
  Begin
-  For I := 0 To A.Length-1 Do
-   if (A.Data[I] <> B.Data[I]) Then
-    Exit(False);
+  FreeMem(Pnt^.Data);
+  FreeMem(Pnt);
  End;
+ Mem := GetFPCHeapStatus.CurrHeapFree - Mem;
+
+ WriteLog('Released %d kB of memory.', [Mem]);
+
+ List.Clear;
 End;
 
-(* VMString + VMString *)
-Operator + (const A, B: VMString): VMString;
-Var I, D: uint32;
+(* TVMStringList.PurgeUnused *)
+{
+ Removes unused strings from the list and frees their memory.
+}
+Procedure TVMStringList.PurgeUnused;
+Var VM       : PVM;
+    Removable: VMStringList;
+    NewList  : VMStringList;
+    Str      : PVMString;
+    I        : uint32;
+    Memory   : uint32;
 Begin
- Result.Length := A.Length + B.Length;
- Result.Data   := GetMem(Result.Length);
+ WriteLog('Purging unused VMStrings memory...');
 
- D := 0;
+ VM := VMPnt;
 
- if (A.Length > 0) Then
-  For I := 0 To A.Length-1 Do
-  Begin
-   Result.Data[D] := A.Data[I];
-   Inc(D);
-  End;
+ Removable := VMStringList.Create;
+ NewList   := VMStringList.Create;
 
- if (B.Length > 0) Then
-  For I := 0 To B.Length-1 Do
-  Begin
-   Result.Data[D] := B.Data[I];
-   Inc(D);
-  End;
+ // prepare list
+ For Str in List Do
+  Removable.Add(Str);
+
+ For I := Low(VM^.Regs.s) To High(VM^.Regs.s) Do
+ Begin
+  Removable.Remove(VM^.Regs.s[I]);
+  NewList.Add(VM^.Regs.s[I]);
+ End;
+
+ if (VM^.StackPos^ > 0) Then
+  For I := 0 To VM^.StackPos^-1 Do
+   if (VM^.Stack[I].Typ = mvString) Then
+   Begin
+    Removable.Remove(VM^.Stack[I].Value.Str);
+    NewList.Add(VM^.Stack[I].Value.Str);
+   End;
+
+ // remove VMStrings
+ Memory := GetFPCHeapStatus.CurrHeapUsed;
+
+ For Str in Removable Do
+  Dispose(Str);
+
+ Memory := Memory - GetFPCHeapStatus.CurrHeapUsed;
+
+ // set new pointer
+ List.Free;
+ List := NewList;
+
+ // write log
+ WriteLog('Removed %d VMStrings (%d kB memory freed), %d VMStrings are currently in use.', [Removable.Count, Memory div 1024, NewList.Count]);
+
+ // dispose class instances
+ Removable.Free;
 End;
 
-(* VMString + Char *)
-Operator + (const A: VMString; const B: Char): VMString;
+(* TVMStringList.Remove *)
+{
+ Removes string from the list and frees its memory.
+}
+Procedure TVMStringList.Remove(const Str: PVMString);
 Begin
- Result.Length := A.Length+1;
- Result.Data   := GetMem(Result.Length);
+ List.Remove(Str);
+ Dispose(Str);
+End;
 
- Move(A.Data[0], Result.Data[0], A.Length);
+(* TStringList.Unbind *)
+{
+ Removes string from the list and **doesn't** free its memory.
+}
+Procedure TVMStringList.Unbind(const Str: PVMString);
+Begin
+ List.Remove(Str);
+End;
 
- Result.Data[A.Length] := B;
+(* TVMStringList.Dispose *)
+{
+ Frees string memory.
+}
+Procedure TVMStringList.Dispose(const Str: PVMString);
+Begin
+ FreeMem(Str^.Data);
+ FreeMem(Str);
 End;
 End.

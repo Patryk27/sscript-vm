@@ -254,9 +254,6 @@ Begin
 
    JumpTable.AddJump(OpcodePos, OpcodeList.getSize);
 
-   if (isLocationOpcode(Opcode)) Then // skip the location opcodes
-    Continue;
-
    if (Length(Args) > 0) Then
     ParseArgument(Arg0Kind, Arg0, Args[0]);
 

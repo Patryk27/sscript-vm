@@ -18,11 +18,24 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 *)
 {$H+}
-Program VM_;
+Program SScriptVM;
 Uses vm_header, SysUtils, Classes, mInput, mOutput, mMath, mTime, os_functions;
-Var opt_wait, opt_time, opt_jit, opt_verbose: Boolean;
-    GCMemoryLimit                           : uint32;
-    JITSaveTo                               : String;
+
+Type ECommandLineException = Class(Exception);
+     EPrepareException = Class(Exception);
+     EJITException = Class(Exception);
+
+Var opt_logo, opt_wait, opt_time, opt_jit: Boolean;
+
+    LogMode: TLogMode = lmDisabled;
+    LogFile: String = 'vm.log';
+
+    JITSaveTo: String;
+
+    GCMemorySize: uint32;
+
+    VM  : Pointer;
+    Time: uint32;
 
 (* ParseCommandLine *)
 Procedure ParseCommandLine;
@@ -35,28 +48,67 @@ Begin
   Param := ParamStr(Pos);
 
   Case Param of
-   '-v'   : opt_verbose := True;
-   '-wait': opt_wait := True;
-   '-time': opt_time := True;
-   '-jit' : opt_jit  := True;
+   // -w, -wait
+   '-w', '-wait':
+   Begin
+    opt_wait := True;
+   End;
 
+   // -t, -time
+   '-t', '-time':
+   Begin
+    opt_time := True;
+   End;
+
+   // -log
+   '-log':
+   Begin
+    Inc(Pos);
+
+    Case ParamStr(Pos) of
+     'disabled': LogMode := lmDisabled;
+     'console' : LogMode := lmConsole;
+     'file'    : LogMode := lmFile;
+
+     else
+      raise ECommandLineException.CreateFmt('Unknown ''-log'' switch value: %s', [ParamStr(Pos)]);
+    End;
+   End;
+
+   // -log_file
+   '-log_file':
+   Begin
+    Inc(Pos);
+    LogFile := ParamStr(Pos);
+    LogMode := lmFile;
+   End;
+
+   // -jit
+   '-jit':
+   Begin
+    opt_jit := True;
+   End;
+
+   // -jit_save
    '-jit_save':
    Begin
     Inc(Pos);
     JITSaveTo := ParamStr(Pos);
    End;
 
+   // -gc
    '-gc':
    Begin
     Inc(Pos);
     Param := ParamStr(Pos);
 
     if (Length(Param) = 0) Then
-     Param := '256M';
+     raise ECommandLineException.Create('Empty command-line switch value (usage: -gc <size>)');
 
     Case Param[Length(Param)] of
      'm', 'M': Mult := 1024*1024;
      'g', 'G': Mult := 1024*1024*1024;
+
      else
       Mult := 1;
     End;
@@ -64,131 +116,160 @@ Begin
     if (Param[Length(Param)] in ['m', 'M', 'g', 'G']) Then
      Delete(Param, Length(Param), 1);
 
-    GCMemoryLimit := StrToInt(Param) * Mult;
+    Try
+     GCMemorySize := StrToInt(Param) * Mult;
+    Except
+     raise ECommandLineException.CreateFmt('Invalid command-line argument: -gc %s (usage: -gc <size>)', [Param]);
+    End;
    End;
 
+   // unknown switch
    else
-    Writeln('Unknown command-line switch: ', Param);
+    raise ECommandLineException.CreateFmt('Unknown command-line switch: %s', [Param]);
   End;
 
   Inc(Pos);
  End;
 End;
 
+(* DisplayHeader *)
+Procedure DisplayHeader;
+Begin
+ Writeln('SScript Virtual Machine (ssvm.dll version: ', SSGetVMVersion, ')');
+End;
+
+(* DisplayHelp *)
+Procedure DisplayHelp;
+Begin
+ Writeln('Usage:');
+ Writeln('vm.exe [input file] <options>');
+ Writeln;
+
+ Writeln('Available options:');
+ Writeln;
+
+ Writeln('Primary:');
+ Writeln('  -w(ait)  waits for `enter` when finished');
+ Writeln('  -t(ime)  displays program''s execution time');
+ Writeln;
+
+ Writeln('Logging:');
+ Writeln('  -log <mode>       changes VM logging mode (disabled/console/file)');
+ Writeln('  -log_file <file>  changes log file name (default: vm.log) and enables file logging mode');
+ Writeln;
+
+ Writeln('JIT compiler:');
+ Writeln('  -jit              enables just-in-time compilation');
+ Writeln('  -jit_save <file>  saves compiled JIT code to the specified file');
+ Writeln;
+
+ Writeln('Garbage collector:');
+ Writeln('  -gc <size>  changes garbage collector''s memory limit; eg.`-gc 512M` will set it to 512 megabytes. Available switches: G (GB), M (MB) - otherwise bytes are used. Default: 256 MB. Better not to set it below 64 MB.');
+End;
+
+(* Prepare *)
+Function Prepare: Boolean;
+Var Struct: TVMDataStructure;
+Begin
+ Struct.FileName  := PChar(ParamStr(1));
+ Struct.GCMemSize := GCMemorySize;
+
+ Struct.LogMode := LogMode;
+ Struct.LogFile := PChar(LogFile);
+
+ VM := SSCreateAndLoad(Struct); // load program
+
+ if (VM = nil) Then
+ Begin
+  raise EPrepareException.CreateFmt('Couldn''t load specified program file: %s', [ParamStr(1)]);
+  Exit(False);
+ End;
+
+ mInput.Init(VM);
+ mOutput.Init(VM);
+ mMath.Init(VM);
+ mTime.Init(VM);
+
+ Exit(True);
+End;
+
+(* RunJIT *)
+Function RunJIT: Boolean;
+Var JITStream: TMemoryStream;
+    JITCode  : Pointer;
+    I        : uint32;
+Begin
+ // try to compile
+ if (not SSJITCompile(VM)) Then
+ Begin
+  raise EJITException.CreateFmt('JIT compiling failed! %s', [SSGetJITError(VM)]);
+  Exit(False);
+ End;
+
+ // save JIT output?
+ if (Length(JITSaveTo) > 0) Then
+ Begin
+  JITStream := TMemoryStream.Create;
+  Try
+   JITCode := SSGetJITCodeData(VM);
+   For I := 0 To SSGetJITCodeSize(VM)-1 Do
+    JITStream.WriteByte(PByte(JITCode+I)^);
+   JITStream.SaveToFile(JITSaveTo);
+  Finally
+   JITStream.Free;
+  End;
+ End;
+End;
+
 // main program block
 Label VMEnd;
-Var VM       : Pointer;
-    Time     : int64;
-    JITStream: TMemoryStream;
-    JITCode  : Pointer;
-    I        : Integer;
 Begin
+ opt_logo := False;
+ opt_wait := False;
+ opt_time := False;
+ opt_jit  := False;
+
+ DefaultFormatSettings.DecimalSeparator := '.';
+
  Time := GetMilliseconds;
 
- DecimalSeparator := '.';
- if (ParamCount < 1) Then
+ if (ParamCount < 1) Then // error: too few parameters
  Begin
-  Writeln('SScript Virtual Machine (ssvm.dll version: ', SSGetVMVersion, ')');
+  DisplayHeader;
   Writeln;
-
-  Writeln('Usage:');
-  Writeln('vm.exe [input file] <options>');
-  Writeln;
-
-  Writeln('Available options:');
-  Writeln;
-
-  Writeln('-v                enable verbose mode');
-  Writeln('-wait             wait for `enter` when finished');
-  Writeln('-time             display program''s execution time');
-  Writeln('-jit              enable just-in-time compilation (**very** experimental!)');
-  Writeln('-jit_save <file>  save compiled JIT code to the specified file');
-  Writeln('-gc <value>       change garbage collector''s memory limit, eg.`-gc 512M` will set it to 512 megabytes. Switches: G (GB), M (MB), otherwise bytes are used. Default: 256 MB. Don''t set it below 64 MB.');
-
+  DisplayHelp;
   Exit;
  End;
 
  ParseCommandLine; // parse command line
 
- if (GCMemoryLimit = 0) Then
-  GCMemoryLimit := 256*1024*1024;
+ if (GCMemorySize = 0) Then // if zero, set it to the default value
+  GCMemorySize := 256*1024*1024;
 
- if (ParamStr(1) = '-logo') Then
+ if (opt_logo) Then // if '-logo' parameter passed
  Begin
-  Writeln('SScript Virtual Machine (ssvm.dll version: ', SSGetVMVersion, ')');
- End Else
- Begin
-  if (opt_verbose) Then
-   Writeln('-> Loading bytecode from ''', ParamStr(1), '''');
-
-  VM := SSCreateAndLoad(PChar(ParamStr(1)), GCMemoryLimit); // load program
-
-  if (VM = nil) Then
-  Begin
-   Writeln('Couldn''t load specified file.');
-   goto VMEnd;
-  End;
-
-  if (opt_verbose) Then
-   Writeln('-> Setting internal calls');
-
-  mInput.Init(VM);
-  mOutput.Init(VM);
-  mMath.Init(VM);
-  mTime.Init(VM);
-
-  // run JIT compiler?
-  if (opt_jit) Then
-  Begin
-   if (opt_verbose) Then
-    Writeln('-> Running JIT compiler...');
-
-   if (not SSJITCompile(VM)) Then
-   Begin
-    Writeln('JIT compiling failed!');
-    Writeln(SSGetJITError(VM));
-    goto VMEnd;
-   End;
-
-   if (opt_verbose) Then
-    Writeln('-> Bytecode has been compiled! JIT compiled size: ', SSGetJITCodeSize(VM), ' bytes');
-  End;
-
-  // save JIT output?
-  if (opt_jit) and (Length(JITSaveTo) > 0) Then
-  Begin
-   if (opt_verbose) Then
-    Writeln('-> Saving JIT code to ''', JITSaveTo, '''');
-
-   JITStream := TMemoryStream.Create;
-   Try
-    JITCode := SSGetJITCodeData(VM);
-    For I := 0 To SSGetJITCodeSize(VM)-1 Do
-     JITStream.WriteByte(PByte(JITCode+I)^);
-    JITStream.SaveToFile(JITSaveTo);
-   Finally
-    JITStream.Free;
-   End;
-  End;
-
-  if (opt_verbose) Then
-   Writeln('-> Executing VM...');
-
-  SSExecuteVM(VM);
-
-  if (opt_verbose) Then
-   Writeln('-> Program stopped/finished executing!');
-
-  if (VM <> nil) and (SSGetStopReason(VM) = srException) Then
-  Begin
-   Writeln('Virtual machine exception has been thrown:');
-   Writeln;
-   Writeln(PChar(SSGetException(VM).Data));
-  End;
-
-  if (VM <> nil) Then
-   SSFreeVM(VM);
+  DisplayHeader;
+  Exit;
  End;
+
+ if (not Prepare) Then // prepare VM
+  goto VMEnd;
+
+ if (opt_jit) and (not RunJIT) Then // run JIT compiler, if specified
+  goto VMEnd;
+
+ if (VM = nil) Then
+  goto VMEnd;
+
+ SSExecuteVM(VM);
+
+ if (SSGetStopReason(VM) = srException) Then
+ Begin
+  Writeln('Virtual machine threw an exception:');
+  Writeln(PChar(SSGetException(VM).Data));
+ End;
+
+ SSFreeVM(VM);
 
 VMEnd:
  Time := GetMilliseconds-Time;

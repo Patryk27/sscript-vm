@@ -217,6 +217,8 @@ Begin
    JITStream.Free;
   End;
  End;
+
+ Exit(True);
 End;
 
 // main program block
@@ -244,7 +246,9 @@ Begin
   ParseCommandLine;
 
   if (GCMemorySize = 0) Then // if zero, set it to the default value
+  Begin
    GCMemorySize := 256*1024*1024;
+  End;
 
   if (opt_logo) Then // if '-logo' parameter passed
   Begin

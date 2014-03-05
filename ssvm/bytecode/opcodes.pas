@@ -40,6 +40,9 @@ Unit Opcodes;
  Type TOpcodeArgType =
       (ptBoolReg, ptCharReg, ptIntReg, ptFloatReg, ptStringReg, ptReferenceReg, ptBool, ptChar, ptInt, ptFloat, ptString, ptStackval, ptConstantMemRef);
 
+ { TOpcodeArgTypeSet }
+ Type TOpcodeArgTypeSet = Set of TOpcodeArgType;
+
  { TBytecodeRegister }
  Type TBytecodeRegister = // a helper type used in the JIT compiler
       (reg_eb, reg_ec, reg_ei, reg_ef, reg_es, reg_er);

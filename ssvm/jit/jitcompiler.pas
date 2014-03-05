@@ -234,26 +234,21 @@ Var Reader   : TBytecodeReader;
   End;
 
   { CheckArgs }
+  Function CheckArgs(const Arg0: TOpcodeArgTypeSet): Boolean;
+  Begin
+   Result := (Args[0].ArgType in Arg0);
+  End;
+
+  { CheckArgs }
   Function CheckArgs(const Arg0, Arg1: TOpcodeArgType): Boolean;
   Begin
    Result := (Args[0].ArgType = Arg0) and (Args[1].ArgType = Arg1);
   End;
 
   { CheckArgs }
-  Function CheckArgs(const Arg0, Arg1: Array of TOpcodeArgType): Boolean;
-  Var Arg   : TOpcodeArgType;
-      A0, A1: Boolean;
+  Function CheckArgs(const Arg0, Arg1: TOpcodeArgTypeSet): Boolean;
   Begin
-   A0 := False;
-   A1 := False;
-
-   For Arg in Arg0 Do
-    A0 := A0 or (Args[0].ArgType = Arg);
-
-   For Arg in Arg1 Do
-    A1 := A1 or (Args[1].ArgType = Arg);
-
-   Result := (A0 and A1);
+   Result := (Args[0].ArgType in Arg0) and (Args[1].ArgType in Arg1);
   End;
 
 Begin
@@ -295,31 +290,31 @@ Begin
     o_push:
     Begin
      // push(reg/imm bool)
-     if (Args[0].ArgType in [ptBool, ptBoolReg]) Then
+     if (CheckArgs([ptBool, ptBoolReg])) Then
      Begin
       JITOpcode := jo_bpush;
      End Else
 
      // push(reg/imm char)
-     if (Args[0].ArgType in [ptChar, ptCharReg]) Then
+     if (CheckArgs([ptChar, ptCharReg])) Then
      Begin
       JITOpcode := jo_cpush;
      End Else
 
      // push(reg/imm int)
-     if (Args[0].ArgType in [ptInt, ptIntReg]) Then
+     if (CheckArgs([ptInt, ptIntReg])) Then
      Begin
       JITOpcode := jo_ipush;
      End Else
 
      // push(reg/imm float)
-     if (Args[0].ArgType in [ptFloat, ptFloatReg]) Then
+     if (CheckArgs([ptFloat, ptFloatReg])) Then
      Begin
       JITOpcode := jo_fpush;
      End Else
 
      // push(reg/imm string)
-     if (Args[0].ArgType in [ptString, ptStringReg]) Then
+     if (CheckArgs([ptString, ptStringReg])) Then
      Begin
       JITOpcode := jo_spush;
      End Else
@@ -345,7 +340,7 @@ Begin
     o_pop:
     Begin
      // pop(reg bool/char/int/float/string/reference)
-     if (Args[0].ArgType in [ptBoolReg..ptReferenceReg]) Then
+     if (CheckArgs([ptBoolReg..ptReferenceReg])) Then
      Begin
       JITOpcode := TJITOpcodeKind(ord(jo_bpop) + ord(Args[0].ArgType) - ord(ptBoolReg));
 
@@ -358,7 +353,7 @@ Begin
     { add, sub, mul, div, mod }
     o_add, o_sub, o_mul, o_div, o_mod:
     Begin
-     if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptStackval) Then // @TODO
+     if (CheckArgs(ptStackval, ptStackval)) Then // @TODO
       InvalidOpcodeException;
 
      // op(reg char | stackval, reg/imm char | stackval)
@@ -410,49 +405,49 @@ Begin
     o_mov:
     Begin
      // mov(reg bool, reg/imm bool | stackval)
-     if (Args[0].ArgType = ptBoolReg) and (Args[1].ArgType in [ptBoolReg, ptBool, ptStackval]) Then
+     if (CheckArgs([ptBoolReg], [ptBoolReg, ptBool, ptStackval])) Then
      Begin
       JITOpcode := jo_bbmov;
      End Else
 
      // mov(reg char, reg/imm char | stackval)
-     if (Args[0].ArgType = ptCharReg) and (Args[1].ArgType in [ptCharReg, ptChar, ptStackval]) Then
+     if (CheckArgs([ptCharReg], [ptCharReg, ptChar, ptStackval])) Then
      Begin
       JITOpcode := jo_ccmov;
      End Else
 
      // mov(reg char, reg/imm int)
-     if (Args[0].ArgType = ptCharReg) and (Args[1].ArgType in [ptIntReg, ptInt]) Then
+     if (CheckArgs([ptCharReg], [ptIntReg, ptInt])) Then
      Begin
       JITOpcode := jo_cimov;
      End Else
 
      // mov(reg int, reg/imm int | stackval)
-     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptIntReg, ptInt, ptStackval]) Then
+     if (CheckArgs([ptIntReg], [ptIntReg, ptInt, ptStackval])) Then
      Begin
       JITOpcode := jo_iimov;
      End Else
 
      // mov(reg int, reg/imm char)
-     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptCharReg, ptChar]) Then
+     if (CheckArgs([ptIntReg], [ptCharReg, ptChar])) Then
      Begin
       JITOpcode := jo_icmov;
      End Else
 
      // mov(reg float, reg/imm float | imm int | stackval)
-     if (Args[0].ArgType = ptFloatReg) and (Args[1].ArgType in [ptFloatReg, ptFloat, ptInt, ptStackval]) Then
+     if (CheckArgs([ptFloatReg], [ptFloatReg, ptFloat, ptInt, ptStackval])) Then
      Begin
       JITOpcode := jo_ffmov;
      End Else
 
      // mov(reg string, reg/imm string | stackval)
-     if (Args[0].ArgType = ptStringReg) and (Args[1].ArgType in [ptStringReg, ptString, ptStackval]) Then
+     if (CheckArgs([ptStringReg], [ptStringReg, ptString, ptStackval])) Then
      Begin
       JITOpcode := jo_ssmov;
      End Else
 
      // mov(stackval, imm/reg bool/char/int/float/string/reference)
-     if (Args[0].ArgType = ptStackval) Then
+     if (CheckArgs(ptStackval)) Then
      Begin
       Case Args[1].ArgType of
        ptBool, ptBoolReg    : JITOpcode := jo_bbmov;
@@ -524,8 +519,7 @@ Begin
     { if_* }
     o_if_e, o_if_ne, o_if_g, o_if_l, o_if_ge, o_if_le:
     Begin
-     if (Args[0].ArgType in [ptInt, ptIntReg]) and
-        (Args[1].ArgType in [ptInt, ptIntReg]) Then
+     if (CheckArgs([ptInt, ptIntReg], [ptInt, ptIntReg])) Then
      Begin
       JITOpcode := TJITOpcodeKind(ord(jo_iicmpe) + ord(Opcode) - ord(o_if_e));
      End Else

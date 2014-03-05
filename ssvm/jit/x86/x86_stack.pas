@@ -96,7 +96,7 @@
   mov_reg32_imm32(reg_eax, uint32(getVM));
 
   if (Arg0.Kind = joa_memory) Then
-   mov_reg32_imm32(reg_edx, uint32(Arg0.MemoryAddr)) Else
+   mov_reg32_mem32(reg_edx, Arg0.MemoryAddr) Else
    InvalidOpcodeException;
 
   call_internalproc(@r__push_string);

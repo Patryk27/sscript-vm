@@ -95,11 +95,21 @@ End;
 
 (* TJITAbstractCPU.AllocateString *)
 Function TJITAbstractCPU.AllocateString(const Value: String): VMReference;
-Var Data: Pointer;
+Var Data, StrData: Pointer;
+    I, Len       : uint32;
 Begin
- Result := JITMemAlloc(sizeof(VMString));
+ Len := Length(Value);
 
+ Result  := JITMemAlloc(sizeof(VMString));
+ StrData := JITMemAlloc(Len);
 
+ PVMString(Result)^.Data   := StrData;
+ PVMString(Result)^.Length := Len;
+
+ For I := 1 To Len Do
+  PChar(StrData + I-1)^ := Value[I];
+
+// VM^.VMStringList.Bind (?) - instead of JITMemAlloc()
 End;
 
 (* TJITAbstractCPU.isRegNative *)

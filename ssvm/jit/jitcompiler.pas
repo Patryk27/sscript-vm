@@ -148,7 +148,7 @@ Var Reader   : TBytecodeReader;
   { InvalidOpcodeException }
   Procedure InvalidOpcodeException; inline;
   Begin
-   VM^.ThrowException('JIT: invalid opcode: [0x%x] %s', [OpcodePos, Reader.OpcodeToString(Opcode, Args)]);
+   raise Exception.CreateFmt('JIT: invalid opcode: [0x%x] %s', [OpcodePos, Reader.OpcodeToString(Opcode, Args)]);
   End;
 
   { ParseArgument }

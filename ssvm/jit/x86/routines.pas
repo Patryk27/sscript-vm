@@ -13,10 +13,9 @@ End;
 
 (* ------------------ string operations ------------------ *)
 { r__clone_string }
-Function r__clone_string(const Arg: PString): PString;
+Function r__clone_string(const VM: PVM; const Arg: PVMString): PVMString; register;
 Begin
- New(Result);
- Result^ := Arg^;
+ Result := VM^.VMStringList.CloneVMString(Arg); // @TODO: is it safe?
 End;
 
 (* ------------------ integer operations ------------------ *)
@@ -165,12 +164,12 @@ End;
 (* ------------------ internal calls ------------------ *)
 { r__create_icall_parameter_list }
 Procedure r__create_icall_parameter_list(const VM: PVM; const call: PInternalCall; const ParamsMV: PMixedValue); register;
-Var I: int8;
+Var I: uint8;
 Begin
- For I := 0 To int8(call^.ParamCount)-1 Do
+ if (call^.ParamCount > 0) Then
  Begin
-  ParamsMV[I] := VM^.Stack[VM^.Regs.i[5]];
-  Dec(VM^.Regs.i[5]);
+  For I := 0 To call^.ParamCount-1 Do
+   ParamsMV[I] := VM^.Stack.Pop;
  End;
 End;
 

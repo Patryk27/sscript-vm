@@ -201,7 +201,8 @@
   // ssmov(mem, mem)
   if (CheckArgs(joa_memory, joa_memory)) Then
   Begin
-   mov_reg32_imm32(reg_eax, uint32(Arg1.MemoryAddr));
+   mov_reg32_imm32(reg_eax, uint32(getVM));
+   mov_reg32_imm32(reg_edx, uint32(Arg1.MemoryAddr));
    call_internalproc(@r__clone_string);
    mov_mem32_reg32(Arg0.MemoryAddr, reg_eax);
   End Else

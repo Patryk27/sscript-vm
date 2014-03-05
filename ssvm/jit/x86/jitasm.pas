@@ -150,6 +150,9 @@ Unit JITAsm;
         // fstp
         Procedure fstp_memfloat(const Mem: VMReference);
 
+        // fistp
+        Procedure fistp_memint(const Mem: VMReference);
+
         // faddp
         Procedure faddp_st0(const Reg: TRegisterFPU);
 
@@ -218,6 +221,7 @@ Begin
  SetLength(RC, Length(RC)+1);
  RC[High(RC)].OpcodeAddress := Data.Position;
  RC[High(RC)].AddressToCall := AddressToCall;
+ {$UNDEF RC}
 End;
 
 (* TJITAsm.Create *)
@@ -237,15 +241,11 @@ End;
 (* TJITAsm.post_compilation *)
 Procedure TJITAsm.post_compilation;
 Var Call: TResolvableCall;
-    Addr: int32;
 Begin
  For Call in ResolvableCalls Do
  Begin
   Data.Position := int64(Call.OpcodeAddress) + 1; // '+1' because we must skip the opcode ($E8 in this case)
-  Addr          := Data.read_uint32;
-  Data.Position := Data.Position - 4;
-
-  Data.write_int32(Addr - (uint32(Data.Memory) + Data.Position) - 4);
+  Data.write_int32(Call.AddressToCall - (uint32(Data.Memory)+Data.Position+4));
  End;
 
  Data.Position := 0;
@@ -843,7 +843,7 @@ Begin
  AddNewResolvableCall(uint32(Handler));
 
  emit_uint8($E8);
- emit_uint32(uint32(Handler));
+ emit_uint32(0);
 End;
 
 (* TJITAsm.fld_memfloat *)
@@ -875,6 +875,17 @@ End;
 Procedure TJITAsm.fstp_memfloat(const Mem: VMReference);
 Begin
  emit_uint8($DB);
+ emit_uint8($3D);
+ emit_uint32(Mem);
+End;
+
+(* TJITAsm.fistp_memint *)
+{
+ fistp qword [mem]
+}
+Procedure TJITAsm.fistp_memint(const Mem: VMReference);
+Begin
+ emit_uint8($DF);
  emit_uint8($3D);
  emit_uint32(Mem);
 End;

@@ -136,7 +136,7 @@ Begin
    StopReason := srFinished;
    Stop       := False;
 
-   For I := Low(Regs.s) To High(Regs.s) Do
+   For I := Low(Regs.s) To High(Regs.s) Do // clear string registers
     Regs.s[I] := VMStringList.StringToVMString('');
 
    if (JITCode <> nil) Then // if possible, execute the JIT compiled code instead of running slow opcode interpreter

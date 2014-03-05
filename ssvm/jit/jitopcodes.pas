@@ -40,12 +40,22 @@ Unit JITOpcodes;
        jo_iidiv, // iidiv(^)
        jo_iimod, // iimod(^)
 
-       jo_ffadd, // ffadd(float r/m/s, float r/m/c/s) -> no double stackval-reference
+       jo_ffadd, // ffadd(float r/m/s, float r/m/c/s) -> no double stackval-ref
        jo_ffsub, // ffsub(^)
        jo_ffmul, // ffmul(^)
        jo_ffdiv, // ffdiv(^)
 
-       jo_iicmpe, // iicmpe(int r/m/s, int r/m/c/s) -> no double stackval-reference
+       jo_fiadd, // fiadd(float r/m, int r/m/c)
+       jo_fisub, // fisub(^)
+       jo_fimul, // fimul(^)
+       jo_fidiv, // fidiv(^)
+
+       jo_ifadd, // ifadd(int r/m, float r/m/c)
+       jo_ifsub, // ifsub(^)
+       jo_ifmul, // ifmul(^)
+       jo_ifdiv, // ifdiv(^)
+
+       jo_iicmpe, // iicmpe(int r/m/s, int r/m/c/s) -> no double stackval-ref
        jo_iicmpne, // iicmpne(^)
        jo_iicmpg, // iicmpg(^)
        jo_iicmpl, // iicmpl(^)
@@ -81,6 +91,12 @@ Unit JITOpcodes;
         2, 2, 2, 2, 2,
 
         // ff  add/sub/mul/div
+        2, 2, 2, 2,
+
+        // fi  add/sub/mul/div
+        2, 2, 2, 2,
+
+        // if  add/sub/mul/div
         2, 2, 2, 2,
 
         // ii  cmpe/cmpne/cmpg/cmpl/cmpge/cmple

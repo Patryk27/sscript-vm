@@ -441,17 +441,21 @@ Begin
    JumpTable.AddJump(OpcodeID, JAsm.getData.Size);
 
    With JAsm do
-   Case Opcode.Kind of
+   Begin
+    Case Opcode.Kind of
 
-    {$I x86_stack.pas}
-    {$I x86_mov.pas}
-    {$I x86_int_math.pas}
-    {$I x86_float_math.pas}
-    {$I x86_jmp_call.pas}
+     {$I x86_stack.pas}
+     {$I x86_mov.pas}
+     {$I x86_int_math.pas}
+     {$I x86_float_math.pas}
+     {$I x86_float_int_math.pas}
+     {$I x86_int_float_math.pas}
+     {$I x86_jmp_call.pas}
 
-    { invalid opcode }
-    else
-     raise Exception.CreateFmt('TJITCPU.Compile() -> invalid opcode (index=%d, kind=#%d)', [OpcodeID, ord(Opcode.Kind)]);
+     { invalid opcode }
+     else
+      raise Exception.CreateFmt('TJITCPU.Compile() -> invalid opcode (index=%d, kind=#%d)', [OpcodeID, ord(Opcode.Kind)]);
+    End;
    End;
   End;
 
@@ -462,6 +466,7 @@ Begin
 
  // post compilation
  JAsm.getData.Position := 0;
+
  JAsm.post_compilation;
 
  // do other "post" things

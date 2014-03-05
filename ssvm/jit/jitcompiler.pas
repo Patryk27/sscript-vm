@@ -360,6 +360,22 @@ Begin
        JITOpcode := TJITOpcodeKind(ord(jo_ffadd) + ord(Opcode)-ord(o_add));
      End Else
 
+     // op(reg float, reg/imm int)
+     if (Args[0].ArgType in [ptFloatReg]) and (Args[1].ArgType in [ptIntReg, ptInt]) Then
+     Begin
+      if (Opcode = o_mod) Then
+       InvalidOpcodeException Else
+       JITOpcode := TJITOpcodeKind(ord(jo_fiadd) + ord(Opcode)-ord(o_add));
+     End Else
+
+     // op(reg int, reg/imm float)
+     if (Args[0].ArgType in [ptIntReg]) and (Args[1].ArgType in [ptFloatReg, ptFloat]) Then
+     Begin
+      if (Opcode = o_mod) Then
+       InvalidOpcodeException Else
+       JITOpcode := TJITOpcodeKind(ord(jo_ifadd) + ord(Opcode)-ord(o_add));
+     End Else
+
       InvalidOpcodeException;
 
      PutOpcode(JITOpcode, [Arg0Kind, Arg1Kind], [Arg0, Arg1]);

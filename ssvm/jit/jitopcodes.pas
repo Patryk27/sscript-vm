@@ -34,7 +34,28 @@ Unit JITOpcodes;
        jo_ssmov, // ssmov(string ^, string ^)
        jo_rrmov, // rrmov(reference r, reference r/s)
 
-       jo_iiadd, // iiadd(int r/m/s, int r/m/c/s) -> no double stackval-reference though
+       jo_cimov, // cimov(char r/m, int r/m/c)
+       jo_icmov, // icmov(int ^, char ^)
+
+       jo_ccadd, // ccadd(char r/m/s, char r/m/c/s) -> no double stakval-ref
+       jo_ccsub, // ccsub(^)
+       jo_ccmul, // ccmul(^)
+       jo_ccdiv, // ccdiv(^)
+       jo_ccmod, // ccmod(^)
+
+       jo_ciadd, // ciadd(char r/m, int r/m/c)
+       jo_cisub, // cisub(^)
+       jo_cimul, // cimul(^)
+       jo_cidiv, // cidiv(^)
+       jo_cimod, // cimod(^)
+
+       jo_icadd, // icadd(int r/m, char r/m/c)
+       jo_icsub, // icsub(^)
+       jo_icmul, // icmul(^)
+       jo_icdiv, // icdiv(^)
+       jo_icmod, // icmod(^)
+
+       jo_iiadd, // iiadd(int r/m/s, int r/m/c/s) -> no double stackval-ref
        jo_iisub, // iisub(^)
        jo_iimul, // iimul(^)
        jo_iidiv, // iidiv(^)
@@ -86,6 +107,18 @@ Unit JITOpcodes;
 
         // bb/cc/ii/ff/ss/rr  mov
         2, 2, 2, 2, 2, 2,
+
+        // mixed mov-s
+        2, 2,
+
+        // cc  add/sub/mul/div/mod
+        2, 2, 2, 2, 2,
+
+        // ci  add/sub/mul/div/mod
+        2, 2, 2, 2, 2,
+
+        // ic  add/sub/mul/div/mod
+        2, 2, 2, 2, 2,
 
         // ii  add/sub/mul/div/mod
         2, 2, 2, 2, 2,

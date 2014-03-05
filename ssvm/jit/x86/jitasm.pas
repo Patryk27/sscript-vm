@@ -75,8 +75,11 @@ Unit JITAsm;
         Procedure push_mem32(const Mem: VMReference);
 
         // mov reg, ...
+        Procedure mov_reg8_imm8(const Reg: TRegister8; const Value: int8);
         Procedure mov_reg8_reg8(const RegA, RegB: TRegister8);
         Procedure mov_reg8_mem8(const Reg: TRegister8; const Mem: VMReference);
+
+        Procedure mov_reg16_imm16(const Reg: TRegister16; const Value: int16);
 
         Procedure mov_reg32_imm32(const Reg: TRegister32; const Value: int32);
         Procedure mov_reg32_reg32(const RegA, RegB: TRegister32);
@@ -95,6 +98,9 @@ Unit JITAsm;
         Procedure xchg_reg32_reg32(const RegA, RegB: TRegister32);
 
         // add
+        Procedure add_mem8_imm8(const Mem: VMReference; const Value: int8);
+        Procedure add_mem8_reg8(const Mem: VMReference; const Reg: TRegister8);
+
         Procedure add_reg32_reg32(const RegA, RegB: TRegister32);
 
         Procedure add_mem32_imm32(const Mem: VMReference; const Value: int32);
@@ -105,6 +111,9 @@ Unit JITAsm;
         Procedure adc_mem32_reg32(const Mem: VMReference; const Reg: TRegister32);
 
         // sub
+        Procedure sub_mem8_imm8(const Mem: VMReference; const Value: int8);
+        Procedure sub_mem8_reg8(const Mem: VMReference; const Reg: TRegister8);
+
         Procedure sub_mem32_imm32(const Mem: VMReference; const Value: int32);
         Procedure sub_mem32_reg32(const Mem: VMReference; const Reg: TRegister32);
 
@@ -113,7 +122,15 @@ Unit JITAsm;
         Procedure sbb_mem32_reg32(const Mem: VMReference; const Reg: TRegister32);
 
         // mul
+        Procedure mul_reg8(const Reg: TRegister8);
         Procedure mul_reg32(const Reg: TRegister32);
+
+        Procedure mul_mem8(const Mem: VMReference);
+
+        // div
+        Procedure div_reg8(const Reg: TRegister8);
+
+        Procedure div_mem8(const Mem: VMReference);
 
         // cmp
         Procedure cmp_reg32_imm32(const Reg: TRegister32; const Value: int32);
@@ -290,6 +307,16 @@ Begin
  emit_uint32(Mem);
 End;
 
+(* TJITASm.mov_reg8_imm8 *)
+{
+ mov reg, value
+}
+Procedure TJITAsm.mov_reg8_imm8(const Reg: TRegister8; const Value: int8);
+Begin
+ emit_uint8($B0+ord(Reg));
+ emit_int8(Value);
+End;
+
 (* TJITAsm.mov_reg8_reg8 *)
 {
  mov regA, regB
@@ -329,6 +356,14 @@ Begin
   emit_uint8(puint8(@ModRM)^);
   emit_uint32(Mem);
  End;
+End;
+
+(* TJITAsm.mov_reg16_imm16 *)
+Procedure TJITAsm.mov_reg16_imm16(const Reg: TRegister16; const Value: int16);
+Begin
+ emit_uint8($66);
+ emit_uint8($B8+ord(Reg));
+ emit_int16(Value);
 End;
 
 (* TJITAsm.mov_reg32_imm32 *)
@@ -473,6 +508,39 @@ Begin
  emit_modrm(ModRM);
 End;
 
+(* TJITAsm.add_mem8_imm8 *)
+{
+ add byte [mem], value
+}
+Procedure TJITAsm.add_mem8_imm8(const Mem: VMReference; const Value: int8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.RM   := 5;
+ ModRM.Reg  := 0;
+
+ emit_uint8($80);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
+ emit_int8(Value);
+End;
+
+(* TJITAsm.add_mem8_reg8 *)
+{
+ add byte [mem], reg
+}
+Procedure TJITAsm.add_mem8_reg8(const Mem: VMReference; const Reg: TRegister8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.RM   := 5;
+ ModRM.Reg  := ord(Reg);
+
+ emit_uint8($00);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
+End;
+
 (* TJITAsm.add_reg32_reg32 *)
 {
  add regA, regB
@@ -544,6 +612,39 @@ Begin
  emit_uint32(Mem);
 End;
 
+(* TJITAsm.sub_mem8_imm8 *)
+{
+ sub byte [mem], value
+}
+Procedure TJITAsm.sub_mem8_imm8(const Mem: VMReference; const Value: int8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.RM   := 5;
+ ModRM.Reg  := 5;
+
+ emit_uint8($80);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
+ emit_int8(Value);
+End;
+
+(* TJITAsm.sub_mem8_reg8 *)
+{
+ sub byte [mem], reg
+}
+Procedure TJITAsm.sub_mem8_reg8(const Mem: VMReference; const Reg: TRegister8);
+Var ModRM: TModRM;
+Begin
+ ModRM.Mode := 0;
+ ModRM.RM   := 5;
+ ModRM.Reg  := ord(Reg);
+
+ emit_uint8($28);
+ emit_modrm(ModRM);
+ emit_uint32(Mem);
+End;
+
 (* TJITAsm.sub_mem32_imm32 *)
 {
  sub dword [mem], value
@@ -597,6 +698,16 @@ Begin
  emit_uint32(Mem);
 End;
 
+(* TJITAsm.mul_reg8 *)
+{
+ mul reg
+}
+Procedure TJITAsm.mul_reg8(const Reg: TRegister8);
+Begin
+ emit_uint8($F6);
+ emit_uint8($E0+ord(Reg));
+End;
+
 (* TJITAsm.mul_reg32 *)
 {
  mul reg
@@ -605,6 +716,35 @@ Procedure TJITAsm.mul_reg32(const Reg: TRegister32);
 Begin
  emit_uint8($F7);
  emit_uint8($E0+ord(Reg));
+End;
+
+(* TJITAsm.mul_mem8 *)
+Procedure TJITAsm.mul_mem8(const Mem: VMReference);
+Begin
+ emit_uint8($F6);
+ emit_uint8($25);
+ emit_uint32(Mem);
+End;
+
+(* TJITAsm.div_reg8 *)
+{
+ div reg
+}
+Procedure TJITAsm.div_reg8(const Reg: TRegister8);
+Begin
+ emit_uint8($F6);
+ emit_uint8($F0+ord(Reg));
+End;
+
+(* TJITAsm.div_mem8 *)
+{
+ div byte [mem]
+}
+Procedure TJITAsm.div_mem8(const Mem: VMReference);
+Begin
+ emit_uint8($F6);
+ emit_uint8($35);
+ emit_uint32(Mem);
 End;
 
 (* TJITAsm.cmp_reg32_imm32 *)

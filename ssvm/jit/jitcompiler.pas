@@ -228,15 +228,32 @@ Var Reader   : TBytecodeReader;
   End;
 
   { CheckArgs }
-  Function CheckArgs(const Arg0: TOpcodeArgType): Boolean; inline;
+  Function CheckArgs(const Arg0: TOpcodeArgType): Boolean;
   Begin
    Result := (Args[0].ArgType = Arg0);
   End;
 
   { CheckArgs }
-  Function CheckArgs(const Arg0, Arg1: TOpcodeArgType): Boolean; inline;
+  Function CheckArgs(const Arg0, Arg1: TOpcodeArgType): Boolean;
   Begin
    Result := (Args[0].ArgType = Arg0) and (Args[1].ArgType = Arg1);
+  End;
+
+  { CheckArgs }
+  Function CheckArgs(const Arg0, Arg1: Array of TOpcodeArgType): Boolean;
+  Var Arg   : TOpcodeArgType;
+      A0, A1: Boolean;
+  Begin
+   A0 := False;
+   A1 := False;
+
+   For Arg in Arg0 Do
+    A0 := A0 or (Args[0].ArgType = Arg);
+
+   For Arg in Arg1 Do
+    A1 := A1 or (Args[1].ArgType = Arg);
+
+   Result := (A0 and A1);
   End;
 
 Begin
@@ -344,8 +361,16 @@ Begin
      if (Args[0].ArgType = ptStackval) and (Args[1].ArgType = ptStackval) Then // @TODO
       InvalidOpcodeException;
 
+     // op(reg char | stackval, reg/imm char | stackval)
+     if (CheckArgs([ptCharReg, ptStackval], [ptCharReg, ptChar, ptStackval])) Then
+     Begin
+      if (Opcode = o_mod) Then
+       JITOpcode := jo_ccmod Else
+       JITOpcode := TJITOpcodeKind(ord(jo_ccadd) + ord(Opcode)-ord(o_add));
+     End Else
+
      // op(reg int | stackval, reg/imm int | stackval)
-     if (Args[0].ArgType in [ptIntReg, ptStackval]) and (Args[1].ArgType in [ptIntReg, ptInt, ptStackval]) Then
+     if (CheckArgs([ptIntReg, ptStackval], [ptIntReg, ptInt, ptStackval])) Then
      Begin
       if (Opcode = o_mod) Then // special case - see opcode list
        JITOpcode := jo_iimod Else
@@ -353,7 +378,7 @@ Begin
      End Else
 
      // op(reg float | stackval, reg/imm float | imm int | stackval)
-     if (Args[0].ArgType in [ptFloatReg, ptStackval]) and (Args[1].ArgType in [ptFloatReg, ptFloat, ptInt, ptStackval]) Then
+     if (CheckArgs([ptFloatReg, ptStackval], [ptFloatReg, ptFloat, ptInt, ptStackval])) Then
      Begin
       if (Opcode = o_mod) Then
        InvalidOpcodeException { no "mod" operation for floating point types } Else
@@ -361,7 +386,7 @@ Begin
      End Else
 
      // op(reg float, reg/imm int)
-     if (Args[0].ArgType in [ptFloatReg]) and (Args[1].ArgType in [ptIntReg, ptInt]) Then
+     if (CheckArgs([ptFloatReg], [ptIntReg, ptInt])) Then
      Begin
       if (Opcode = o_mod) Then
        InvalidOpcodeException Else
@@ -369,7 +394,7 @@ Begin
      End Else
 
      // op(reg int, reg/imm float)
-     if (Args[0].ArgType in [ptIntReg]) and (Args[1].ArgType in [ptFloatReg, ptFloat]) Then
+     if (CheckArgs([ptIntReg], [ptFloatReg, ptFloat])) Then
      Begin
       if (Opcode = o_mod) Then
        InvalidOpcodeException Else
@@ -396,10 +421,22 @@ Begin
       JITOpcode := jo_ccmov;
      End Else
 
+     // mov(reg char, reg/imm int)
+     if (Args[0].ArgType = ptCharReg) and (Args[1].ArgType in [ptIntReg, ptInt]) Then
+     Begin
+      JITOpcode := jo_cimov;
+     End Else
+
      // mov(reg int, reg/imm int | stackval)
      if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptIntReg, ptInt, ptStackval]) Then
      Begin
       JITOpcode := jo_iimov;
+     End Else
+
+     // mov(reg int, reg/imm char)
+     if (Args[0].ArgType = ptIntReg) and (Args[1].ArgType in [ptCharReg, ptChar]) Then
+     Begin
+      JITOpcode := jo_icmov;
      End Else
 
      // mov(reg float, reg/imm float | imm int | stackval)

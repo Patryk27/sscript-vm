@@ -92,6 +92,25 @@
    InvalidOpcodeException;
  End;
 
+ { cimov }
+ jo_cimov:
+ Begin
+  // cimov(mem, const)
+  if (CheckArgs(joa_memory, joa_constant)) Then
+  Begin
+   mov_mem8_imm8(Arg0.MemoryAddr, Arg1.Constant);
+  End Else
+
+  // cimov(mem, mem)
+  if (CheckArgs(joa_memory, joa_memory)) Then
+  Begin
+   mov_reg8_mem8(reg_al, Arg1.MemoryAddr);
+   mov_mem8_reg8(Arg0.MemoryAddr, reg_al);
+  End Else
+
+   InvalidOpcodeException;
+ End;
+
  { iimov }
  jo_iimov:
  Begin
@@ -143,6 +162,28 @@
    push_mem32(Arg1.MemoryAddr+0);
 
    call_internalproc(@r__set_stackval_int);
+  End Else
+
+   InvalidOpcodeException;
+ End;
+
+ { icmov }
+ jo_icmov:
+ Begin
+  // icmov(mem, const)
+  if (CheckArgs(joa_memory, joa_constant)) Then
+  Begin
+   mov_mem32_imm32(Arg0.MemoryAddr+0, ord(Char(Arg1.Constant)));
+   mov_mem32_imm32(Arg0.MemoryAddr+4, 0);
+  End Else
+
+  // icmov(mem, mem)
+  if (CheckArgs(joa_memory, joa_memory)) Then
+  Begin
+   mov_reg8_mem8(reg_al, Arg1.MemoryAddr);
+   mov_mem32_imm32(Arg0.MemoryAddr+0, 0);
+   mov_mem32_imm32(Arg0.MemoryAddr+4, 0);
+   mov_mem8_reg8(Arg0.MemoryAddr, reg_al);
   End Else
 
    InvalidOpcodeException;

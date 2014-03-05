@@ -20,11 +20,7 @@
 {$H+}
 Program SScriptVM;
 Uses vm_header, SysUtils, Classes, mInput, mOutput, mMath, mTime, os_functions;
-
-Type ECommandLineException = Class(Exception);
-     EPrepareException = Class(Exception);
-     EJITException = Class(Exception);
-
+Type EBogusException = Class(Exception);
 Var opt_logo, opt_wait, opt_time, opt_jit: Boolean;
 
     LogMode: TLogMode = lmDisabled;
@@ -36,6 +32,12 @@ Var opt_logo, opt_wait, opt_time, opt_jit: Boolean;
 
     VM  : Pointer;
     Time: uint32;
+
+(* RaiseError *)
+Procedure RaiseError(const Format: String; const Args: Array of Const);
+Begin
+ raise EBogusException.CreateFmt(Format, Args);
+End;
 
 (* ParseCommandLine *)
 Procedure ParseCommandLine;
@@ -71,7 +73,7 @@ Begin
      'file'    : LogMode := lmFile;
 
      else
-      raise ECommandLineException.CreateFmt('Unknown ''-log'' switch value: %s', [ParamStr(Pos)]);
+      RaiseError('Unknown ''-log'' switch value: %s', [ParamStr(Pos)]);
     End;
    End;
 
@@ -103,7 +105,7 @@ Begin
     Param := ParamStr(Pos);
 
     if (Length(Param) = 0) Then
-     raise ECommandLineException.Create('Empty command-line switch value (usage: -gc <size>)');
+     RaiseError('Empty command-line switch value (usage: -gc <size>)', []);
 
     Case Param[Length(Param)] of
      'm', 'M': Mult := 1024*1024;
@@ -119,13 +121,13 @@ Begin
     Try
      GCMemorySize := StrToInt(Param) * Mult;
     Except
-     raise ECommandLineException.CreateFmt('Invalid command-line argument: -gc %s (usage: -gc <size>)', [Param]);
+     RaiseError('Invalid command-line argument: -gc %s (usage: -gc <size>)', [Param]);
     End;
    End;
 
    // unknown switch
    else
-    raise ECommandLineException.CreateFmt('Unknown command-line switch: %s', [Param]);
+    RaiseError('Unknown command-line switch: %s', [Param]);
   End;
 
   Inc(Pos);
@@ -180,10 +182,7 @@ Begin
  VM := SSCreateAndLoad(Struct); // load program
 
  if (VM = nil) Then
- Begin
-  raise EPrepareException.CreateFmt('Couldn''t load specified program file: %s', [ParamStr(1)]);
-  Exit(False);
- End;
+  RaiseError('Couldn''t load specified program file: %s', [ParamStr(1)]);
 
  mInput.Init(VM);
  mOutput.Init(VM);
@@ -199,12 +198,11 @@ Var JITStream: TMemoryStream;
     JITCode  : Pointer;
     I        : uint32;
 Begin
+ Result := False;
+
  // try to compile
  if (not SSJITCompile(VM)) Then
- Begin
-  raise EJITException.CreateFmt('JIT compiling failed! %s', [SSGetJITError(VM)]);
-  Exit(False);
- End;
+  RaiseError('JIT compiling failed!%s%s', [sLineBreak, SSGetJITError(VM)]);
 
  // save JIT output?
  if (Length(JITSaveTo) > 0) Then
@@ -224,69 +222,98 @@ End;
 // main program block
 Label VMEnd;
 Begin
- opt_logo := False;
- opt_wait := False;
- opt_time := False;
- opt_jit  := False;
+ Try
+  opt_logo := False;
+  opt_wait := False;
+  opt_time := False;
+  opt_jit  := False;
 
- DefaultFormatSettings.DecimalSeparator := '.';
+  DefaultFormatSettings.DecimalSeparator := '.';
 
- Time := GetMilliseconds;
+  Time := GetMilliseconds;
 
- if (ParamCount < 1) Then // error: too few parameters
- Begin
-  DisplayHeader;
-  Writeln;
-  DisplayHelp;
-  Exit;
- End;
+  if (ParamCount < 1) Then // error: too few parameters
+  Begin
+   DisplayHeader;
+   Writeln;
+   DisplayHelp;
+   Exit;
+  End;
 
- ParseCommandLine; // parse command line
+  { parse command line }
+  ParseCommandLine;
 
- if (GCMemorySize = 0) Then // if zero, set it to the default value
-  GCMemorySize := 256*1024*1024;
+  if (GCMemorySize = 0) Then // if zero, set it to the default value
+   GCMemorySize := 256*1024*1024;
 
- if (opt_logo) Then // if '-logo' parameter passed
- Begin
-  DisplayHeader;
-  Exit;
- End;
+  if (opt_logo) Then // if '-logo' parameter passed
+  Begin
+   DisplayHeader;
+   Exit;
+  End;
 
- if (not Prepare) Then // prepare VM
-  goto VMEnd;
+  { prepare VM }
+  if (not Prepare) Then
+  Begin
+   goto VMEnd;
+  End;
 
- if (opt_jit) and (not RunJIT) Then // run JIT compiler, if specified
-  goto VMEnd;
+  { if specified, run JIT compiler }
+  if (opt_jit) and (not RunJIT) Then
+  Begin
+   goto VMEnd;
+  End;
 
- if (VM = nil) Then
-  goto VMEnd;
+  if (VM = nil) Then
+  Begin
+   goto VMEnd;
+  End;
 
- SSExecuteVM(VM);
+  { execute VM }
+  SSExecuteVM(VM);
 
- if (SSGetStopReason(VM) = srException) Then
- Begin
-  Writeln('Virtual machine threw an exception:');
-  Writeln(PChar(SSGetException(VM).Data));
- End;
+  if (SSGetStopReason(VM) = srException) Then
+  Begin
+   Writeln('Virtual machine threw an exception:');
+   Writeln(PChar(SSGetException(VM).Data));
+  End;
 
- SSFreeVM(VM);
+  { free VM }
+  SSFreeVM(VM);
 
-VMEnd:
- Time := GetMilliseconds-Time;
+ VMEnd:
+  Time := GetMilliseconds-Time;
 
- { -time }
- if (opt_time) Then
- Begin
-  Writeln;
-  Writeln('------------------------');
-  Writeln('Execution time: ', Time, 'ms');
- End;
+  { -time }
+  if (opt_time) Then
+  Begin
+   Writeln;
+   Writeln('------------------------');
+   Writeln('Execution time: ', Time, 'ms');
+  End;
 
- { -wait }
- if (opt_wait) Then
- Begin
-  Writeln;
-  Writeln('-- END --');
-  Readln;
+  { -wait }
+  if (opt_wait) Then
+  Begin
+   Writeln;
+   Writeln('-- END --');
+   Readln;
+  End;
+ Except
+  On E: EBogusException Do
+  Begin
+   Writeln(E.Message);
+
+   if (opt_wait) Then
+    Readln;
+
+   Halt;
+  End;
+
+  On E: Exception Do
+  Begin
+   Writeln('Unexpected exception was raised:');
+   Writeln(E.Message);
+  End;
  End;
 End.

@@ -419,20 +419,9 @@ Var OpcodeID  : uint32;
   End;
 
   { CheckArgs }
-  Function CheckArgs(const Arg0, Arg1: Array of TJITOpcodeArgKind): Boolean;
-  Var Arg   : TJITOpcodeArgKind;
-      A0, A1: Boolean;
+  Function CheckArgs(const Arg0, Arg1: TJITOpcodeArgKindSet): Boolean; inline;
   Begin
-   A0 := False;
-   A1 := False;
-
-   For Arg in Arg0 Do
-    A0 := A0 or (Opcode.Args[0].Kind = Arg);
-
-   For Arg in Arg1 Do
-    A1 := A1 or (Opcode.Args[1].Kind = Arg);
-
-   Result := (A0 and A1);
+   Result := (Opcode.Args[0].Kind in Arg0) and (Opcode.Args[1].Kind in Arg1);
   End;
 
 Begin
@@ -463,7 +452,8 @@ Begin
 
      {$I x86_stack.pas}
      {$I x86_mov.pas}
-     {$I x86_char_math.pas}
+     {$I x86_char_math.pas} // it's char and char+int math in one
+     {$I x86_int_char_math.pas}
      {$I x86_int_math.pas}
      {$I x86_float_math.pas}
      {$I x86_float_int_math.pas}

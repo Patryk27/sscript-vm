@@ -85,7 +85,7 @@
  jo_iimul:
  Begin
   // iimul(mem, mem/const/stackval)
-  if (Arg0.Kind = joa_memory) and (Arg1.Kind in [joa_memory, joa_constant, joa_stackval]) Then
+  if (CheckArgs([joa_memory], [joa_memory, joa_constant, joa_stackval])) Then
   Begin
    mov_reg32_mem32(reg_edi, Arg0.MemoryAddr+4);
    mov_reg32_mem32(reg_esi, Arg0.MemoryAddr+0);
@@ -152,7 +152,7 @@
  jo_iidiv, jo_iimod:
  Begin
   // opcode(mem, mem/int)
-  if (Arg0.Kind = joa_memory) and (Arg1.Kind in [joa_memory, joa_constant]) Then
+  if (CheckArgs([joa_memory], [joa_memory, joa_constant])) Then
   Begin
    mov_reg32_imm32(reg_eax, uint32(Arg0.MemoryAddr));
 

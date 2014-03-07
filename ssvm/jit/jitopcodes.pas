@@ -7,6 +7,8 @@ Unit JITOpcodes;
  Interface
  Uses Variants, VMTypes;
 
+ // @TODO: viadd/ivadd/vvadd etc.
+
  { TJITOpcodeKind }
  Type TJITOpcodeKind = // don't change order of these!
       (
@@ -156,6 +158,9 @@ Unit JITOpcodes;
        joa_constant,
        joa_stackval
       );
+
+ { TJITOpcodeArgKindSet }
+ Type TJITOpcodeArgKindSet = Set of TJITOpcodeArgKind;
 
  { TJITOpcodeArg }
  Type TJITOpcodeArg =

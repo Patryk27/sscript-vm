@@ -1007,9 +1007,10 @@ Begin
 
   if (reg.isMemRef) THen
   Begin
-   { OR (memory reference, value) }
+   { MOD (memory reference, value) }
    Case param.Typ of
-    mvInt: PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ mod getInt(Param); { int }
+    mvChar: PVMChar(reg.MemAddr)^ := VMChar(VMIChar(PVMChar(reg.MemAddr)^) mod VMIChar(getChar(Param))); { char }
+    mvInt : PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ mod getInt(Param); { int }
 
     else
      VM^.ThrowException('''mod'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
@@ -1019,7 +1020,8 @@ Begin
   Begin
    { MOD (register, value) }
    Case reg.Typ of
-    mvInt: Regs.i[reg.RegIndex] := Regs.i[reg.RegIndex] mod getInt(param); { int }
+    mvChar: Regs.c[reg.RegIndex] := VMChar(VMIChar(Regs.c[reg.RegIndex]) mod VMIChar(getChar(param))); { char }
+    mvInt : Regs.i[reg.RegIndex] := Regs.i[reg.RegIndex] mod getInt(param); { int }
 
     else
      VM^.ThrowException('''mod'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
@@ -1029,7 +1031,8 @@ Begin
    { MOD (stackval, value) }
    With reg.Stackval^ do
     Case reg.Typ of
-     mvInt: Value.Int := Value.Int mod getInt(param); { int }
+     mvChar: Value.Char := VMChar(VMIChar(Value.Char) mod VMIChar(getInt(param))); { char }
+     mvInt : Value.Int := Value.Int mod getInt(param); { int }
 
      else
       VM^.ThrowException('''mod'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));

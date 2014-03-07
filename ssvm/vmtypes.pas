@@ -7,7 +7,8 @@ Unit VMTypes;
 
  Interface
 
- Type Puint8  = ^uint8; // for some reason FPC doesn't have them declared
+ { few pointer types (for some reason FPC doesn't have them declared) }
+ Type Puint8  = ^uint8;
       Pint8   = ^int8;
       Puint16 = ^uint16;
       Pint16  = ^int16;
@@ -16,13 +17,17 @@ Unit VMTypes;
       Puint64 = ^uint64;
       Pint64  = ^int64;
 
- Type VMBool       = Boolean;
-      VMChar       = Char;
-      VMInt        = Int64;
-      VMFloat      = Extended;
-      VMReference  = Pointer;
-      VMIReference = {$IFDEF CPU64} uint64 {$ELSE} uint32 {$ENDIF};
+ { VM primary }
+ Type VMBool      = Boolean;
+      VMChar      = Char;
+      VMInt       = Int64;
+      VMFloat     = Extended;
+      VMReference = Pointer;
 
+      VMIReference = {$IFDEF CPU64} uint64 {$ELSE} uint32 {$ENDIF}; // used in internal casts
+      VMIChar = uint8; // used in internal casts
+
+ { VMString }
  Type VMString =
       Record
        Length: uint32;
@@ -33,6 +38,7 @@ Unit VMTypes;
        Function asString: String;
       End;
 
+ { VM primary pointers }
  Type PVMBool      = ^VMBool;
       PVMChar      = ^VMChar;
       PVMInt       = ^VMInt;

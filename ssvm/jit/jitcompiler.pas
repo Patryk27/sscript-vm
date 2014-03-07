@@ -135,7 +135,7 @@ End;
 (* TJITCompiler.Compile *)
 Function TJITCompiler.Compile: Pointer;
 Var Reader   : TBytecodeReader;
-    Opcode   : TOpcode_E;
+    Opcode   : TOpcodeKind;
     Args     : TOpcodeArgArray;
     OpcodePos: uint32;
 
@@ -356,12 +356,28 @@ Begin
      if (CheckArgs(ptStackval, ptStackval)) Then // @TODO
       InvalidOpcodeException;
 
-     // op(reg char | stackval, reg/imm char | stackval)
-     if (CheckArgs([ptCharReg, ptStackval], [ptCharReg, ptChar, ptStackval])) Then
+     // op(reg char, reg/imm char | stackval)
+     if (CheckArgs([ptCharReg], [ptCharReg, ptChar, ptStackval])) Then
      Begin
       if (Opcode = o_mod) Then
        JITOpcode := jo_ccmod Else
-       JITOpcode := TJITOpcodeKind(ord(jo_ccadd) + ord(Opcode)-ord(o_add));
+       JITOpcode := jo_ccadd;
+     End Else
+
+     // op(reg char, reg/imm int)
+     if (CheckArgs([ptCharReg], [ptIntReg, ptInt])) Then
+     Begin
+      if (Opcode = o_mod) Then
+       JITOpcode := jo_cimod Else
+       JITOpcode := jo_ciadd;
+     End Else
+
+     // op(reg int, reg/imm char)
+     if (CheckArgs([ptIntReg], [ptCharReg, ptChar])) Then
+     Begin
+      if (Opcode = o_mod) Then
+       JITOpcode := jo_icmod Else
+       JITOpcode := jo_icadd;
      End Else
 
      // op(reg int | stackval, reg/imm int | stackval)
@@ -369,7 +385,7 @@ Begin
      Begin
       if (Opcode = o_mod) Then // special case - see opcode list
        JITOpcode := jo_iimod Else
-       JITOpcode := TJITOpcodeKind(ord(jo_iiadd) + ord(Opcode)-ord(o_add));
+       JITOpcode := jo_iiadd;
      End Else
 
      // op(reg float | stackval, reg/imm float | imm int | stackval)
@@ -377,7 +393,7 @@ Begin
      Begin
       if (Opcode = o_mod) Then
        InvalidOpcodeException { no "mod" operation for floating point types } Else
-       JITOpcode := TJITOpcodeKind(ord(jo_ffadd) + ord(Opcode)-ord(o_add));
+       JITOpcode := jo_ffadd;
      End Else
 
      // op(reg float, reg/imm int)
@@ -385,7 +401,7 @@ Begin
      Begin
       if (Opcode = o_mod) Then
        InvalidOpcodeException Else
-       JITOpcode := TJITOpcodeKind(ord(jo_fiadd) + ord(Opcode)-ord(o_add));
+       JITOpcode := jo_fiadd;
      End Else
 
      // op(reg int, reg/imm float)
@@ -393,10 +409,16 @@ Begin
      Begin
       if (Opcode = o_mod) Then
        InvalidOpcodeException Else
-       JITOpcode := TJITOpcodeKind(ord(jo_ifadd) + ord(Opcode)-ord(o_add));
+       JITOpcode := jo_ifadd;
      End Else
 
+     // op(invalid)
+     Begin
       InvalidOpcodeException;
+     End;
+
+     if (Opcode <> o_mod) Then
+      JITOpcode := TJITOpcodeKind(ord(JITOpcode) + ord(Opcode)-ord(o_add));
 
      PutOpcode(JITOpcode, [Arg0Kind, Arg1Kind], [Arg0, Arg1]);
     End;

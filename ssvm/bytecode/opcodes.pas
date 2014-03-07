@@ -8,8 +8,8 @@ Unit Opcodes;
  Interface
  Uses VMTypes;
 
- { TOpcode_E }
- Type TOpcode_E = // don't change order of these!
+ { TOpcodeKind }
+ Type TOpcodeKind = // don't change order of these!
       (
        o_nop, o_stop,
        o_push, o_pop,
@@ -23,7 +23,7 @@ Unit Opcodes;
       );
 
  { OpcodeArgCount }
- Const OpcodeArgCount: Array[TOpcode_E] of uint8 =
+ Const OpcodeArgCount: Array[TOpcodeKind] of uint8 =
        (
         0, 0,
         1, 1,

@@ -37,7 +37,7 @@ Unit JITOpcodes;
        jo_cimov, // cimov(char r/m, int r/m/c)
        jo_icmov, // icmov(int ^, char ^)
 
-       jo_ccadd, // ccadd(char r/m/s, char r/m/c/s) -> no double stakval-ref
+       jo_ccadd, // ccadd(char r/m, char r/m/c/s)
        jo_ccsub, // ccsub(^)
        jo_ccmul, // ccmul(^)
        jo_ccdiv, // ccdiv(^)

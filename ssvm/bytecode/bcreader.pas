@@ -20,12 +20,12 @@ Unit BCReader;
         Constructor Create(const fBytecodeData: Pointer);
         Destructor Destroy; override;
 
-        Function FetchOpcode: TOpcode_E;
-        Procedure FetchOpcode(out Opcode: TOpcode_E; out Args: TOpcodeArgArray);
+        Function FetchOpcode: TOpcodeKind;
+        Procedure FetchOpcode(out Opcode: TOpcodeKind; out Args: TOpcodeArgArray);
         Function FetchArgument: TOpcodeArg;
-        Function FetchArguments(const Opcode: TOpcode_E): TOpcodeArgArray;
+        Function FetchArguments(const Opcode: TOpcodeKind): TOpcodeArgArray;
 
-        Function OpcodeToString(const Opcode: TOpcode_E; const Args: TOpcodeArgArray): String;
+        Function OpcodeToString(const Opcode: TOpcodeKind; const Args: TOpcodeArgArray): String;
 
         Function AnyOpcodeLeft: Boolean;
 
@@ -58,13 +58,13 @@ Begin
 End;
 
 (* TBytecodeReader.FetchOpcode *)
-Function TBytecodeReader.FetchOpcode: TOpcode_E;
+Function TBytecodeReader.FetchOpcode: TOpcodeKind;
 Begin
- Result := TOpcode_E(BytecodeData.read_uint8);
+ Result := TOpcodeKind(BytecodeData.read_uint8);
 End;
 
 (* TBytecodeReader.FetchOpcode *)
-Procedure TBytecodeReader.FetchOpcode(out Opcode: TOpcode_E; out Args: TOpcodeArgArray);
+Procedure TBytecodeReader.FetchOpcode(out Opcode: TOpcodeKind; out Args: TOpcodeArgArray);
 Begin
  Opcode := FetchOpcode;
  Args   := FetchArguments(Opcode);
@@ -90,7 +90,7 @@ Begin
 End;
 
 (* TBytecodeReader.FetchArguments *)
-Function TBytecodeReader.FetchArguments(const Opcode: TOpcode_E): TOpcodeArgArray;
+Function TBytecodeReader.FetchArguments(const Opcode: TOpcodeKind): TOpcodeArgArray;
 Var I: Integer;
 Begin
  SetLength(Result, OpcodeArgCount[Opcode]);
@@ -100,7 +100,7 @@ Begin
 End;
 
 (* TBytecodeReader.OpcodeToString *)
-Function TBytecodeReader.OpcodeToString(const Opcode: TOpcode_E; const Args: TOpcodeArgArray): String;
+Function TBytecodeReader.OpcodeToString(const Opcode: TOpcodeKind; const Args: TOpcodeArgArray): String;
 Const BoolRegsNames: Array[1..5] of String = ('eb1', 'eb2', 'eb3', 'eb4', 'if');
       IntRegsNames : Array[1..5] of String = ('ei1', 'ei2', 'ei3', 'ei4', 'stp');
       BoolTable    : Array[Boolean] of String = ('false', 'true');

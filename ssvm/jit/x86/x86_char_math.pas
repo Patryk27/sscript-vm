@@ -1,5 +1,5 @@
- { ccadd, ccsub }
- jo_ccadd, jo_ccsub:
+ { ccadd, ciadd, ccsub, cisub }
+ jo_ccadd, jo_ciadd, jo_ccsub, jo_cisub:
  Begin
   // opcode(mem, const/mem/stackval)
   if (CheckArgs([joa_memory], [joa_constant, joa_memory, joa_stackval])) Then
@@ -26,10 +26,10 @@
    InvalidOpcodeException;
  End;
 
- { ccmul }
- jo_ccmul:
+ { ccmul, cimul }
+ jo_ccmul, jo_cimul:
  Begin
-  // ccmul(mem, const/mem/stackval)
+  // opcode(mem, const/mem/stackval)
   if (CheckArgs([joa_memory], [joa_constant, joa_memory, joa_stackval])) Then
   Begin
    Case Arg1.Kind of
@@ -61,8 +61,8 @@
    InvalidOpcodeException;
  End;
 
- { ccdiv, ccmod }
- jo_ccdiv, jo_ccmod:
+ { ccdiv, cidiv, ccmod, cimod }
+ jo_ccdiv, jo_cidiv, jo_ccmod, jo_cimod:
  Begin
   // opcode(mem, const/mem/stackval)
   if (CheckArgs([joa_memory], [joa_constant, joa_memory, joa_stackval])) Then

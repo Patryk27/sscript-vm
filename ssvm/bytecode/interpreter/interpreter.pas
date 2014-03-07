@@ -50,7 +50,7 @@ Unit Interpreter;
  Procedure op_LOCATION(const VM: PVM);
 
  Type TOpcodeProc = Procedure(const VM: PVM);
- Const OpcodeTable: Array[TOpcode_E] of TOpcodeProc = // opcode list
+ Const OpcodeTable: Array[TOpcodeKind] of TOpcodeProc = // opcode list
  (
   @op_NOP,
   @op_STOP,

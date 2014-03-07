@@ -251,7 +251,7 @@ Begin
  Begin
   CurrentOpcode := Position;
 
-  OpcodeTable[TOpcode_E(read_uint8)](VMPnt);
+  OpcodeTable[TOpcodeKind(read_uint8)](VMPnt);
  End;
 End;
 

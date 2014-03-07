@@ -92,7 +92,7 @@
     End;
    End;
 
-   if (Opcode.Kind = jo_ccdiv) Then
+   if (Opcode.Kind in [jo_ccdiv, jo_cidiv]) Then
     mov_mem8_reg8(Arg0.MemoryAddr, reg_al) Else
     mov_mem8_reg8(Arg0.MemoryAddr, reg_ah);
   End Else

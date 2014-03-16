@@ -41,8 +41,9 @@ Unit VMStruct;
 
        InternalCallList: TInternalCallList; // list of registered icall-s
 
-       Stack         : TVMStack; // default bytecode stack
-       ExceptionStack: PVMInt; // pointer to the latest exception stack element
+       Stack           : TVMStack; // default bytecode stack
+       ExceptionStack  : PVMInt; // pointer to the beginning of the exception stack
+       ExceptionStackID: uint32; // index of last element lying on the exception stack
 
        ExceptionHandler: VMInt; // current bytecode exception handler (must be a signed type!); `-1` means no handler set
        LatestException : TExceptionBlock; // last exception block
@@ -371,16 +372,17 @@ Begin
    if (ExceptionHandler = -1) Then // no exception handler set - halt VM and return control back to the user
    Begin
     StopReason := srException;
-    Stop       := True;
-
     BackToTheMain;
    End;
 
    if (JITCode = nil) Then
    Begin
-    Bytecode.setPosition(VMReference(ExceptionHandler));
+    Stop := False;
+    Bytecode.setRelativePosition(ExceptionHandler);
    End Else
+   Begin
     ThrowException('Unimplemented: bytecode exception handling with JIT compiler.');
+   End;
   End;
  End;
 End;

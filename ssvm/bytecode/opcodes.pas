@@ -57,7 +57,7 @@ Unit Opcodes;
         ptChar    : (ImmChar: VMChar);
         ptInt     : (ImmInt: VMInt);
         ptFloat   : (ImmFloat: VMFloat);
-        ptString  : (ImmString: String);
+        ptString  : (ImmString: ShortString);
         ptStackval: (StackvalPos: int32);
 
         ptConstantMemRef: (MemoryAddress: uint64);

@@ -17,21 +17,24 @@
  { vm.save_exception_state }
  if (AnsiCompareStr(Name, 'vm.save_exception_state') = 0) Then
  Begin
-  ExceptionStack^ := StackPos^; // save stack position
-  Inc(ExceptionStack);
+  ExceptionStack[ExceptionStackID] := StackPos^; // save stack position
+  Inc(ExceptionStackID);
 
-  ExceptionStack^ := ExceptionHandler; // save previous handler
-  Inc(ExceptionStack);
+  ExceptionStack[ExceptionStackID] := ExceptionHandler; // save previous handler
+  Inc(ExceptionStackID);
  End Else
 
  { vm.restore_exception_state }
  if (AnsiCompareStr(Name, 'vm.restore_exception_state') = 0) Then
  Begin
-  Dec(ExceptionStack);
-  ExceptionHandler := ExceptionStack^; // restore previous handler
+  if (ExceptionStackID < 2) Then
+   ThrowException('Cannot restore exception state: exception stack is corrupted.');
 
-  Dec(ExceptionStack);
-  StackPos^ := ExceptionStack^; // restore stack position
+  Dec(ExceptionStackID);
+  ExceptionHandler := ExceptionStack[ExceptionStackID]; // restore previous handler
+
+  Dec(ExceptionStackID);
+  StackPos^ := ExceptionStack[ExceptionStackID]; // restore stack position
  End Else
 
  { vm.set_exception_handler }

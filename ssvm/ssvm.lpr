@@ -75,7 +75,8 @@ Begin
   GarbageCollector := TGarbageCollector.Create(Result, Struct.GCMemSize);
 
   // allocate memory
-  ExceptionStack := GetMem(ExceptionStackSize);
+  ExceptionStack   := AllocMem(ExceptionStackSize);
+  ExceptionStackID := 0;
 
   // set variables
   StackPos := Pointer(VMIReference(@Regs.i[5])); // point at high bytes of the 'stp' register
@@ -228,8 +229,13 @@ Var Compiler: TJITCompiler = nil;
 Begin
  With VM^ do
  Begin
+  WriteLog('JITCompile()');
+
   if (JITCompiler <> nil) Then
+  Begin
+   WriteLog('Freeing previous JIT compiler instance...');
    TJITCompiler(JITCompiler).Free;
+  End;
 
   JITCompiler := nil;
   JITCode     := nil;
@@ -237,18 +243,21 @@ Begin
   JITError    := #0;
 
   Try
+   WriteLog('Running JIT compiler...');
    Compiler    := TJITCompiler.Create(VM); // create compiler instance, load bytecode...
    JITCode     := Compiler.Compile(); // ...and compile it! :)
    JITCodeSize := MemSize(JITCode);
   Except
    On E: Exception Do
    Begin
+    WriteLog('JIT compiler raised an exception: %s', [E.Message]);
     JITError := StringToPChar(E.Message);
     Compiler.Free;
     Exit(False);
    End;
   End;
 
+  WriteLog('JIT compilation done successfully!');
   JITCompiler := Compiler;
   Exit(True);
  End;

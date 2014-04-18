@@ -30,14 +30,14 @@ Begin
   mvChar  : Exit(P1.Value.Char = P2.Value.Char);
   mvInt   : Exit(P1.Value.Int = P2.Value.Int);
   mvFloat : Exit(P1.Value.Float = P2.Value.Float);
-  mvString: Exit(P1.Value.Str = P2.Value.Str);
+  mvString: Exit(P1.Value.Str^ = P2.Value.Str^);
  End;
 End;
 
 (* <> *)
 Operator <> (const P1, P2: TMixedValue): Boolean;
 Begin
- Result := not (P1 = P2);
+ Result := (not (P1 = P2));
 End;
 
 (* > *)

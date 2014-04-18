@@ -56,13 +56,27 @@ Unit VMTypes;
 
        TypeSizes: Array[TYPE_BOOL_id..TYPE_STRING_id] of Byte = (sizeof(VMBool), sizeof(VMChar), sizeof(VMInt), sizeof(VMFloat), sizeof(PVMString));
 
+ Operator = (const A, B: VMString): Boolean;
+
  Implementation
 
+(* VMString = VMString *)
+{
+ Compares two VMStrings for equality.
+}
+Operator = (const A, B: VMString): Boolean;
+Begin
+ if (A.Length = B.Length) Then
+  Result := (CompareByte(A.Data[0], B.Data[0], A.Length) = 0) Else
+  Result := False;
+End;
+
+// -------------------------------------------------------------------------- //
 (* VMString.setNull *)
 {
  Resets VMString.
 
- Note: doesn't free any memory!
+ Note: doesn't free its memory!
 }
 Procedure VMString.setNull;
 Begin

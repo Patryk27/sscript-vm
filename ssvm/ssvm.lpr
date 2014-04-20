@@ -360,8 +360,16 @@ End;
 }
 Function GetException(const VM: PVM): TExceptionBlock; stdcall;
 Begin
- With VM^ do
-  Exit(LatestException);
+ Result := VM^.LatestException;
+End;
+
+(* GetExceptionAddress *)
+{
+ Returns the address of the latest code exception.
+}
+Function GetExceptionAddress(const VM: PVM): uint32; stdcall;
+Begin
+ Result := uint32(VM^.Bytecode.getCurrentOpcode);
 End;
 
 (* GetStopReason *)
@@ -370,8 +378,20 @@ End;
 }
 Function GetStopReason(const VM: PVM): TStopReason; stdcall;
 Begin
- With VM^ do
-  Exit(StopReason);
+ Result := VM^.StopReason;
+End;
+
+(* GetLineData *)
+{
+ Returns line data of specified opcode.
+}
+Function GetLineData(const VM: PVM; const Address: uint32; out FileName, FunctionName: PChar; out FunctionLine: uint32): Boolean; stdcall;
+Var sFileName, sFunctionName: String;
+Begin
+ Result := VM^.Bytecode.getLineData(Address, sFileName, sFunctionName, FunctionLine);
+
+ FileName     := StringToPChar(sFileName);
+ FunctionName := StringToPChar(sFunctionName);
 End;
 
 (* AllocateString *)
@@ -410,7 +430,10 @@ Exports
 
  ThrowException,
  GetException,
+ GetExceptionAddress,
  GetStopReason,
+
+ GetLineData,
 
  AllocateString,
 

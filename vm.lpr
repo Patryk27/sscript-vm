@@ -221,6 +221,25 @@ Begin
  Exit(True);
 End;
 
+(* DisplayExceptionInfo *)
+Procedure DisplayExceptionInfo;
+Var FileName, FunctionName: PChar;
+    FunctionLine          : uint32;
+Begin
+ Writeln('Virtual machine threw an exception:');
+ Writeln(PChar(SSGetException(VM).Data));
+
+ Writeln;
+
+ if (SSGetLineData(VM, SSGetExceptionAddress(VM), FileName, FunctionName, FunctionLine)) Then
+ Begin
+  Writeln('Exception was raised in ', FunctionName, ', line ', FunctionLine, ' (', FileName, ')');
+ End Else
+ Begin
+  Writeln('(couldn''t fetch exception info)');
+ End;
+End;
+
 // main program block
 Label VMEnd;
 Begin
@@ -278,8 +297,7 @@ Begin
 
   if (SSGetStopReason(VM) = srException) Then
   Begin
-   Writeln('Virtual machine threw an exception:');
-   Writeln(PChar(SSGetException(VM).Data));
+   DisplayExceptionInfo;
   End;
 
   { free VM }

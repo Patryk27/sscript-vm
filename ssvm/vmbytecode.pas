@@ -43,13 +43,16 @@ Unit VMBytecode;
 
         Function getRelativePosition: VMIReference;
 
+        Function getLineData(const Address: uint32; out FileName, FunctionName: String; out FunctionLine: uint32): Boolean;
+
+       Public
         Property getData: PByte read Data;
         Property getPosition: PByte read Position;
         Property getCurrentOpcode: PByte read CurrentOpcode;
        End;
 
  Implementation
-Uses VMStruct, Interpreter;
+Uses VMStruct, DbgParser, Interpreter;
 
 (* TVMBytecode.Create *)
 Constructor TVMBytecode.Create(const fVM: Pointer);
@@ -277,5 +280,44 @@ End;
 Function TVMBytecode.getRelativePosition: VMIReference;
 Begin
  Result := VMIReference(Position) - VMIReference(Data);
+End;
+
+(* TVMBytecode.getLineData *)
+Function TVMBytecode.getLineData(const Address: uint32; out FileName, FunctionName: String; out FunctionLine: uint32): Boolean;
+Var DbgData: TDebugData;
+    Current: uint32;
+    I      : uint32;
+Begin
+ FileName     := '';
+ FunctionName := '';
+ FunctionLine := 0;
+
+ Current := uint32(CurrentOpcode) - uint32(Data);
+
+ // get debug data
+ DbgData := PVM(VMPnt)^.LoaderData.Debug;
+
+ // if no debug data available, give up
+ if (DbgData.LineDataCount = 0) Then
+  Exit(False);
+
+ // find the nearest opcode
+ With DbgData do
+ Begin
+  For I := 0 To LineDataCount-1 Do
+  Begin
+   if (LineDataList[I].Opcode > Current) Then
+    Exit(Length(FileName) > 0);
+
+   FileName     := FileList[LineDataList[I].FileID].FileName;
+   FunctionName := FunctionList[LineDataList[I].FunctionID].FunctionName;
+   FunctionLine := LineDataList[I].Line;
+
+   if (LineDataList[I].Opcode = Current) Then
+    Exit(True);
+  End;
+ End;
+
+ Result := (Length(FileName) > 0);
 End;
 End.

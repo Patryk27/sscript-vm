@@ -7,7 +7,7 @@
 Unit VMStruct;
 
  Interface
- Uses VMStack, VMTypes, VMStrings, VMICall, VMExceptions, VMBytecode, BCLoader, SysUtils;
+ Uses VMStack, VMTypes, VMStrings, VMICall, VMExceptions, VMBytecode, BCLoader, DbgParser, SysUtils;
 
  Const VMVersion = '0.3.4 nightly';
 

@@ -2,14 +2,13 @@
  Copyright © by Patryk Wychowaniec, 2013-2014
  All rights reserved.
 
- -------------------
  Bytecode loader class.
 *)
 {$H+}
 Unit BCLoader;
 
  Interface
- Uses SysUtils, Classes, Zipper;
+ Uses DbgParser, Stream, SysUtils, Classes, Zipper;
 
  Const BytecodeMajor = 0;
        BytecodeMinor = 42;
@@ -23,11 +22,20 @@ Unit BCLoader;
       Record
        State: TLoadState;
 
+       // points at first opcode
        CodeData: PByte;
 
-       MagicNumber               : uint32;
-       isRunnable                : Boolean;
+       // magic number - should be equal 0x0DEFACED
+       MagicNumber: uint32;
+
+       // attributes
+       isRunnable: Boolean;
+
+       // version
        VersionMajor, VersionMinor: uint8;
+
+       // debug data
+       Debug: TDebugData;
       End;
 
  { TBCLoader }
@@ -43,8 +51,9 @@ Unit BCLoader;
         Procedure OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
         Procedure OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 
-        Procedure ParseHeader(AStream: TStream);
-        Procedure ParseBytecode(AStream: TStream);
+        Procedure ParseHeader(const NStream: Stream.TStream);
+        Procedure ParseBytecode(const NStream: Stream.TStream);
+        Procedure ParseDebug(const NStream: Stream.TStream);
 
        Public
         Constructor Create(const fFileName: String);
@@ -60,18 +69,22 @@ Unit BCLoader;
 (* TBCLoader.OnCreateStream *)
 Procedure TBCLoader.OnCreateStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
 Begin
- AStream := TMemoryStream.Create;
+ AStream := Stream.TStream.Create(True);
 End;
 
 (* TBCLoader.OnDoneStream *)
 Procedure TBCLoader.OnDoneStream(Sender: TObject; var AStream: TStream; AItem: TFullZipFileEntry);
+Var NStream: Stream.TStream;
 Begin
  AStream.Position := 0;
 
+ NStream := Stream.TStream(AStream);
+
  Try
   Case AItem.ArchiveFileName of
-   '.header'  : ParseHeader(AStream);
-   '.bytecode': ParseBytecode(AStream);
+   '.header'  : ParseHeader(NStream);
+   '.bytecode': ParseBytecode(NStream);
+   '.debug'   : ParseDebug(NStream);
   End;
  Finally
   AStream.Free;
@@ -82,7 +95,7 @@ End;
 {
  Parses header from specified stream.
 }
-Procedure TBCLoader.ParseHeader(AStream: TStream);
+Procedure TBCLoader.ParseHeader(const NStream: Stream.TStream);
 
   { EndingZero }
   Function EndingZero(const Text: String): String;
@@ -95,21 +108,23 @@ Procedure TBCLoader.ParseHeader(AStream: TStream);
 Begin
  With LoaderData do
  Begin
-  MagicNumber  := BEtoN(AStream.ReadDWord);
-  isRunnable   := Boolean(AStream.ReadByte);
-  VersionMajor := AStream.ReadByte;
-  VersionMinor := AStream.ReadByte;
+  MagicNumber  := NStream.read_uint32;
+  isRunnable   := Boolean(NStream.read_uint8);
+  VersionMajor := NStream.read_uint8;
+  VersionMinor := NStream.read_uint8;
 
-  if (MagicNumber <> $0DEFACED) Then // error: invalid magic number
+  // check magic number
+  if (MagicNumber <> $0DEFACED) Then
   Begin
-   ErrorMsg := Format('Invalid magic number: %i', [MagicNumber]);
+   ErrorMsg := Format('Invalid magic number: 0x%x', [MagicNumber]);
    Exit;
   End;
 
-  if (VersionMajor <> BytecodeMajor) or (VersionMinor <> BytecodeMinor) Then // error: invalid bytecode version
+  // check bytecode version
+  if (VersionMajor <> BytecodeMajor) or (VersionMinor <> BytecodeMinor) Then
   Begin
-   ErrorMsg := Format('Unsupported bytecode version: %s.%s, expecting %s.%s', [IntToStr(VersionMajor), EndingZero(IntToStr(VersionMinor)),
-                                                                               IntToStr(BytecodeMajor), EndingZero(IntToStr(BytecodeMinor))]);
+   ErrorMsg := Format('Unsupported bytecode version: %d.%s, expecting %d.%s', [VersionMajor, EndingZero(IntToStr(VersionMinor)),
+                                                                               BytecodeMajor, EndingZero(IntToStr(BytecodeMinor))]);
    Exit;
   End;
  End;
@@ -119,20 +134,41 @@ End;
 {
  Parses bytecode from specified stream.
 }
-Procedure TBCLoader.ParseBytecode(AStream: TStream);
+Procedure TBCLoader.ParseBytecode(const NStream: Stream.TStream);
 Var I: uint32;
 Begin
  With LoaderData do
  Begin
-  if (AStream.Size = 0) Then
+  if (NStream.Size = 0) Then
   Begin
    ErrorMsg := 'No bytecode to be loaded!';
    Exit;
   End;
 
-  CodeData := AllocMem(AStream.Size);
-  For I := 0 To AStream.Size-1 Do // @TODO: AStream.Read/AStream.ReadBuffer
-   CodeData[I] := AStream.ReadByte;
+  CodeData := AllocMem(NStream.Size);
+  For I := 0 To NStream.Size-1 Do // @TODO: NStream.Read/NStream.ReadBuffer
+   CodeData[I] := NStream.ReadByte;
+ End;
+End;
+
+(* TBCLoader.ParseDebug *)
+{
+ Parses debug data from specified stream.
+}
+Procedure TBCLoader.ParseDebug(const NStream: Stream.TStream);
+Var Debug: TDebugDataReader;
+Begin
+ Debug := TDebugDataReader.Create(NStream);
+
+ Try
+  Try
+   LoaderData.Debug := Debug.Read;
+  Except
+   On E: Exception Do
+    ErrorMsg := E.Message;
+  End;
+ Finally
+  Debug.Free;
  End;
 End;
 
@@ -158,9 +194,7 @@ Var Zip     : TUnzipper;
    FileList.Add(FileName);
    Zip.UnzipFiles(FileList);
 
-   if (Length(ErrorMsg) > 0) Then
-    Exit(False) Else
-    Exit(True);
+   Result := (Length(ErrorMsg) = 0);
   End;
 
 Begin
@@ -184,7 +218,7 @@ Begin
   Zip.OnCreateStream := @OnCreateStream;
   Zip.OnDoneStream   := @OnDoneStream;
 
-  Result := UnzipAndParse('.header') and UnzipAndParse('.bytecode');
+  Result := UnzipAndParse('.header') and UnzipAndParse('.bytecode') and UnzipAndParse('.debug');
 
   if (not Result) Then
   Begin

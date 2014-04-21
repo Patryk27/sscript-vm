@@ -363,6 +363,15 @@ Begin
  Result := VM^.LatestException;
 End;
 
+(* GetExceptionFrame *)
+{
+ Returns the stack position of the latest code exception.
+}
+Function GetExceptionFrame(const VM: PVM): uint32; stdcall;
+Begin
+ Result := VM^.StackPos^;
+End;
+
 (* GetExceptionAddress *)
 {
  Returns the address of the latest code exception.
@@ -392,6 +401,45 @@ Begin
 
  FileName     := StringToPChar(sFileName);
  FunctionName := StringToPChar(sFunctionName);
+End;
+
+(* GetCallerFrame *)
+Function GetCallerFrame(const VM: PVM; const Frame: uint32): uint32; stdcall;
+Var I: uint32;
+Begin
+ With VM^ do
+ Begin
+  if (Frame = 0) Then
+   Exit(0);
+
+  Try
+   For I := Frame-1 Downto 0 Do
+   Begin
+    if (Stack[I].Typ = mvCallstackRef) Then
+     Exit(I);
+   End;
+  Except
+   Exit(0);
+  End;
+ End;
+End;
+
+(* GetCallerAddress *)
+Function GetCallerAddress(const VM: PVM; const Frame: uint32): uint32; stdcall;
+Begin
+ With VM^ do
+ Begin
+  if (Frame = 0) Then
+   Exit(0);
+
+  Try
+   if (Stack[Frame].Typ = mvCallstackRef) Then
+    Exit(Stack[Frame].Value.Int) Else
+    Exit(0);
+  Except
+   Exit(0);
+  End;
+ End;
 End;
 
 (* AllocateString *)
@@ -430,10 +478,13 @@ Exports
 
  ThrowException,
  GetException,
+ GetExceptionFrame,
  GetExceptionAddress,
  GetStopReason,
 
  GetLineData,
+ GetCallerFrame,
+ GetCallerAddress,
 
  AllocateString,
 

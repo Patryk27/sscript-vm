@@ -225,19 +225,34 @@ End;
 Procedure DisplayExceptionInfo;
 Var FileName, FunctionName: PChar;
     FunctionLine          : uint32;
+
+    Frame, Address: uint32;
 Begin
  Writeln('Virtual machine threw an exception:');
  Writeln(PChar(SSGetException(VM).Data));
 
  Writeln;
 
- if (SSGetLineData(VM, SSGetExceptionAddress(VM), FileName, FunctionName, FunctionLine)) Then
- Begin
-  Writeln('Exception was raised in ', FunctionName, ', line ', FunctionLine, ' (', FileName, ')');
- End Else
- Begin
-  Writeln('(couldn''t fetch exception info)');
- End;
+ // display stacktrace
+ Writeln('Exception stacktrace:');
+
+ Frame   := SSGetExceptionFrame(VM);
+ Address := SSGetExceptionAddress(VM);
+
+ Repeat
+  Writeln;
+
+  if (Frame = SSGetExceptionFrame(VM)) Then
+   Write('     at ') Else
+   Write(' ... from ');
+
+  if (SSGetLineData(VM, Address, FileName, FunctionName, FunctionLine)) Then
+   Writeln(FunctionName, ', line ', FunctionLine, ' in ', FileName) Else
+   Writeln('unknown source (0x', IntToHex(Address, 2*sizeof(Address)), ')');
+
+  Frame   := SSGetCallerFrame(VM, Frame);
+  Address := SSGetCallerAddress(VM, Frame);
+ Until (Address = 0);
 End;
 
 // main program block

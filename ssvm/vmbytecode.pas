@@ -292,7 +292,7 @@ Begin
  FunctionName := '';
  FunctionLine := 0;
 
- Current := uint32(CurrentOpcode) - uint32(Data);
+ Current := uint32(Address) - uint32(Data);
 
  // get debug data
  DbgData := PVM(VMPnt)^.LoaderData.Debug;

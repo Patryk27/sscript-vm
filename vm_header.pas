@@ -108,10 +108,13 @@ Unit vm_header;
 
  Procedure SSThrowException(const VM: Pointer; const Exception: TExceptionBlock);                                                                      stdcall external 'ssvm.dll' name 'ThrowException';
  Function SSGetException(const VM: Pointer): TExceptionBlock;                                                                                          stdcall external 'ssvm.dll' name 'GetException';
+ Function SSGetExceptionFrame(const VM: Pointer): uint32;                                                                                              stdcall external 'ssvm.dll' name 'GetExceptionFrame';
  Function SSGetExceptionAddress(const VM: Pointer): uint32;                                                                                            stdcall external 'ssvm.dll' name 'GetExceptionAddress';
  Function SSGetStopReason(const VM: Pointer): TStopReason;                                                                                             stdcall external 'ssvm.dll' name 'GetStopReason';
 
  Function SSGetLineData(const VM: Pointer; const Address: uint32; out FileName, FunctionName: PChar; out FunctionLine: uint32): Boolean;               stdcall external 'ssvm.dll' name 'GetLineData';
+ Function SSGetCallerFrame(const VM: Pointer; const Frame: uint32): uint32;                                                                            stdcall external 'ssvm.dll' name 'GetCallerFrame';
+ Function SSGetCallerAddress(const VM: Pointer; const Frame: uint32): uint32;                                                                          stdcall external 'ssvm.dll' name 'GetCallerAddress';
 
  Function SSAllocateString(const VM: Pointer; const Content: PChar): PVMString                                                                         stdcall external 'ssvm.dll' name 'AllocateString';
 

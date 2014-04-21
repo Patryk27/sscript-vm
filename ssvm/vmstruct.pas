@@ -25,7 +25,7 @@ Unit VMStruct;
       TVM =
       Record
        Regs: // registers
-       Packed Record
+       Record
         b: Array[1..5] of VMBool;      // bool     : eb1, eb2, eb3, eb4, if
         c: Array[1..4] of VMChar;      // char     : ec1, ec2, ec3, ec4
         i: Array[1..5] of VMInt;       // int      : ei1, ei2, ei3, ei4, stp
@@ -76,7 +76,7 @@ Unit VMStruct;
        Function getChar(const MV: TMixedValue): VMChar; inline;
        Function getInt(const MV: TMixedValue): VMInt; inline;
        Function getFloat(const MV: TMixedValue): VMFloat; inline;
-       Function getString(const MV: TMixedValue): PVMString; inline;
+       Function getString(const MV: TMixedValue): PVMString; // inline;
        Function getReference(const MV: TMixedValue): VMReference; inline;
        Function getPChar(const MV: TMixedValue; const UnbindAndFree: Boolean=False): PChar; inline;
 

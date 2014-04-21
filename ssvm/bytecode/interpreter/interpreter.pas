@@ -1450,19 +1450,7 @@ Begin
   // save char to register
   if (outValue.isReg) and (outValue.Typ = mvChar) Then
   Begin
-   {$ASMMODE INTEL}
-   asm
-    mov eax, eax
-   end;
-
    Regs.c[outValue.RegIndex] := Char;
-
-   {
-    @Note, @todo:
-    Without that "mov eax, eax" the VM crashes (FPC 2.7.1) - some FPC bug, I
-    don't know any details.
-    Leave it as it is for your own good.
-   }
   End Else
 
   // save char to stackval

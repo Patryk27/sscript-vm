@@ -212,6 +212,7 @@ End;
 
 (* TVM.getInt *)
 Function TVM.getInt(const MV: TMixedValue): VMInt;
+Var Float: VMFloat;
 Begin
  With MV do
  Begin
@@ -220,7 +221,7 @@ Begin
 
   Case Typ of
    { bool }
-   mvBool: Exit(Int64(Value.Bool));
+   mvBool: Exit(VMInt(Value.Bool));
 
    { char }
    mvChar: Exit(ord(Value.Char));
@@ -229,7 +230,18 @@ Begin
    mvInt, mvReference, mvCallstackRef: Exit(Value.Int);
 
    { float }
-   mvFloat: Exit(Round(Value.Float)); // @TODO: inf, NaN?
+   mvFloat:
+   Begin
+    Float := Value.Float;
+
+    if (Float > High(VMInt)) Then
+     Exit(High(VMInt)) Else
+
+    if (Float < Low(VMInt)) Then
+     Exit(Low(VMInt)) Else
+
+     Exit(Round(Float));
+   End;
   End;
  End;
 

@@ -1173,7 +1173,7 @@ Begin
   // prepare variables if memory reference
   if (arrayReference.isMemRef) Then
   Begin
-   ArrayPnt := arrayReference.MemAddr;
+   ArrayPnt := PPointer(arrayReference.MemAddr)^;
    Typ      := mvReference;
   End Else
 

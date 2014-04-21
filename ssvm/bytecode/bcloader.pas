@@ -10,8 +10,14 @@ Unit BCLoader;
  Interface
  Uses DbgParser, Stream, SysUtils, Classes, Zipper;
 
- Const BytecodeMajor = 0;
-       BytecodeMinor = 42;
+ { TBytecodeVersion }
+ Type TBytecodeVersion =
+      Record
+       Major, Minor: uint8;
+      End;
+
+ Const BytecodeVersion: TBytecodeVersion =
+       (Major: 0; Minor: 43);
 
  { TLoadState }
  Type TLoadState = (lsSuccess, lsFailed, lsFileNotFound);
@@ -28,11 +34,11 @@ Unit BCLoader;
        // magic number - should be equal 0x0DEFACED
        MagicNumber: uint32;
 
+       // version
+       Version: TBytecodeVersion;
+
        // attributes
        isRunnable: Boolean;
-
-       // version
-       VersionMajor, VersionMinor: uint8;
 
        // debug data
        Debug: TDebugData;
@@ -108,10 +114,12 @@ Procedure TBCLoader.ParseHeader(const NStream: Stream.TStream);
 Begin
  With LoaderData do
  Begin
-  MagicNumber  := NStream.read_uint32;
-  isRunnable   := Boolean(NStream.read_uint8);
-  VersionMajor := NStream.read_uint8;
-  VersionMinor := NStream.read_uint8;
+  // read magic
+  MagicNumber := NStream.read_uint32;
+
+  // read version
+  Version.Major := NStream.read_uint8;
+  Version.Minor := NStream.read_uint8;
 
   // check magic number
   if (MagicNumber <> $0DEFACED) Then
@@ -121,12 +129,15 @@ Begin
   End;
 
   // check bytecode version
-  if (VersionMajor <> BytecodeMajor) or (VersionMinor <> BytecodeMinor) Then
+  if (Version.Major <> BytecodeVersion.Major) or (Version.Minor <> BytecodeVersion.Minor) Then
   Begin
-   ErrorMsg := Format('Unsupported bytecode version: %d.%s, expecting %d.%s', [VersionMajor, EndingZero(IntToStr(VersionMinor)),
-                                                                               BytecodeMajor, EndingZero(IntToStr(BytecodeMinor))]);
+   ErrorMsg := Format('Unsupported bytecode version: %d.%s, expecting %d.%s', [Version.Major, EndingZero(IntToStr(Version.Minor)),
+                                                                               BytecodeVersion.Major, EndingZero(IntToStr(BytecodeVersion.Minor))]);
    Exit;
   End;
+
+  // read attributes
+  isRunnable := Boolean(NStream.read_uint8);
  End;
 End;
 

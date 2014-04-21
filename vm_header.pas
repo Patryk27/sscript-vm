@@ -17,6 +17,7 @@
  along with SScript Compiler; if not, write to the Free Software
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 *)
+{$H+}
 Unit vm_header;
 
  Interface
@@ -107,7 +108,10 @@ Unit vm_header;
 
  Procedure SSThrowException(const VM: Pointer; const Exception: TExceptionBlock);                                                                      stdcall external 'ssvm.dll' name 'ThrowException';
  Function SSGetException(const VM: Pointer): TExceptionBlock;                                                                                          stdcall external 'ssvm.dll' name 'GetException';
+ Function SSGetExceptionAddress(const VM: Pointer): uint32;                                                                                            stdcall external 'ssvm.dll' name 'GetExceptionAddress';
  Function SSGetStopReason(const VM: Pointer): TStopReason;                                                                                             stdcall external 'ssvm.dll' name 'GetStopReason';
+
+ Function SSGetLineData(const VM: Pointer; const Address: uint32; out FileName, FunctionName: PChar; out FunctionLine: uint32): Boolean;               stdcall external 'ssvm.dll' name 'GetLineData';
 
  Function SSAllocateString(const VM: Pointer; const Content: PChar): PVMString                                                                         stdcall external 'ssvm.dll' name 'AllocateString';
 

@@ -46,6 +46,8 @@ Unit Interpreter;
  Procedure op_ARGET(const VM: PVM);
  Procedure op_ARCRT(const VM: PVM);
  Procedure op_ARLEN(const VM: PVM);
+ Procedure op_STRSET(const VM: PVM);
+ Procedure op_STRGET(const VM: PVM);
  Procedure op_STRLEN(const VM: PVM);
  Procedure op_LOCATION(const VM: PVM);
 
@@ -87,14 +89,36 @@ Unit Interpreter;
   @op_ARGET,
   @op_ARCRT,
   @op_ARLEN,
+  @op_STRSET,
+  @op_STRGET,
   @op_STRLEN
  );
 
  Implementation
-Uses VMObjects, VMStack, VMICall, VMExceptions;
+Uses VMObjects, VMStack, VMICall, VMExceptions, TypInfo;
 
-{ CheckStringBounds }
-Procedure CheckStringBounds(const VM: PVM; const Str: PVMString; const Index: uint32);
+(* InvalidArgumentsException *)
+Procedure InvalidArgumentsException(const VM: PVM; const ArgList: Array of TMixedValue);
+Var OpName: String;
+Begin
+ OpName := GetEnumName(TypeInfo(TOpcodeKind), VM^.Bytecode.getCurrentOpcode^);
+ Delete(OpName, 1, 2); // remove the "o_"
+
+ Case Length(ArgList) of
+  1: VM^.ThrowException('''%s'' called with arguments: %s', [OpName, getTypeName(ArgList[0])]);
+  2: VM^.ThrowException('''%s'' called with arguments: %s, %s', [OpName, getTypeName(ArgList[0]), getTypeName(ArgList[1])]);
+  3: VM^.ThrowException('''%s'' called with arguments: %s, %s, %s', [OpName, getTypeName(ArgList[0]), getTypeName(ArgList[1]), getTypeName(ArgList[2])]);
+
+  else
+   VM^.ThrowException('InvalidArgumentsException()');
+ End;
+End;
+
+(* CheckStringBounds *)
+{
+ Checks if "Index" fits in string bounds (1..Length).
+}
+Procedure CheckStringBounds(const VM: PVM; const Str: PVMString; const Index: VMInt);
 Var Len: uint32;
 Begin
  if (Index < 1) Then
@@ -1041,237 +1065,432 @@ Begin
  End;
 End;
 
-{ ARSET (register, index count, value) }
+{ ARSET (reg/stvl/mem arrayReference, int indexCount, newValue) }
 Procedure op_ARSET(const VM: PVM);
-Var refreg, index_count, new_value: TMixedValue;
-    PosArray                      : TIndexArray;
-    I                             : uint32;
-Label Fail;
+Var arrayReference, indexCount, newValue: TMixedValue;
+    IndexArray                          : TIndexArray;
+
+    ArrayPnt: VMReference;
+    Typ     : TMixedValueType;
+
+    I: uint32;
 Begin
  With VM^ do
  Begin
-  refreg      := Bytecode.read_param;
-  index_count := Bytecode.read_param;
-  new_value   := Bytecode.read_param;
+  // read parameters
+  arrayReference := Bytecode.read_param;
+  indexCount     := Bytecode.read_param;
+  newValue       := Bytecode.read_param;
 
-  if not (refreg.isReg or refreg.isStackval) Then
-   VM^.ThrowException('''arset'' requires the first parameter to be a register or a stackval.');
+  // read indexes
+  SetLength(IndexArray, getInt(indexCount));
+  For I := 0 To High(IndexArray) Do
+   IndexArray[I] := getInt(Stack.Pop);
 
-  SetLength(PosArray, getInt(index_count));
-  For I := 0 To High(PosArray) Do
-   PosArray[I] := getInt(Stack.Pop);
-
-  if (refreg.isReg) Then
+  // prepare pointers if register
+  if (arrayReference.isReg) Then
   Begin
-   { ARSET (register, index count, value) }
-   Case refreg.Typ of
-    mvReference: TMArray(CheckObject(getReference(refreg))).setValue(PosArray, new_value); // reference reg
-
-    mvString: // string reg
-    Begin
-     CheckStringBounds(VM, Regs.s[refreg.RegIndex], PosArray[0]);
-     Regs.s[refreg.RegIndex]^.Data[PosArray[0]] := getChar(new_value);
-    End;
-
-    mvChar: // char reg
-    Begin
-     CheckStringBounds(VM, nil, PosArray[0]);
-     Regs.c[refreg.RegIndex] := getChar(new_value);
-    End;
-
-    else
-     goto Fail;
-   End;
+   ArrayPnt := getReference(arrayReference);
+   Typ      := arrayReference.Typ;
   End Else
+
+  // prepare pointers if stackval
+  if (arrayReference.isStackval) Then
   Begin
-   { ARSET (stackval, index count, value) }
-   With refreg.Stackval^ do
-    Case refreg.Typ of
-      mvReference: TMArray(CheckObject(Pointer(Int32(Value.Int)))).setValue(PosArray, new_value); // reference
+   ArrayPnt := Pointer(arrayReference.Value.Int);
+   Typ      := arrayReference.Stackval^.Typ;
+  End Else
 
-      mvString: // string
-      Begin
-       CheckStringBounds(VM, Value.Str, PosArray[0]);
-       Value.Str^.Data[PosArray[0]-1] := getChar(new_value); // `-1`, because we have `PVMChar` (which is counted from zero), not `AnsiString`.
-      End;
+  // prepare pointers if memory reference
+  if (arrayReference.isMemRef) Then
+  Begin
+   ArrayPnt := PPointer(arrayReference.MemAddr)^;
+   Typ      := mvReference;
+  End Else
 
-      mvChar: // char
-      Begin
-       CheckStringBounds(VM, nil, PosArray[0]);
-       Value.Char := getChar(new_value);
-      End;
-
-      else
-       goto Fail;
-     End;
+  // throw an exception if something other
+  Begin
+   VM^.ThrowException('''arset'' requires the first parameter to be a register, stackval or memory reference.');
   End;
 
-  Exit;
+  // do magic
+  Case Typ of
+   // array reference
+   mvReference:
+   Begin
+    TMArray(CheckObject(ArrayPnt)).setValue(IndexArray, newValue);
+   End;
 
- Fail:
-  VM^.ThrowException('''arset'' called with arguments: '+getTypeName(refreg)+', '+getTypeName(index_count)+', '+getTypeName(new_value));
+   // invalid
+   else
+    VM^.ThrowException('''arset'' called with arguments: %s, %s, %s', [getTypeName(arrayReference), getTypeName(indexCount), getTypeName(newValue)]);
+  End;
  End;
 End;
 
-{ ARGET (register, index count, result register) }
+{ ARGET (reg/stvl/mem arrayReference, int indexCount, out outValue) }
 Procedure op_ARGET(const VM: PVM);
-Var refreg, index_count, outreg: TMixedValue;
-    PosArray                   : TIndexArray;
-    I                          : uint32;
-    AValue                     : TMixedValue;
-    TmpStr                     : PVMString;
+Var arrayReference, indexCount, outValue: TMixedValue;
+    IndexArray                          : TIndexArray;
+
+    ArrayPnt: Pointer;
+    Typ     : TMixedValueType;
+
+    AValue: TMixedValue;
+
+    I: uint32;
 Label Fail;
 Begin
  With VM^ do
  Begin
+  // reset temporary variable
   AValue.Reset;
 
-  refreg      := Bytecode.read_param;
-  index_count := Bytecode.read_param;
-  outreg      := Bytecode.read_param;
+  // read parameters
+  arrayReference := Bytecode.read_param;
+  indexCount     := Bytecode.read_param;
+  outValue       := Bytecode.read_param;
 
-  SetLength(PosArray, getInt(index_count));
-  For I := 0 To High(PosArray) Do
-   PosArray[I] := getInt(Stack.Pop);
+  // read indexes
+  SetLength(IndexArray, getInt(indexCount));
+  For I := 0 To High(IndexArray) Do
+   IndexArray[I] := getInt(Stack.Pop);
 
-  if (not (refreg.isReg or refreg.isStackval)) or (not (outreg.isReg or outreg.isStackval)) Then
-   VM^.ThrowException('''arget'' requires the first and third parameter to be a register or a stackval.');
-
-  if (refreg.isReg) Then
+  // prepare variables if register
+  if (arrayReference.isReg) Then
   Begin
-   { ARGET (register, index count, result register) }
-   Case refreg.Typ of
-    mvReference: AValue := TMArray(CheckObject(getReference(refreg))).getValue(PosArray); // reference
-
-    mvString: // string
-    Begin
-     TmpStr := getString(refreg);
-
-     AValue.Typ        := mvChar;
-     AValue.Value.Char := TmpStr^.Data[PosArray[0]-1]; // `-1`, because we have `PVMChar` (which is counted from `0`), not `AnsiString` (which is counted from `1`).
-    End;
-
-    mvChar: // char
-    Begin
-     AValue.Typ        := mvChar;
-     AValue.Value.Char := getChar(refreg);
-    End;
-
-    else
-     goto Fail;
-   End;
+   ArrayPnt := getReference(arrayReference);
+   Typ      := arrayReference.Typ;
   End Else
+
+  // prepare variables if stackval
+  if (arrayReference.isStackval) Then
   Begin
-   { ARGET (stackval, index count, result register) }
-   With refreg.Stackval^ do
-    Case refreg.Typ of
-     mvReference: AValue := TMArray(CheckObject(Pointer(Value.Int))).getValue(PosArray); // reference
+   ArrayPnt := Pointer(arrayReference.Stackval^.Value.Int);
+   Typ      := arrayReference.Stackval^.Typ;
+  End Else
 
-     mvString: // string
-     Begin
-      CheckStringBounds(VM, Value.Str, PosArray[0]);
+  // prepare variables if memory reference
+  if (arrayReference.isMemRef) Then
+  Begin
+   ArrayPnt := arrayReference.MemAddr;
+   Typ      := mvReference;
+  End Else
 
-      AValue.Typ        := mvChar;
-      AValue.Value.Char := Value.Str^.Data[PosArray[0]-1];
-     End;
-
-     mvChar: // char
-     Begin
-      CheckStringBounds(VM, nil, PosArray[0]);
-
-      AValue.Typ        := mvChar;
-      AValue.Value.Char := Value.Char;
-     End;
-
-     else
-      goto Fail;
-    End;
+  // throw an exception otherwise
+  Begin
+   goto Fail;
   End;
 
-  if (outreg.isStackval) Then
+  // do magic
+  Case Typ of
+   // array reference
+   mvReference:
+   Begin
+    AValue := TMArray(CheckObject(ArrayPnt)).getValue(IndexArray);
+   End;
+
+   // invalid
+   else
+    goto Fail;
+  End;
+
+  // save result (register)
+  if (outValue.isReg) Then
   Begin
-   outreg.Stackval^ := AValue;
-  End Else
-  Begin
-   Case outreg.Typ of
-    mvBool     : Regs.b[outreg.RegIndex] := getBool(AValue);
-    mvChar     : Regs.c[outreg.RegIndex] := getChar(AValue);
-    mvInt      : Regs.i[outreg.RegIndex] := getInt(AValue);
-    mvFloat    : Regs.f[outreg.RegIndex] := getFloat(AValue);
-    mvString   : Regs.s[outreg.RegIndex] := getString(AValue);
-    mvReference: Regs.r[outreg.RegIndex] := getReference(AValue);
+   Case outValue.Typ of
+    mvBool     : Regs.b[outValue.RegIndex] := getBool(AValue);
+    mvChar     : Regs.c[outValue.RegIndex] := getChar(AValue);
+    mvInt      : Regs.i[outValue.RegIndex] := getInt(AValue);
+    mvFloat    : Regs.f[outValue.RegIndex] := getFloat(AValue);
+    mvString   : Regs.s[outValue.RegIndex] := getString(AValue);
+    mvReference: Regs.r[outValue.RegIndex] := getReference(AValue);
 
     else
      goto Fail;
    End;
+  End Else
+
+  // save result (stackval)
+  if (outValue.isStackval) Then
+  Begin
+   outValue.Stackval^ := AValue;
+  End Else
+
+  // throw exception if invalid result parameter
+  Begin
+   goto Fail;
   End;
 
   Exit;
 
  Fail:
-  VM^.ThrowException('''arget'' called with arguments: '+getTypeName(refreg)+', '+getTypeName(index_count)+', '+getTypeName(outreg));
+  VM^.ThrowException('''arget'' called with arguments: %s, %s, %s', [getTypeName(arrayReference), getTypeName(indexCount), getTypeName(outValue)]);
  End;
 End;
 
-{ ARCRT (register, array type, dimensions count) }
+{ ARCRT (reg/stvl/mem arrayReference, int arrayType, const int dimensionCount) }
 Procedure op_ARCRT(const VM: PVM);
-Var refreg, typ, dimcount: TMixedValue;
-    ArrayObj             : TMArray;
-    Sizes                : TIndexArray;
-    I                    : uint32;
+Var arrayReference, arrayType, dimensionCount: TMixedValue;
+    SizeArray                                : TIndexArray;
+
+    ArrayObj: TMArray;
+
+    I: uint32;
+Label Fail;
 Begin
  With VM^ do
  Begin
-  refreg   := Bytecode.read_param;
-  typ      := Bytecode.read_param;
-  dimcount := Bytecode.read_param;
+  // read parameters
+  arrayReference := Bytecode.read_param;
+  arrayType      := Bytecode.read_param;
+  dimensionCount := Bytecode.read_param;
 
-  if not (refreg.isReg) Then
-   VM^.ThrowException('''arcrt'' requires the first parameter to be a register.');
+  // read dimension sizes
+  SetLength(SizeArray, getInt(dimensionCount));
+  For I := 0 To High(SizeArray) Do
+   SizeArray[I] := getInt(Stack.Pop);
 
-  SetLength(Sizes, getInt(dimcount));
-  For I := 0 To High(Sizes) Do
-   Sizes[I] := getInt(Stack.Pop);
+  // create array
+  ArrayObj := TMArray.Create(VM, getInt(arrayType), SizeArray);
 
-  ArrayObj := TMArray.Create(VM, getInt(typ), Sizes);
+  // save result if register
+  if (arrayReference.isReg) Then
+  Begin
+   if (arrayReference.Typ = mvReference) Then
+    Regs.r[arrayReference.RegIndex] := ArrayObj Else
+    goto Fail;
+  End Else
 
-  Case refreg.Typ of
-   mvReference: Regs.r[refreg.RegIndex] := ArrayObj;
+  // save result if stackval
+  if (arrayReference.isStackval) Then
+  Begin
+   With arrayReference do
+   Begin
+    Stackval^.Typ       := mvReference;
+    Stackval^.Value.Int := VMIReference(ArrayObj);
+   End;
+  End Else
 
-   else
-    VM^.ThrowException('''arcrt'' called with arguments: '+getTypeName(refreg)+', '+getTypeName(typ)+', '+getTypeName(dimcount));
+  // save result if memref
+  if (arrayReference.isMemRef) Then
+  Begin
+   PPointer(arrayReference.MemAddr)^ := ArrayObj;
+  End Else
+
+  // fail otherwise
+  Begin
+   goto Fail;
   End;
+
+  Exit;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [arrayReference, arrayType, dimensionCount]);
 End;
 
-{ ARLEN (register, dimension ID, result register/stackval) }
+{ ARLEN (reg/stvl/mem arrayReference, int dimensionId, reg/stvl/mem int arrayLength) }
 Procedure op_ARLEN(const VM: PVM);
-Var refreg, dimension, outreg: TMixedValue;
-    DimSize                  : uint32;
+Var arrayReference, dimensionId, arrayLength: TMixedValue;
+    DimSize                                 : uint32;
+
+    ArrayPnt: Pointer;
+Label Fail;
 Begin
  With VM^ do
  Begin
-  refreg    := Bytecode.read_param;
-  dimension := Bytecode.read_param;
-  outreg    := Bytecode.read_param;
+  // read parameters
+  arrayReference := Bytecode.read_param;
+  dimensionId    := Bytecode.read_param;
+  arrayLength    := Bytecode.read_param;
 
-  if not (refreg.isReg or refreg.isStackval) Then
-   VM^.ThrowException('''arlen'' requires the first parameter to be a register or a stackval.');
-
-  if not (((outreg.isReg) and (outreg.Typ = mvInt)) or outreg.isStackval) Then
-   VM^.ThrowException('''arlen'' requires the third parameter to be an int register or a stackval.');
-
-  DimSize := TMArray(CheckObject(getReference(refreg))).getSize(getInt(dimension));
-
-  if (outreg.isStackval) Then
+  // get array pointer if arrayReference is register
+  if (arrayReference.isReg) Then
   Begin
-   outreg.Stackval^.Typ       := mvInt;
-   outreg.Stackval^.Value.Int := DimSize;
+   ArrayPnt := getReference(arrayReference);
   End Else
+
+  // get array pointer if stackval
+  if (arrayReference.isStackval) Then
   Begin
-   Regs.i[outreg.RegIndex] := DimSize;
+   ArrayPnt := getReference(arrayReference.Stackval^);
+  End Else
+
+  // get array pointer if memory reference
+  if (arrayReference.isMemRef) Then
+  Begin
+   ArrayPnt := PPointer(arrayReference.MemAddr)^;
+  End Else
+
+  // fail otherwise
+  Begin
+   goto Fail;
   End;
+
+  // fetch array size
+  DimSize := TMArray(CheckObject(ArrayPnt)).getSize(getInt(dimensionId));
+
+  // save array size to register
+  if (arrayLength.isReg) Then
+  Begin
+   Regs.i[arrayLength.RegIndex] := DimSize;
+  End Else
+
+  // save array size to stackval
+  if (arrayLength.isStackval) Then
+  Begin
+   With arrayLength do
+   Begin
+    Stackval^.Typ       := mvInt;
+    Stackval^.Value.Int := DimSize;
+   End;
+  End Else
+
+  // save array size to memref
+  if (arrayLength.isMemRef) Then
+  Begin
+   PVMInt(arrayLength.MemAddr)^ := DimSize;
+  End Else
+
+  // or fail, if none of the above fits the parameter list
+  Begin
+   goto Fail;
+  End;
+
+  Exit;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [arrayReference, dimensionId, arrayLength]);
+End;
+
+{ STRSET (reg/stvl/mem string modString, int charIndex, char newValue) }
+Procedure op_STRSET(const VM: PVM);
+Var modString, charIndex, newValue: TMixedValue;
+
+    Index: VMInt;
+    Str  : PVMString;
+Label Fail;
+Begin
+ With VM^ do
+ Begin
+  // read parameter list
+  modString := Bytecode.read_param;
+  charIndex := Bytecode.read_param;
+  newValue  := Bytecode.read_param;
+
+  // get index
+  Index := getInt(charIndex);
+
+  // fetch string if modString is register
+  if (modString.isReg) Then
+  Begin
+   Str := getString(modString);
+  End Else
+
+  // fetch string if modString is stackval
+  if (modString.isStackval) Then
+  Begin
+   Str := getString(modString.Stackval^);
+  End Else
+
+  // fetch string if modString is memory reference
+  if (modString.isMemRef) Then
+  Begin
+   Str := PPointer(modString.MemAddr)^;
+  End Else
+
+  // give up otherwise
+  Begin
+   goto Fail;
+  End;
+
+  // check bounds
+  CheckStringBounds(VM, Str, Index);
+
+  // modify string
+  Str^.Data[Index-1] := getChar(newValue);
+
+  Exit;
+ End;
+
+Fail:
+ InvalidArgumentsException(VM, [modString, charIndex, newValue]);
+End;
+
+{ STRGET (string modString, int charIndex, reg/stvl/mem char outValue) }
+Procedure op_STRGET(const VM: PVM);
+Var modString, charIndex, outValue: TMixedValue;
+
+    Index: VMInt;
+    Char : System.Char;
+    Str  : PVMString;
+Label Fail;
+Begin
+ With VM^ do
+ Begin
+  // read parameters
+  modString := Bytecode.read_param;
+  charIndex := Bytecode.read_param;
+  outValue  := Bytecode.read_param;
+
+  // get index
+  Index := getInt(charIndex);
+
+  // fetch string
+  Str := getString(modString);
+
+  // check bounds
+  CheckStringBounds(VM, Str, Index);
+
+  // fetch char
+  Char := Str^.Data[Index-1];
+
+  // save char to register
+  if (outValue.isReg) and (outValue.Typ = mvChar) Then
+  Begin
+   {$ASMMODE INTEL}
+   asm
+    mov eax, eax
+   end;
+
+   Regs.c[outValue.RegIndex] := Char;
+
+   {
+    @Note, @todo:
+    Without that "mov eax, eax" the VM crashes (FPC 2.7.1) - some FPC bug, I
+    don't know any details.
+    Leave it as it is for your own good.
+   }
+  End Else
+
+  // save char to stackval
+  if (outValue.isStackval) Then
+  Begin
+   With outValue do
+   Begin
+    Stackval^.Typ        := mvChar;
+    Stackval^.Value.Char := Char;
+   End;
+  End Else
+
+  // save char to memref
+  if (outValue.isMemRef) Then
+  Begin
+   PChar(outValue.MemAddr)^ := Char;
+  End Else
+
+  // throw an exception otherwise
+  Begin
+   goto Fail;
+  End;
+
+  Exit;
+ End;
+
+Fail:
+ InvalidArgumentsException(VM, [modString, charIndex, outValue]);
 End;
 
 { STRLEN (string register, out int register/stackval) }

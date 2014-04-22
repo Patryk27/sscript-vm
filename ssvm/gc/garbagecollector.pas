@@ -270,6 +270,6 @@ Begin
  Result := 0;
 
  For List in ObjectLists Do
-  Result += List.Count;
+  Result += uint32(List.Count);
 End;
 End.

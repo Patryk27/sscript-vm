@@ -119,17 +119,21 @@ End;
  Checks if "Index" fits in string bounds (1..Length).
 }
 Procedure CheckStringBounds(const VM: PVM; const Str: PVMString; const Index: VMInt);
-Var Len: uint32;
+Var Throw: Boolean = False;
+    Len  : uint32;
 Begin
  if (Index < 1) Then
-  VM^.ThrowException('String index out of bounds. Tried to access char #%d, while strings starts from 1.', [Index]);
+  Throw := True;
 
  if (Str = nil) Then
   Len := 1 Else
   Len := Str^.Length;
 
  if (Index > Len) Then
-  VM^.ThrowException('String index out of bounds. Tried to access char #%d, while %d is the last one.', [Index, Len]);
+  Throw := True;
+
+ if (Throw) Then
+  VM^.ThrowException('String index out of bounds: index %d is outside string range 1..%d', [Index, Len]);
 End;
 
 { _ }
@@ -1290,10 +1294,10 @@ Fail:
  InvalidArgumentsException(VM, [arrayReference, arrayType, dimensionCount]);
 End;
 
-{ ARLEN (reg/stvl/mem arrayReference, int dimensionId, reg/stvl/mem int arrayLength) }
+{ ARLEN (reg/stvl/mem arrayReference, reg/stvl/mem int arrayLength) }
 Procedure op_ARLEN(const VM: PVM);
-Var arrayReference, dimensionId, arrayLength: TMixedValue;
-    DimSize                                 : uint32;
+Var arrayReference, arrayLength: TMixedValue;
+    DimSize                    : uint32;
 
     ArrayPnt: Pointer;
 Label Fail;
@@ -1302,7 +1306,6 @@ Begin
  Begin
   // read parameters
   arrayReference := Bytecode.read_param;
-  dimensionId    := Bytecode.read_param;
   arrayLength    := Bytecode.read_param;
 
   // get array pointer if arrayReference is register
@@ -1329,7 +1332,7 @@ Begin
   End;
 
   // fetch array size
-  DimSize := TMArray(CheckObject(ArrayPnt)).getSize(getInt(dimensionId));
+  DimSize := TMArray(CheckObject(ArrayPnt)).getSize;
 
   // save array size to register
   if (arrayLength.isReg) Then
@@ -1362,7 +1365,7 @@ Begin
  End;
 
 Fail:
- InvalidArgumentsException(VM, [arrayReference, dimensionId, arrayLength]);
+ InvalidArgumentsException(VM, [arrayReference, arrayLength]);
 End;
 
 { STRSET (reg/stvl/mem string modString, int charIndex, char newValue) }

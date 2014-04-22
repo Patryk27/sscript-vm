@@ -100,7 +100,10 @@ End;
 Function TVMStringList.CloneVMString(const Value: PVMString): PVMString;
 Begin
  if (Value = nil) Then
-  ThrowException('TVMStringList.CloneVMString() -> Value = nil');
+ Begin
+  Result := StringToVMString('');
+  Exit;
+ End;
 
  CheckMemory;
 
@@ -131,7 +134,7 @@ Begin
  End;
  Mem := GetFPCHeapStatus.CurrHeapFree - Mem;
 
- WriteLog('Released %d kB of memory.', [Mem]);
+ WriteLog('Released %d kB of memory (%d bytes).', [Mem div 1024, Mem]);
 
  List.Clear;
 End;
@@ -166,12 +169,16 @@ Begin
  End;
 
  if (VM^.StackPos^ > 0) Then
+ Begin
   For I := 0 To VM^.StackPos^-1 Do
+  Begin
    if (VM^.Stack[I].Typ = mvString) Then
    Begin
     Removable.Remove(VM^.Stack[I].Value.Str);
     NewList.Add(VM^.Stack[I].Value.Str);
    End;
+  End;
+ End;
 
  // remove VMStrings
  Memory := GetFPCHeapStatus.CurrHeapUsed;
@@ -217,7 +224,10 @@ End;
 }
 Procedure TVMStringList.Dispose(const Str: PVMString);
 Begin
- FreeMem(Str^.Data);
- FreeMem(Str);
+ if (Str <> nil) Then
+ Begin
+  FreeMem(Str^.Data);
+  FreeMem(Str);
+ End;
 End;
 End.

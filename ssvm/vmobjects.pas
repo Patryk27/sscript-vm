@@ -2,15 +2,18 @@
  Copyright © by Patryk Wychowaniec, 2013-2014
  All rights reserved.
 *)
-// @TODO: rewrite this whole unit...
 {$H+}
 Unit VMObjects;
 
  Interface
  Uses SysUtils, VMStack, VMStruct;
 
+ { TIndex }
+ Type TIndex = uint32;
+
+ { TIndexArray }
  Type PIndexArray = ^TIndexArray;
-      TIndexArray = Array of uint32;
+      TIndexArray = Array of TIndex;
 
  { TMObject }
  Type TMObject =
@@ -31,30 +34,37 @@ Unit VMObjects;
  Type TMArray =
       Class (TMObject)
        Private
-        Data     : Pointer; // array data
-        Typ      : Byte; // array internal type ID
-        CTypeSize: Byte; // internal type size
-        MemSize  : uint32; // total memory size used by `array data`
-        Sizes    : TIndexArray; // array dimension sizes
+        Data: Pointer;
+
+        TypeID, TypeSize: uint8; // array internal type ID
+        DimensionSize   : TIndex;
+        MemSize         : uint32; // total memory size occupied by the array data
 
        Private
-        Function getElement(Position: TIndexArray): Pointer;
+        Procedure __set(const DataPos: Pointer; const NewValue: TMixedValue; const aType: uint8);
+        Function __get(const DataPos: Pointer; const aType: uint8): TMixedValue;
+
+        Function getElement(const Index: TIndex): Pointer;
+        Function getElement(Indexes: TIndexArray; out Typ: uint8): Pointer;
 
        Public
-        Constructor Create(const fVM: Pointer; const fType: Byte; const fSizes: TIndexArray);
+        Constructor Create(const fVM: Pointer; const fType: uint8; const fDimensionSize: uint32);
+        Constructor Create(const fVM: Pointer; const fType: uint8; fDimensions: TIndexArray);
         Destructor Destroy; override;
 
-        Procedure setValue(const Position: TIndexArray; NewValue: TMixedValue); // set element's value
-        Function getValue(const Position: TIndexArray): TMixedValue; // get element's value
-        Function getSize(const Dimension: Byte): uint32; // get dimension's size
+        Procedure setValue(const Index: TIndex; const NewValue: TMixedValue);
+        Procedure setValue(const Indexes: TIndexArray; const NewValue: TMixedValue);
+
+        Function getValue(const Index: TIndex): TMixedValue;
+        Function getValue(const Indexes: TIndexArray): TMixedValue;
+
+        Function getSize: TIndex;
 
         Procedure GCMark; override;
        End;
 
  Implementation
 Uses GarbageCollector, VMTypes;
-
-(* ========== TMObject ========== *)
 
 (* TMObject.Create *)
 Constructor TMObject.Create(const fVM: PVM);
@@ -69,58 +79,183 @@ Begin
  isMarked := True;
 End;
 
-(* ========== TMArray =========== *)
-
-(* TMArray.getElementMemory *)
-Function TMArray.getElement(Position: TIndexArray): Pointer;
-Var I: Integer;
+// -------------------------------------------------------------------------- //
+(* TMArray.__set *)
+Procedure TMArray.__set(const DataPos: Pointer; const NewValue: TMixedValue; const aType: uint8);
 Begin
- if (Length(Position) <> Length(Sizes)) Then
- Begin
-  if (Typ = TYPE_STRING_id) and (Length(Position)-1 = Length(Sizes)) Then
-   SetLength(Position, High(Position)) Else
-   VM^.ThrowException('Invalid array access.');
+ Case aType of
+  TYPE_BOOL_id  : PVMBool(DataPos)^  := VM^.getBool(NewValue);
+  TYPE_CHAR_id  : PVMChar(DataPos)^  := VM^.getChar(NewValue);
+  TYPE_INT_id   : PVMInt(DataPos)^   := VM^.getInt(NewValue);
+  TYPE_FLOAT_id : PVMFloat(DataPos)^ := VM^.getFloat(NewValue);
+  TYPE_STRING_id:
+  Begin
+   // if some other string was previously assigned there, free it and then assign the new one
+   VM^.VMStringList.Dispose(PPointer(DataPos)^);
+
+   // clone string
+   PPointer(DataPos)^ := VM^.VMStringList.CloneVMString(VM^.getString(NewValue));
+
+   // and unbind it - we don't want our string to be accidentally freed by the GC
+   VM^.VMStringList.Unbind(PPointer(DataPos)^);
+  End;
+
+  $FF:
+  Begin
+   PPointer(DataPos)^ := VM^.getReference(NewValue);
+  End;
+
+  else
+   VM^.ThrowException('Invalid array internal type: %d', [aType]);
  End;
+End;
 
- For I := Low(Position) To High(Position) Do
-  if (Position[I] >= Sizes[I]) Then
-   VM^.ThrowException('Array out of bounds. Tried to access element #%d, while #%d is the last one.', [Position[I], Sizes[I]-1]);
+(* TMArray.__get *)
+Function TMArray.__get(const DataPos: Pointer; const aType: uint8): TMixedValue;
+Begin
+ // make sure result is empty
+ Result.Reset;
 
- Result := Pointer(Position[Low(Position)]*CTypeSize);
+ With Result do
+ Begin
+  // set mixedvalue type
+  Case aType of
+   TYPE_BOOL_id  : Typ := mvBool;
+   TYPE_CHAR_id  : Typ := mvChar;
+   TYPE_INT_id   : Typ := mvInt;
+   TYPE_FLOAT_id : Typ := mvFloat;
+   TYPE_STRING_id: Typ := mvString;
 
- For I := Low(Position)+1 To High(Position) Do
-   Result += Position[I]*Sizes[I]*CTypeSize;
+   $FF: Typ := mvReference;
 
- Result += uint32(Data);
+   else
+    VM^.ThrowException('Invalid internal array type: %d', [aType]);
+  End;
+
+  // save value
+  Case Typ of
+   mvBool     : Value.Bool  := PVMBool(DataPos)^;
+   mvChar     : Value.Char  := PVMChar(DataPos)^;
+   mvInt      : Value.Int   := PVMInt(DataPos)^;
+   mvFloat    : Value.Float := PVMFloat(DataPos)^;
+   mvString   : Value.Str   := VM^.VMStringList.CloneVMString(PPointer(DataPos)^);
+   mvReference: Value.Int   := VMInt(PPointer(DataPos)^);
+  End;
+ End;
+End;
+
+(* TMArray.getElement *)
+Function TMArray.getElement(const Index: TIndex): Pointer;
+Begin
+ Result := Pointer(uint32(Data) + Index * TypeSize);
+End;
+
+(* TMArray.getElement *)
+Function TMArray.getElement(Indexes: TIndexArray; out Typ: uint8): Pointer;
+Var Arr: TMArray;
+    I  : uint8;
+
+    VMStr: PVMString;
+Begin
+ Typ := TypeID;
+
+ if (Length(Indexes) = 1) Then
+  Exit(getElement(Indexes[0]));
+
+ // multidimensional array
+ if (TypeID = $FF) Then
+ Begin
+  // fetch pointer
+  Arr := TMArray(PPointer(getElement(Indexes[0]))^);
+
+  // check if pointer is valid
+  if (not VM^.isValidObject(Arr)) Then
+   VM^.ThrowException('Multidimensional array contains an invalid entry! (entry address = 0x%x)', [VMIReference(Arr)]);
+
+  // truncate array by first element (i.e. create a new array without that element)
+  For I := 0 To High(Indexes)-1 Do
+   Indexes[I] := Indexes[I+1];
+
+  SetLength(Indexes, High(Indexes));
+
+  // use recursion, luke
+  Result := Arr.getElement(Indexes, Typ);
+ End Else
+
+ // 1D string array
+ if (TypeID = TYPE_STRING_id) Then
+ Begin
+  // stringarray[indexID][charID]
+  Typ := TYPE_CHAR_id;
+
+  // fetch string pointer
+  VMStr := PPointer(getElement(Indexes[0]))^;
+
+  if (VMStr = nil) Then
+   Exit(nil);
+
+  // get char
+  if (Indexes[1] < 1) or (Indexes[1] > VMStr^.Length) Then
+   VM^.ThrowException('String index out of bounds: index %d is outside string range 1..%d', [Indexes[1], VMStr^.Length]);
+
+  Result := VMStr^.Data + Indexes[1] - 1;
+ End Else
+
+ // invalid argument
+ Begin
+  VM^.ThrowException('TMArray.getElement() invalid argument');
+ End;
 End;
 
 (* TMArray.Create *)
-Constructor TMArray.Create(const fVM: Pointer; const fType: Byte; const fSizes: TIndexArray);
-Var I: uint32;
+Constructor TMArray.Create(const fVM: Pointer; const fType: uint8; const fDimensionSize: uint32);
 Begin
  inherited Create(fVM);
 
- { set class fields }
- Typ       := fType;
- CTypeSize := TypeSizes[fType];
- Sizes     := fSizes;
+ // set fields
+ TypeID := fType;
 
- { allocate memory }
- MemSize := 0;
- For I := Low(fSizes) To High(fSizes) Do
-  MemSize += CTypeSize*fSizes[I];
+ if (TypeID = $FF) Then
+  TypeSize := sizeof(Pointer) Else
+  TypeSize := TypeSizes[fType];
 
- if (MemSize = 0) Then
-  MemSize := 1;
+ DimensionSize := fDimensionSize;
 
- Data := AllocMem(MemSize);
+ // allocate memory
+ MemSize := TypeSize * DimensionSize;
+ Data    := AllocMem(MemSize);
+End;
+
+(* TMArray.Create *)
+Constructor TMArray.Create(const fVM: Pointer; const fType: uint8; fDimensions: TIndexArray);
+Var I: uint32;
+Begin
+ if (Length(fDimensions) = 1) Then
+ Begin
+  Create(fVM, fType, fDimensions[0]);
+  Exit;
+ End;
+
+ // create multidimensional array
+ Create(fVM, $FF, fDimensions[High(fDimensions)]);
+
+ SetLength(fDimensions, High(fDimensions));
+
+ if (getSize = 0) Then
+  Exit;
+
+ For I := 0 To getSize-1 Do
+ Begin
+  PPointer(getElement(I))^ := TMArray.Create(fVM, fType, fDimensions);
+ End;
 End;
 
 (* TMArray.Destroy *)
 Destructor TMArray.Destroy;
 Var Mem, MemEnd: PPointer;
 Begin
- if (Typ = TYPE_STRING_id) Then // strings need special memory freeing
+ // strings needs special memory freeing (in fact - it doesn't have to be done here, but why not? Let's not waste memory.)
+ if (TypeID = TYPE_STRING_id) Then
  Begin
   Mem    := Data;
   MemEnd := PPointer(VMIReference(Mem) + VMIReference(MemSize));
@@ -128,99 +263,52 @@ Begin
   While (Mem < MemEnd) Do
   Begin
    if (Mem^ <> nil) Then // if anything is assigned there...
-    VM^.VMStringList.Dispose(Mem^); // these strings are not automatically freed, so we must dispose them by ourselves
+    VM^.VMStringList.Dispose(Mem^); // these strings are not automatically freed so we must dispose them by ourselves
 
    Inc(Mem);
   End;
  End;
 
+ // release pointer
  FreeMem(Data);
+
+ inherited;
 End;
 
 (* TMArray.setValue *)
-Procedure TMArray.setValue(const Position: TIndexArray; NewValue: TMixedValue);
-Var DataPos: Pointer;
-    FreeStr: Boolean = True;
+Procedure TMArray.setValue(const Index: TIndex; const NewValue: TMixedValue);
 Begin
- DataPos := getElement(Position);
+ __set(getElement(Index), NewValue, TypeID);
+End;
 
- if (self.Typ = TYPE_STRING_id) and (Length(Position) = Length(Sizes)+1) Then // special feature: immediate string's char reference; like: ArrayOfString[ArrayIndex][CharIndex] := 'f';
- Begin
-  With NewValue do
-  Begin
-   Value.Str                                 := DataPos;
-   Value.Str^.Data[Position[High(Position)]] := VM^.getChar(NewValue);
-
-   Typ := mvString;
-
-   FreeStr := False;
-  End;
- End;
-
- Case self.Typ of
-  TYPE_BOOL_id  : PVMBool(DataPos)^  := VM^.getBool(NewValue);
-  TYPE_CHAR_id  : PVMChar(DataPos)^  := VM^.getChar(NewValue);
-  TYPE_INT_id   : PVMInt(DataPos)^   := VM^.getInt(NewValue);
-  TYPE_FLOAT_id : PVMFloat(DataPos)^ := VM^.getFloat(NewValue);
-  TYPE_STRING_id:
-  Begin
-   if (FreeStr) and (PPointer(DataPos)^ <> nil) Then // if some other string was previously assigned there, free it and then assign the new one
-    VM^.VMStringList.Dispose(PPointer(DataPos)^);
-
-   PPointer(DataPos)^ := VM^.VMStringList.CloneVMString(VM^.getString(NewValue));
-   VM^.VMStringList.Unbind(PPointer(DataPos)^); // we don't want our string to be "accidentally" freed
-  End;
-
-  else
-   VM^.ThrowException('Invalid array internal type (#%d)', [ord(Typ)]);
- End;
+(* TMArray.setValue *)
+Procedure TMArray.setValue(const Indexes: TIndexArray; const NewValue: TMixedValue);
+Var Typ: uint8;
+    Pos: Pointer;
+Begin
+ Pos := getElement(Indexes, Typ);
+ __set(Pos, NewValue, Typ);
 End;
 
 (* TMArray.getValue *)
-Function TMArray.getValue(const Position: TIndexArray): TMixedValue;
-Var DataPos: Pointer;
+Function TMArray.getValue(const Index: TIndex): TMixedValue;
 Begin
- Result.Reset;
+ Result := __get(getElement(Index), TypeID);
+End;
 
- DataPos := getElement(Position);
-
- With Result do
- Begin
-  Case self.Typ of
-   TYPE_BOOL_id  : Typ := mvBool;
-   TYPE_CHAR_id  : Typ := mvChar;
-   TYPE_INT_id   : Typ := mvInt;
-   TYPE_FLOAT_id : Typ := mvFloat;
-   TYPE_STRING_id: Typ := mvString;
-
-   else
-    VM^.ThrowException('Invalid internal array type (#%d)', [ord(self.Typ)]);
-  End;
-
-  Case Typ of
-   mvBool  : Value.Bool  := PVMBool(DataPos)^;
-   mvChar  : Value.Char  := PVMChar(DataPos)^;
-   mvInt   : Value.Int   := PVMInt(DataPos)^;
-   mvFloat : Value.Float := PVMFloat(DataPos)^;
-   mvString: Value.Str   := VM^.VMStringList.CloneVMString(PPointer(DataPos)^);
-  End;
-
-  if (Length(Position) = Length(Sizes)+1) and (self.Typ = TYPE_STRING_id) Then
-  Begin
-   Typ := mvChar;
-
-   Value.Char := Value.Str^.Data[Position[High(Position)]-1];
-  End;
- End;
+(* TMArray.getValue *)
+Function TMArray.getValue(const Indexes: TIndexArray): TMixedValue;
+Var Typ: uint8;
+    Pos: Pointer;
+Begin
+ Pos    := getElement(Indexes, Typ);
+ Result := __get(Pos, Typ);
 End;
 
 (* TMArray.getSize *)
-Function TMArray.getSize(const Dimension: Byte): uint32;
+Function TMArray.getSize: TIndex;
 Begin
- if (Dimension = 0) or (Dimension > Length(Sizes)) Then
-  VM^.ThrowException('Array of of bounds. Tried to access dimension #%d, while #%d is the last one.', [Dimension, Length(Sizes)]);
-
- Result := Sizes[Dimension-1]; // dimensions from the user-side are counted from `1`, but internally from `0`. This is the place where we do magic to "fix" it.
+ Result := DimensionSize;
 End;
 
 (* TMArray.GCMark *)
@@ -230,18 +318,19 @@ Var Mem, MemEnd: Pointer;
 Begin
  inherited;
 
- if (Typ = TYPE_INT_id) Then
+ if (TypeID = $FF) Then
  Begin
   Mem    := Data;
   MemEnd := Mem+MemSize;
 
   While (Mem < MemEnd) Do
   Begin
-   Obj := TMObject(Pointer(uint32(Pint64(Mem)^)));
+   Obj := TMObject(PPointer(Mem)^);
+
    if (VM^.isValidObject(Obj)) Then
     Obj.GCMark;
 
-   Inc(Mem, sizeof(int64));
+   Inc(Mem, sizeof(Pointer));
   End;
  End;
 End;

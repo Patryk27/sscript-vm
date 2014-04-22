@@ -584,11 +584,19 @@ Begin
 
   Str := SysUtils.Format('er%d = 0x%x', [I, VMIReference(Obj)]);
 
+  if (Obj = nil) Then
+  Begin
+   Str += ' (null)';
+  End Else
+
   if (TGarbageCollector(GarbageCollector).FindObject(Obj)) Then
   Begin
-   Str += ' (valid)';
+   Str += SysUtils.Format(' (valid ''%s'' class instance)', [TObject(Obj).ClassName]);
   End Else
+
+  Begin
    Str += ' (invalid/unknown)';
+  End;
 
   WriteLog(Str);
  End;

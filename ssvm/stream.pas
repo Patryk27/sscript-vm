@@ -8,14 +8,17 @@ Unit Stream;
  Interface
  Uses SysUtils, Classes;
 
+ { EStreamException }
+ Type EStreamException = Class(Exception);
+
  { TStream }
  Type TStream =
       Class (Classes.TMemoryStream)
        Private
-        Enable_NtoBE: Boolean;
+        ConvertToBE: Boolean;
 
        Public
-        Constructor Create(const _Enable_NtoBE: Boolean);
+        Constructor Create(const fConvertToBigEndian: Boolean=True);
 
         // `write` functions
         Procedure write_uint8(const V: uint8);
@@ -27,6 +30,7 @@ Unit Stream;
         Procedure write_int32(const V: int32);
         Procedure write_int64(const V: int64);
         Procedure write_float(const V: Extended);
+        Procedure write_string(const V: String);
 
         // `read` functions
         Function read_uint8: uint8;
@@ -48,9 +52,9 @@ Unit Stream;
  Implementation
 
 (* TStream.Create *)
-Constructor TStream.Create(const _Enable_NtoBE: Boolean);
+Constructor TStream.Create(const fConvertToBigEndian: Boolean);
 Begin
- Enable_NtoBE := _Enable_NtoBE;
+ ConvertToBE := fConvertToBigEndian;
 End;
 
 (* TStream.write_uint8 *)
@@ -62,7 +66,7 @@ End;
 (* TStream.write_uint16 *)
 Procedure TStream.write_uint16(const V: uint16);
 Begin
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Write(NtoBE(V), sizeof(V)) Else
   Write(V, sizeof(V));
 End;
@@ -70,7 +74,7 @@ End;
 (* TStream.write_uint32 *)
 Procedure TStream.write_uint32(const V: uint32);
 Begin
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Write(NtoBE(V), sizeof(V)) Else
   Write(V, sizeof(V));
 End;
@@ -78,7 +82,7 @@ End;
 (* TStream.write_uint64 *)
 Procedure TStream.write_uint64(const V: uint64);
 Begin
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Write(NtoBE(V), sizeof(V)) Else
   Write(V, sizeof(V));
 End;
@@ -92,7 +96,7 @@ End;
 (* TStream.write_int16 *)
 Procedure TStream.write_int16(const V: int16);
 Begin
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Write(NtoBE(V), sizeof(V)) Else
   Write(V, sizeof(V));
 End;
@@ -100,7 +104,7 @@ End;
 (* TStream.write_int32 *)
 Procedure TStream.write_int32(const V: int32);
 Begin
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Write(NtoBE(V), sizeof(V)) Else
   Write(V, sizeof(V));
 End;
@@ -108,7 +112,7 @@ End;
 (* TStream.write_int64 *)
 Procedure TStream.write_int64(const V: int64);
 Begin
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Write(NtoBE(V), sizeof(V)) Else
   Write(V, sizeof(V));
 End;
@@ -117,6 +121,21 @@ End;
 Procedure TStream.write_float(const V: Extended);
 Begin
  Write(V, sizeof(V));
+End;
+
+(* TStream.write_string *)
+Procedure TStream.write_string(const V: String);
+Var Ch: Char;
+Begin
+ For Ch in V Do
+ Begin
+  if (Ch = #0) Then
+   raise EStreamException.Create('Terminator char (0x00) found in the string content!');
+
+  write_uint8(ord(Ch));
+ End;
+
+ write_uint8(0);
 End;
 
 (* TStream.read_uint8 *)
@@ -130,7 +149,7 @@ Function TStream.read_uint16: uint16;
 Begin
  Read(Result, sizeof(Result));
 
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Result := BEtoN(Result);
 End;
 
@@ -139,8 +158,8 @@ Function TStream.read_uint32: uint32;
 Begin
  Read(Result, sizeof(Result));
 
- if (Enable_NtoBE) Then
- Result := BEtoN(Result);
+ if (ConvertToBE) Then
+  Result := BEtoN(Result);
 End;
 
 (* TStream.read_uint64 *)
@@ -148,7 +167,7 @@ Function TStream.read_uint64: uint64;
 Begin
  Read(Result, sizeof(Result));
 
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Result := BEtoN(Result);
 End;
 
@@ -163,7 +182,7 @@ Function TStream.read_int16: int16;
 Begin
  Read(Result, sizeof(Result));
 
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Result := BEtoN(Result);
 End;
 
@@ -172,7 +191,7 @@ Function TStream.read_int32: int32;
 Begin
  Read(Result, sizeof(Result));
 
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Result := BEtoN(Result);
 End;
 
@@ -181,7 +200,7 @@ Function TStream.read_int64: int64;
 Begin
  Read(Result, sizeof(Result));
 
- if (Enable_NtoBE) Then
+ if (ConvertToBE) Then
   Result := BEtoN(Result);
 End;
 

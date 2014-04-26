@@ -4,16 +4,15 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="66">
+    <Units Count="68">
       <Unit0>
         <Filename Value="ssvm.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="ssvm"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="0"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="1"/>
-        <CursorPos X="25" Y="27"/>
+        <TopLine Value="134"/>
+        <CursorPos X="19" Y="148"/>
         <UsageCount Value="200"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -59,7 +58,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="100"/>
         <CursorPos X="5" Y="129"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit5>
       <Unit6>
         <Filename Value="objects.pas"/>
@@ -67,7 +66,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="34" Y="18"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit6>
       <Unit7>
         <Filename Value="stream.pas"/>
@@ -75,7 +74,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="38" Y="16"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit7>
       <Unit8>
         <Filename Value="jit\jit_base.pas"/>
@@ -83,7 +82,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="19"/>
         <CursorPos X="1" Y="50"/>
-        <UsageCount Value="29"/>
+        <UsageCount Value="28"/>
       </Unit8>
       <Unit9>
         <Filename Value="jit\x86\routines.pas"/>
@@ -91,7 +90,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="55"/>
         <CursorPos X="59" Y="77"/>
-        <UsageCount Value="94"/>
+        <UsageCount Value="93"/>
       </Unit9>
       <Unit10>
         <Filename Value="jit\x86\jit.pas"/>
@@ -99,7 +98,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1547"/>
         <CursorPos X="39" Y="1550"/>
-        <UsageCount Value="24"/>
+        <UsageCount Value="23"/>
       </Unit10>
       <Unit11>
         <Filename Value="bytecode\bcreader.pas"/>
@@ -107,7 +106,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="105"/>
         <CursorPos X="75" Y="116"/>
-        <UsageCount Value="21"/>
+        <UsageCount Value="20"/>
       </Unit11>
       <Unit12>
         <Filename Value="bytecode\bcloader.pas"/>
@@ -115,7 +114,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="22"/>
         <CursorPos X="74" Y="26"/>
-        <UsageCount Value="100"/>
+        <UsageCount Value="99"/>
       </Unit12>
       <Unit13>
         <Filename Value="bytecode\opcodes.pas"/>
@@ -123,7 +122,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="54"/>
         <CursorPos X="28" Y="64"/>
-        <UsageCount Value="114"/>
+        <UsageCount Value="113"/>
       </Unit13>
       <Unit14>
         <Filename Value="bytecode\opcodeinterpreter.pas"/>
@@ -131,7 +130,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="525"/>
         <CursorPos X="18" Y="539"/>
-        <UsageCount Value="25"/>
+        <UsageCount Value="24"/>
       </Unit14>
       <Unit15>
         <Filename Value="gc\gc.pas"/>
@@ -139,7 +138,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="13"/>
       </Unit15>
       <Unit16>
         <Filename Value="jit\jit_compiler.pas"/>
@@ -147,7 +146,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="408"/>
         <CursorPos X="1" Y="450"/>
-        <UsageCount Value="15"/>
+        <UsageCount Value="14"/>
       </Unit16>
       <Unit17>
         <Filename Value="jit\jit_abstract_cpu.pas"/>
@@ -155,7 +154,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="148"/>
         <CursorPos X="9" Y="153"/>
-        <UsageCount Value="15"/>
+        <UsageCount Value="14"/>
       </Unit17>
       <Unit18>
         <Filename Value="jit\x86\cpu_x86.pas"/>
@@ -163,23 +162,23 @@
         <WindowIndex Value="0"/>
         <TopLine Value="2486"/>
         <CursorPos X="52" Y="2524"/>
-        <UsageCount Value="19"/>
+        <UsageCount Value="18"/>
       </Unit18>
       <Unit19>
         <Filename Value="vmstrings.pas"/>
         <UnitName Value="VMStrings"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="197"/>
-        <CursorPos X="24" Y="229"/>
+        <TopLine Value="180"/>
+        <CursorPos X="44" Y="58"/>
         <UsageCount Value="105"/>
       </Unit19>
       <Unit20>
         <Filename Value="vmtypes.pas"/>
         <UnitName Value="VMTypes"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="51"/>
-        <CursorPos X="8" Y="51"/>
-        <UsageCount Value="124"/>
+        <TopLine Value="1"/>
+        <CursorPos X="39" Y="46"/>
+        <UsageCount Value="123"/>
       </Unit20>
       <Unit21>
         <Filename Value="jit\jitcompiler.pas"/>
@@ -187,7 +186,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="227"/>
         <CursorPos X="124" Y="144"/>
-        <UsageCount Value="76"/>
+        <UsageCount Value="75"/>
       </Unit21>
       <Unit22>
         <Filename Value="jit\jitopcodes.pas"/>
@@ -195,7 +194,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="141"/>
         <CursorPos X="55" Y="163"/>
-        <UsageCount Value="72"/>
+        <UsageCount Value="71"/>
       </Unit22>
       <Unit23>
         <Filename Value="jit\jitopcodelist.pas"/>
@@ -203,7 +202,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="73"/>
         <CursorPos X="48" Y="122"/>
-        <UsageCount Value="68"/>
+        <UsageCount Value="67"/>
       </Unit23>
       <Unit24>
         <Filename Value="jit\jitabstractcpu.pas"/>
@@ -211,7 +210,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="80"/>
         <CursorPos X="5" Y="98"/>
-        <UsageCount Value="34"/>
+        <UsageCount Value="33"/>
       </Unit24>
       <Unit25>
         <Filename Value="jit\x86\jitcpu.pas"/>
@@ -219,7 +218,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="410"/>
         <CursorPos X="130" Y="436"/>
-        <UsageCount Value="71"/>
+        <UsageCount Value="70"/>
       </Unit25>
       <Unit26>
         <Filename Value="jit\x86\jitasm.pas"/>
@@ -227,7 +226,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="220"/>
         <CursorPos X="14" Y="238"/>
-        <UsageCount Value="67"/>
+        <UsageCount Value="66"/>
       </Unit26>
       <Unit27>
         <Filename Value="jit\jitjumptable.pas"/>
@@ -235,7 +234,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="60"/>
         <CursorPos X="27" Y="74"/>
-        <UsageCount Value="35"/>
+        <UsageCount Value="34"/>
       </Unit27>
       <Unit28>
         <Filename Value="jit\x86\x86_mov.pas"/>
@@ -243,7 +242,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="55"/>
         <CursorPos X="102" Y="65"/>
-        <UsageCount Value="29"/>
+        <UsageCount Value="28"/>
       </Unit28>
       <Unit29>
         <Filename Value="jit\x86\x86_int_math.pas"/>
@@ -251,7 +250,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="147"/>
         <CursorPos X="1" Y="154"/>
-        <UsageCount Value="29"/>
+        <UsageCount Value="28"/>
       </Unit29>
       <Unit30>
         <Filename Value="jit\x86\x86_stack.pas"/>
@@ -259,7 +258,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="57"/>
         <CursorPos X="35" Y="74"/>
-        <UsageCount Value="29"/>
+        <UsageCount Value="28"/>
       </Unit30>
       <Unit31>
         <Filename Value="jit\x86\x86_float_math.pas"/>
@@ -267,7 +266,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="15"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit31>
       <Unit32>
         <Filename Value="vmobjects.pas"/>
@@ -275,14 +274,14 @@
         <WindowIndex Value="0"/>
         <TopLine Value="227"/>
         <CursorPos X="84" Y="257"/>
-        <UsageCount Value="111"/>
+        <UsageCount Value="110"/>
       </Unit32>
       <Unit33>
         <Filename Value="vmstruct.pas"/>
         <UnitName Value="VMStruct"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="565"/>
-        <CursorPos X="55" Y="595"/>
+        <TopLine Value="387"/>
+        <CursorPos X="52" Y="393"/>
         <UsageCount Value="104"/>
       </Unit33>
       <Unit34>
@@ -291,15 +290,15 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="65" Y="14"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="11"/>
       </Unit34>
       <Unit35>
         <Filename Value="vmstack.pas"/>
         <UnitName Value="VMStack"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="12"/>
-        <CursorPos X="30" Y="39"/>
-        <UsageCount Value="94"/>
+        <TopLine Value="201"/>
+        <CursorPos X="59" Y="89"/>
+        <UsageCount Value="95"/>
       </Unit35>
       <Unit36>
         <Filename Value="vmexceptions.pas"/>
@@ -307,31 +306,34 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="8" Y="16"/>
-        <UsageCount Value="12"/>
+        <UsageCount Value="11"/>
       </Unit36>
       <Unit37>
         <Filename Value="vmbytecode.pas"/>
         <UnitName Value="VMBytecode"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="288"/>
-        <CursorPos X="48" Y="297"/>
+        <TopLine Value="240"/>
+        <CursorPos X="1" Y="256"/>
         <UsageCount Value="103"/>
       </Unit37>
       <Unit38>
         <Filename Value="vmelement.pas"/>
         <UnitName Value="VMElement"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="12"/>
+        <TopLine Value="102"/>
         <CursorPos X="7" Y="12"/>
-        <UsageCount Value="94"/>
+        <UsageCount Value="93"/>
       </Unit38>
       <Unit39>
         <Filename Value="bytecode\interpreter\interpreter.pas"/>
         <UnitName Value="Interpreter"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="342"/>
-        <CursorPos X="41" Y="360"/>
-        <UsageCount Value="97"/>
+        <TopLine Value="34"/>
+        <CursorPos X="37" Y="51"/>
+        <UsageCount Value="100"/>
+        <Loaded Value="True"/>
       </Unit39>
       <Unit40>
         <Filename Value="bytecode\interpreter\interpreter_icalls.pas"/>
@@ -339,7 +341,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="34"/>
         <CursorPos X="33" Y="56"/>
-        <UsageCount Value="67"/>
+        <UsageCount Value="66"/>
       </Unit40>
       <Unit41>
         <Filename Value="gc\garbagecollector.pas"/>
@@ -347,7 +349,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="239"/>
         <CursorPos X="31" Y="252"/>
-        <UsageCount Value="86"/>
+        <UsageCount Value="85"/>
       </Unit41>
       <Unit42>
         <Filename Value="..\..\SScript-Compiler\bytecode\opcodes.pas"/>
@@ -355,21 +357,21 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="2"/>
+        <UsageCount Value="1"/>
       </Unit42>
       <Unit43>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\objpash.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="179"/>
         <CursorPos X="8" Y="187"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="2"/>
       </Unit43>
       <Unit44>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\systemh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1134"/>
         <CursorPos X="37" Y="1141"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="2"/>
       </Unit44>
       <Unit45>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\packages\fv\src\time.pas"/>
@@ -377,7 +379,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="419"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="2"/>
       </Unit45>
       <Unit46>
         <Filename Value="..\os_functions.pas"/>
@@ -385,28 +387,28 @@
         <WindowIndex Value="0"/>
         <TopLine Value="47"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="4"/>
+        <UsageCount Value="3"/>
       </Unit46>
       <Unit47>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\inc\heaph.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="23"/>
         <CursorPos X="5" Y="23"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="2"/>
       </Unit47>
       <Unit48>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\sysutils\sysutilh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="210"/>
         <CursorPos X="13" Y="210"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="2"/>
       </Unit48>
       <Unit49>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\sysutils\sysstrh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="16"/>
         <CursorPos X="4" Y="22"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="2"/>
       </Unit49>
       <Unit50>
         <Filename Value="C:\lazarus\fpc\2.6.2\source\packages\numlib\src\int.pas"/>
@@ -414,7 +416,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="729"/>
         <CursorPos X="1" Y="1"/>
-        <UsageCount Value="3"/>
+        <UsageCount Value="2"/>
       </Unit50>
       <Unit51>
         <Filename Value="jit\x86\x86_jmp_call.pas"/>
@@ -422,7 +424,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="35"/>
         <CursorPos X="38" Y="51"/>
-        <UsageCount Value="8"/>
+        <UsageCount Value="7"/>
       </Unit51>
       <Unit52>
         <Filename Value="jit\x86\x86_float_int_math.pas"/>
@@ -430,7 +432,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="83" Y="9"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit52>
       <Unit53>
         <Filename Value="jit\x86\x86_int_float_math.pas"/>
@@ -438,7 +440,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="207" Y="18"/>
-        <UsageCount Value="7"/>
+        <UsageCount Value="6"/>
       </Unit53>
       <Unit54>
         <Filename Value="jit\x86\x86_char_math.pas"/>
@@ -446,7 +448,7 @@
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="76" Y="11"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
       </Unit54>
       <Unit55>
         <Filename Value="jit\x86\x86_int_char_math.pas"/>
@@ -454,35 +456,35 @@
         <WindowIndex Value="0"/>
         <TopLine Value="82"/>
         <CursorPos X="54" Y="99"/>
-        <UsageCount Value="4"/>
+        <UsageCount Value="3"/>
       </Unit55>
       <Unit56>
         <Filename Value="mixedvalue_operators.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="52" Y="33"/>
-        <UsageCount Value="5"/>
+        <UsageCount Value="4"/>
       </Unit56>
       <Unit57>
         <Filename Value="C:\lazarus\fpc\2.7.1\source\rtl\inc\systemh.inc"/>
         <WindowIndex Value="0"/>
-        <TopLine Value="705"/>
-        <CursorPos X="11" Y="729"/>
-        <UsageCount Value="4"/>
+        <TopLine Value="518"/>
+        <CursorPos X="3" Y="518"/>
+        <UsageCount Value="10"/>
       </Unit57>
       <Unit58>
         <Filename Value="C:\lazarus\fpc\2.7.1\source\rtl\objpas\sysutils\syspchh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="8"/>
         <CursorPos X="10" Y="39"/>
-        <UsageCount Value="4"/>
+        <UsageCount Value="3"/>
       </Unit58>
       <Unit59>
         <Filename Value="C:\lazarus\fpc\2.7.1\source\rtl\objpas\sysutils\syspch.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="70"/>
         <CursorPos X="3" Y="72"/>
-        <UsageCount Value="4"/>
+        <UsageCount Value="3"/>
       </Unit59>
       <Unit60>
         <Filename Value="bytecode\dbgparser.pas"/>
@@ -490,68 +492,182 @@
         <WindowIndex Value="0"/>
         <TopLine Value="104"/>
         <CursorPos X="52" Y="112"/>
-        <UsageCount Value="14"/>
+        <UsageCount Value="13"/>
       </Unit60>
       <Unit61>
         <Filename Value="C:\lazarus\fpc\2.7.1\source\rtl\inc\mathh.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="21"/>
         <CursorPos X="15" Y="21"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
       </Unit61>
       <Unit62>
         <Filename Value="C:\lazarus\fpc\2.7.1\source\rtl\i386\math.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="2"/>
         <CursorPos X="32" Y="4"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
       </Unit62>
       <Unit63>
         <Filename Value="C:\lazarus\fpc\2.7.1\source\rtl\inc\objpash.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="202"/>
         <CursorPos X="21" Y="202"/>
-        <UsageCount Value="6"/>
+        <UsageCount Value="5"/>
       </Unit63>
       <Unit64>
         <Filename Value="C:\lazarus\fpc\2.7.1\source\rtl\inc\heaph.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="29"/>
         <CursorPos X="5" Y="44"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="9"/>
       </Unit64>
       <Unit65>
         <Filename Value="C:\lazarus\fpc\2.7.1\source\rtl\inc\heap.inc"/>
         <WindowIndex Value="0"/>
         <TopLine Value="312"/>
         <CursorPos X="36" Y="334"/>
-        <UsageCount Value="11"/>
+        <UsageCount Value="10"/>
       </Unit65>
+      <Unit66>
+        <Filename Value="C:\lazarus\fpc\2.7.1\source\rtl\objpas\sysutils\sysstrh.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="81"/>
+        <CursorPos X="10" Y="66"/>
+        <UsageCount Value="10"/>
+      </Unit66>
+      <Unit67>
+        <Filename Value="C:\lazarus\fpc\2.7.1\source\rtl\objpas\sysutils\sysstr.inc"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="14"/>
+        <CursorPos X="3" Y="22"/>
+        <UsageCount Value="10"/>
+      </Unit67>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>
     </General>
-    <JumpHistory Count="5" HistoryIndex="4">
+    <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
-        <Filename Value="ssvm.lpr"/>
-        <Caret Line="372" Column="25" TopLine="49"/>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="190" Column="9" TopLine="203"/>
       </Position1>
       <Position2>
-        <Filename Value="ssvm.lpr"/>
-        <Caret Line="487" Column="54" TopLine="459"/>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="228" Column="7" TopLine="216"/>
       </Position2>
       <Position3>
-        <Filename Value="ssvm.lpr"/>
-        <Caret Line="495" Column="1" TopLine="141"/>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="243" Column="7" TopLine="216"/>
       </Position3>
       <Position4>
-        <Filename Value="ssvm.lpr"/>
-        <Caret Line="27" Column="36" TopLine="1"/>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="291" Column="7" TopLine="262"/>
       </Position4>
       <Position5>
-        <Filename Value="ssvm.lpr"/>
-        <Caret Line="27" Column="38" TopLine="1"/>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="306" Column="7" TopLine="278"/>
       </Position5>
+      <Position6>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="354" Column="7" TopLine="325"/>
+      </Position6>
+      <Position7>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="369" Column="7" TopLine="341"/>
+      </Position7>
+      <Position8>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="417" Column="7" TopLine="388"/>
+      </Position8>
+      <Position9>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="432" Column="7" TopLine="404"/>
+      </Position9>
+      <Position10>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="478" Column="7" TopLine="449"/>
+      </Position10>
+      <Position11>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="526" Column="7" TopLine="497"/>
+      </Position11>
+      <Position12>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="544" Column="7" TopLine="516"/>
+      </Position12>
+      <Position13>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="795" Column="7" TopLine="766"/>
+      </Position13>
+      <Position14>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="809" Column="7" TopLine="781"/>
+      </Position14>
+      <Position15>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="854" Column="7" TopLine="825"/>
+      </Position15>
+      <Position16>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="900" Column="7" TopLine="871"/>
+      </Position16>
+      <Position17>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="914" Column="7" TopLine="886"/>
+      </Position17>
+      <Position18>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="960" Column="7" TopLine="931"/>
+      </Position18>
+      <Position19>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="974" Column="7" TopLine="946"/>
+      </Position19>
+      <Position20>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1032" Column="7" TopLine="1004"/>
+      </Position20>
+      <Position21>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1016" Column="14" TopLine="995"/>
+      </Position21>
+      <Position22>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1088" Column="29" TopLine="1065"/>
+      </Position22>
+      <Position23>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1125" Column="8" TopLine="1105"/>
+      </Position23>
+      <Position24>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1129" Column="60" TopLine="1105"/>
+      </Position24>
+      <Position25>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1134" Column="60" TopLine="1113"/>
+      </Position25>
+      <Position26>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1138" Column="8" TopLine="1113"/>
+      </Position26>
+      <Position27>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1142" Column="60" TopLine="1113"/>
+      </Position27>
+      <Position28>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1151" Column="8" TopLine="1123"/>
+      </Position28>
+      <Position29>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1298" Column="79" TopLine="1264"/>
+      </Position29>
+      <Position30>
+        <Filename Value="bytecode\interpreter\interpreter.pas"/>
+        <Caret Line="1682" Column="5" TopLine="1648"/>
+      </Position30>
     </JumpHistory>
   </ProjectSession>
   <EditorMacros Count="0"/>

@@ -72,17 +72,17 @@ Unit VMStruct;
        Procedure CheckMemory;
 
        // -- TMixedValue handling -- //
-       Function getBool(const MV: TMixedValue): VMBool; inline;
-       Function getChar(const MV: TMixedValue): VMChar; inline;
-       Function getInt(const MV: TMixedValue): VMInt; inline;
-       Function getFloat(const MV: TMixedValue): VMFloat; inline;
+       Function getBool(const MV: TMixedValue): VMBool; //inline;
+       Function getChar(const MV: TMixedValue): VMChar; //inline;
+       Function getInt(const MV: TMixedValue): VMInt; //inline;
+       Function getFloat(const MV: TMixedValue): VMFloat; //inline;
        Function getString(const MV: TMixedValue): PVMString; // inline;
-       Function getReference(const MV: TMixedValue): VMReference; inline;
-       Function getPChar(const MV: TMixedValue; const UnbindAndFree: Boolean=False): PChar; inline;
+       Function getReference(const MV: TMixedValue): VMReference; //inline;
+       Function getPChar(const MV: TMixedValue; const UnbindAndFree: Boolean=False): PChar; //inline;
 
        // -- string handling -- //
-       Procedure StringConcat(const A, B: PVMString);
-       Procedure StringConcat(const A: PVMString; const B: String);
+       Procedure StringConcat(A, B: PVMString);
+       Procedure StringConcat(A: PVMString; const B: String);
 
        // -- exception handling -- //
        Procedure ThrowException(const Exception: TExceptionBlock);
@@ -273,11 +273,49 @@ End;
 
 (* TVM.getString *)
 Function TVM.getString(const MV: TMixedValue): PVMString;
+Var VMStr: PVMString;
+    Str  : String;
+    Ch   : PChar;
 Begin
  With MV do
  Begin
   if (isMemRef) Then
+  Begin
+   if (PByte(MemAddr)^ = $FF) Then
+   Begin
+    {
+     @Note:
+
+     This is related to the global variables mechanism.
+
+     Since compiler cannot allocate VMStrings by itself (even in the bytecode)
+     and global variables must be handled somehow, following data is generated:
+     > 0xFF + first string char + second string char + (...) + 0x00
+     This sequence indicates that VM shouldn't take the address of the string
+     (because this would normally be: > VMString pointer) but the string itself.
+    }
+
+    Str := '';
+    Ch  := MemAddr+1;
+
+    While (Ch^ <> #0) Do
+    Begin
+     Str += Ch^;
+     Inc(Ch);
+    End;
+
+    New(VMStr);
+    VMStr^.Data   := StringToPChar(Str, False);
+    VMStr^.Length := Length(Str);
+
+    // assign the pointer so that we don't have to create a new VMString each time
+    if (Length(Str)+1 >= sizeof(Pointer)) Then
+     PPointer(MemAddr)^ := VMStr;
+   End;
+
+   // return address
    Exit(PPointer(MemAddr)^);
+  End;
 
   Case Typ of
    { char }
@@ -331,34 +369,80 @@ End;
 {
  Concatenates two VMStrings: A := A+B;
 }
-Procedure TVM.StringConcat(const A, B: PVMString);
+Procedure TVM.StringConcat(A, B: PVMString);
 Var OldLen: uint32;
+
+  { SpecialCase } // see: TVM.getString()
+  Function SpecialCase(const Pnt: Pointer): PVMString;
+  Var MV: TMixedValue;
+  Begin
+   if (Puint8(Pnt)^ = $FF) Then
+   Begin
+    MV.Reset;
+    MV.Typ      := mvString;
+    MV.MemAddr  := Pnt;
+    MV.isMemRef := True;
+
+    Result := TVM.getString(MV);
+   End Else
+   Begin
+    Result := PVMString(Pnt);
+   End;
+  End;
+
 Begin
- if (B^.Length = 0) Then // nothing to be done
+ A := SpecialCase(A);
+ B := SpecialCase(B);
+
+ // is there anything to do?
+ if (B^.Length = 0) Then
   Exit;
 
+ // save current length
  OldLen := A^.Length;
 
- A^.Length += B^.Length; // increase length
- ReallocMem(A^.Data, A^.Length); // reallocate memory block
+ // increase length
+ A^.Length += B^.Length;
 
- Move(B^.Data[0], A^.Data[OldLen], B^.Length); // move chars
+ // reallocate memory block
+ ReallocMem(A^.Data, A^.Length);
+
+ // copy data
+ Move(B^.Data[0], A^.Data[OldLen], B^.Length);
 End;
 
 (* StringConcat *)
 { Concatenates VMString and a regular String: A := A+B; }
-Procedure TVM.StringConcat(const A: PVMString; const B: String);
+Procedure TVM.StringConcat(A: PVMString; const B: String);
 Var OldLen: uint32;
+    MV    : TMixedValue;
 Begin
- if (Length(B) = 0) Then // nothing to be done
+ // is there anything to do?
+ if (Length(B) = 0) Then
   Exit;
 
+ // special case; see TVM.getString()
+ if (PByte(A)^ = $FF) Then
+ Begin
+  MV.Reset;
+  MV.Typ      := mvString;
+  MV.MemAddr  := A;
+  MV.isMemRef := True;
+
+  A := TVM.getString(MV);
+ End;
+
+ // save current length
  OldLen := A^.Length;
 
- A^.Length += Length(B); // increase length
- ReallocMem(A^.Data, A^.Length); // reallocate memory block
+ // increase length
+ A^.Length += Length(B);
 
- Move(B[1], A^.Data[OldLen], Length(B)); // move chars
+ // reallocate memory block
+ ReallocMem(A^.Data, A^.Length);
+
+ // copy data
+ Move(B[1], A^.Data[OldLen], Length(B));
 End;
 
 (* TVM.ThrowException *)

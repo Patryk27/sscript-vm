@@ -98,7 +98,9 @@ Uses VMStruct;
 (* getTypeName *)
 Function getTypeName(const MV: TMixedValue): String;
 Begin
- Result := MixedValueTypeNames[MV.Typ];
+ if (ord(MV.Typ) > ord(High(MixedValueTypeNames))) Then
+  Result := 'invalid' Else
+  Result := MixedValueTypeNames[MV.Typ];
 
  if (MV.isReg) Then
   Result += ' reg';

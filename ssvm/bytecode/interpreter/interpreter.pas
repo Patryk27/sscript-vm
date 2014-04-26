@@ -49,7 +49,6 @@ Unit Interpreter;
  Procedure op_STRSET(const VM: PVM);
  Procedure op_STRGET(const VM: PVM);
  Procedure op_STRLEN(const VM: PVM);
- Procedure op_LOCATION(const VM: PVM);
 
  Type TOpcodeProc = Procedure(const VM: PVM);
  Const OpcodeTable: Array[TOpcodeKind] of TOpcodeProc = // opcode list
@@ -157,25 +156,23 @@ End;
 Procedure op_PUSH(const VM: PVM);
 Begin
  With VM^ do
+ Begin
   Stack.Push(Bytecode.read_param(True));
+ End;
 End;
 
 { POP (register) }
 Procedure op_POP(const VM: PVM);
 Var reg, val: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   val := Stack.Pop;
   reg := Bytecode.read_param;
 
-  if (not (reg.isReg or reg.isStackval)) Then
-   VM^.ThrowException('''pop'' requires the first parameter to be a register or a stackval.');
-
-  if (reg.isStackval) Then
-  Begin
-   reg.Stackval^ := val;
-  End Else
+  { POP (register) }
+  if (reg.isReg) Then
   Begin
    Case reg.Typ of
     mvBool     : Regs.b[reg.RegIndex] := getBool(val);
@@ -186,267 +183,332 @@ Begin
     mvReference: Regs.r[reg.RegIndex] := getReference(val);
 
     else
-     VM^.ThrowException('''pop'' called with arguments: '+getTypeName(reg)+' <- '+getTypeName(val));
+     goto Fail;
    End;
+
+   Exit;
+  End;
+
+  { POP (stackval) }
+  if (reg.isStackval) Then
+  Begin
+   reg.Stackval^ := val;
+   Exit;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [val, reg]);
 End;
 
 { ADD (lvalue, value) }
 Procedure op_ADD(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''add'' requires the first parameter to be an L-value.');
-
+  { ADD (memory reference, value) }
   if (reg.isMemRef) Then
   Begin
-   { ADD (memory reference, value) }
    Case param.Typ of
     mvChar : PByte(reg.MemAddr)^    += getInt(param); { char }
     mvInt  : PVMInt(reg.MemAddr)^   += getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ += getFloat(param); { float }
 
     else
-     VM^.ThrowException('''add'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { ADD (register, value) }
   if (reg.isReg) Then
   Begin
-   { ADD (register, value) }
    Case reg.Typ of
     mvChar : Regs.c[reg.RegIndex] := chr(ord(Regs.c[reg.RegIndex])+getInt(param)); { char }
     mvInt  : Regs.i[reg.RegIndex] += getInt(param); { int }
     mvFloat: Regs.f[reg.RegIndex] += getFloat(param); { float }
 
     else
-     VM^.ThrowException('''add'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { ADD (stackval, value) }
+  if (reg.isStackval) Then
   Begin
-   { ADD (stackval, value) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvChar : Value.Char := chr(ord(Value.Char)+getInt(param)); { char }
      mvInt  : Value.Int += getInt(param); { int }
      mvFloat: Value.Float += getFloat(param); { float }
 
      else
-      VM^.ThrowException('''add'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto Fail;
     End;
+
+    Exit;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { SUB (lvalue, value) }
 Procedure op_SUB(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''sub'' requires the first parameter to be an L-value.');
-
+  { SUB (memory reference, value) }
   if (reg.isMemRef) Then
   Begin
-   { SUB (memory reference, value) }
    Case param.Typ of
     mvChar : PByte(reg.MemAddr)^    -= getInt(param); { char }
     mvInt  : PVMInt(reg.MemAddr)^   -= getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ -= getFloat(param); { float }
 
     else
-     VM^.ThrowException('''sub'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { SUB (register, value) }
   if (reg.isReg) Then
   Begin
-   { SUB (register, value) }
    Case reg.Typ of
     mvChar : Regs.c[reg.RegIndex] := chr(ord(Regs.c[reg.RegIndex])-getInt(param)); { char }
     mvInt  : Regs.i[reg.RegIndex] -= getInt(param); { int }
     mvFloat: Regs.f[reg.RegIndex] -= getFloat(param); { float }
 
     else
-     VM^.ThrowException('''sub'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { SUB (stackval, value) }
+  if (reg.isStackval) Then
   Begin
-   { SUB (stackval, value) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvChar : Value.Char := chr(ord(Value.Char)-getInt(param)); { char }
      mvInt  : Value.Int -= getInt(param); { int }
      mvFloat: Value.Float -= getFloat(param); { float }
 
      else
-      VM^.ThrowException('''sub'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto fail;
     End;
+
+    Exit;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { MUL (lvalue, value) }
 Procedure op_MUL(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''mul'' requires the first parameter to be an L-value.');
-
+  { MUL (memory reference, value) }
   if (reg.isMemRef) Then
   Begin
-   { MUL (memory reference, value) }
    Case param.Typ of
     mvChar : PByte(reg.MemAddr)^    *= getInt(param); { char }
     mvInt  : PVMInt(reg.MemAddr)^   *= getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ *= getFloat(param); { float }
 
     else
-     VM^.ThrowException('''mul'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { MUL (register, value) }
   if (reg.isReg) Then
   Begin
-   { MUL (register, value) }
    Case reg.Typ of
     mvChar : Regs.c[reg.RegIndex] := chr(ord(Regs.c[reg.RegIndex])*getInt(param)); { char }
     mvInt  : Regs.i[reg.RegIndex] *= getInt(param); { int }
     mvFloat: Regs.f[reg.RegIndex] *= getFloat(param); { float }
 
     else
-     VM^.ThrowException('''mul'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { MUL (stackval, value) }
+  if (reg.isStackval) Then
   Begin
-   { MUL (stackval, value) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvChar : Value.Char := chr(ord(Value.Char)*getInt(param)); { char }
      mvInt  : Value.Int *= getInt(param); { int }
      mvFloat: Value.Float *= getFloat(param); { float }
 
      else
-      VM^.ThrowException('''mul'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto Fail;
     End;
+   End;
+
+   Exit;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { DIV (lvalue, value) }
 Procedure op_DIV(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''div'' requires the first parameter to be an L-value.');
-
- // if (getFloat(param) = 0) Then @TODO
- //  div_by_zero();
-
+  { DIV (memory reference, value) }
   if (reg.isMemRef) Then
   Begin
-   { DIV (memory reference, value) }
    Case param.Typ of
     mvChar : PByte(reg.MemAddr)^    := PByte(reg.MemAddr)^ div getInt(param); { char }
     mvInt  : PVMInt(reg.MemAddr)^   := PVMInt(reg.MemAddr)^ div getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ /= getFloat(param); { float }
 
     else
-     VM^.ThrowException('''div'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { DIV (register, value) }
   if (reg.isReg) Then
   Begin
-   { DIV (register, value) }
    Case reg.Typ of
     mvChar : Regs.c[reg.RegIndex] := chr(ord(Regs.c[reg.RegIndex]) div getInt(param)); { char }
     mvInt  : Regs.i[reg.RegIndex] := Regs.i[reg.RegIndex] div getInt(param); { int }
     mvFloat: Regs.f[reg.RegIndex] /= getFloat(param); { float }
 
     else
-     VM^.ThrowException('''div'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { DIV (stackval, value) }
+  if (reg.isStackval) Then
   Begin
-   { DIV (stackval, value) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvChar : Value.Char := chr(ord(Value.Char) div getInt(param)); { char }
      mvInt  : Value.Int := Value.Int div getInt(param); { int }
      mvFloat: Value.Float /= getFloat(param); { float }
 
      else
-      VM^.ThrowException('''div'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto Fail;
     End;
+
+    Exit;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { NEG (register/stackval) }
 Procedure op_NEG(const VM: PVM);
 Var reg: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg := Bytecode.read_param;
 
-  if (not (reg.isReg or reg.isStackval)) Then
-   VM^.ThrowException('''neg'' requires the first parameter to be a register or a stackval.');
-
+  { NEG (register) }
   if (reg.isReg) Then
   Begin
-   { NEG (register) }
    Case reg.Typ of
     mvInt  : Regs.i[reg.RegIndex] := -Regs.i[reg.RegIndex]; { int }
     mvFloat: Regs.f[reg.RegIndex] := -Regs.f[reg.RegIndex]; { float }
 
     else
-     VM^.ThrowException('''neg'' called with argument: '+getTypeName(reg));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { NEG (stackval) }
+  if (reg.isStackval) Then
   Begin
-   { NEG (stackval) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvInt  : Value.Int   := -Value.Int; { int }
      mvFloat: Value.Float := -Value.Float; { float }
+
+     else
+      goto Fail;
     End;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg]);
 End;
 
 { MOV (lvalue, value) }
 Procedure op_MOV(const VM: PVM);
 Var reg, val: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg := Bytecode.read_param;
   val := Bytecode.read_param(True);
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''mov'' requires the first parameter to be an L-value.');
-
+  { MOV (memory reference, value) }
   if (reg.isMemRef) Then
   Begin
-   { MOV (memory reference, value) }
    Case val.Typ of
     mvBool     : PVMBool(reg.MemAddr)^  := getBool(val); { bool }
     mvChar     : PVMChar(reg.MemAddr)^  := getChar(val); { char }
@@ -456,13 +518,15 @@ Begin
     mvReference: PPointer(reg.MemAddr)^ := getReference(val); { reference }
 
     else
-     VM^.ThrowException('''mov'' called with arguments: '+getTypeName(reg)+', '+getTypeName(val));
+     goto Fail;
    End;
-  End Else
 
+   Exit;
+  End;
+
+  { MOV (register, value) }
   if (reg.isReg) Then
   Begin
-   { MOV (register, value) }
    Case reg.Typ of
     mvBool     : Regs.b[reg.RegIndex] := getBool(val); { bool }
     mvChar     : Regs.c[reg.RegIndex] := getChar(val); { char }
@@ -472,15 +536,22 @@ Begin
     mvReference: Regs.r[reg.RegIndex] := getReference(val); { reference }
 
     else
-     VM^.ThrowException('''mov'' called with arguments: '+getTypeName(reg)+', '+getTypeName(val));
+     goto Fail;
    End;
-  End Else
 
+   Exit;
+  End;
+
+  { MOV (stackval, value) }
+  if (reg.isStackval) Then
   Begin
-   { MOV (stackval, value) }
    reg.Stackval^ := val;
+   Exit;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, val]);
 End;
 
 { JMP (const int) }
@@ -569,7 +640,8 @@ Begin
 
   { user call }
   For Call in InternalCallList Do // each icall
-  if (AnsiCompareStr(Call^.FullName, Name) = 0) Then // is this what we are searching for?
+  Begin
+   if (AnsiCompareStr(Call^.FullName, Name) = 0) Then // is this what we are searching for?
    Begin
     Params := AllocMem(Call^.ParamCount*sizeof(TMixedValue));
 
@@ -589,6 +661,7 @@ Begin
 
     Exit;
    End;
+  End;
 
   VM^.ThrowException('Undefined internal call: %s', [Name]);
  End;
@@ -615,7 +688,7 @@ End;
 Procedure op_RET(const VM: PVM);
 Begin
  With VM^ do
-  Bytecode.setPosition(PByte(getInt(Stack.Pop)));
+  Bytecode.setPosition(Pointer(getInt(Stack.Pop)));
 End;
 
 { IF_E (value, value) }
@@ -699,41 +772,44 @@ End;
 { STRJOIN (lvalue, char/string) }
 Procedure op_STRJOIN(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''strjoin'' requires the first parameter to be an L-value.');
-
+  { STRJOIN (memory reference, char/string) }
   if (reg.isMemRef) Then
   Begin
-   { STRJOIN (memory reference, char/string) }
    Case param.Typ of
     mvChar  : StringConcat(reg.MemAddr, getChar(Param)); // char
     mvString: StringConcat(reg.MemAddr, getString(Param)); // string
 
     else
-     VM^.ThrowException('''strjoin'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
 
+   Exit;
+  End;
+
+  { STRJOIN (register, char/string) }
   if (reg.isReg) Then
   Begin
-   { STRJOIN (register, char/string) }
    Case reg.Typ of
     mvChar  : StringConcat(Regs.s[reg.RegIndex], getChar(param)); // char
     mvString: StringConcat(Regs.s[reg.RegIndex], getString(param)); // string
 
     else
-     VM^.ThrowException('''strjoin'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
 
+   Exit;
+  End;
+
+  { STRJOIN (stackval, char/string) }
+  if (reg.isStackval) Then
   Begin
-   { STRJOIN (stackval, char/string) }
    With reg.Stackval^ do
    Begin
     Case reg.Typ of
@@ -741,332 +817,415 @@ Begin
      mvString: StringConcat(Value.Str, getString(param)); // string
 
      else
-      VM^.ThrowException('''strjoin'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto Fail;
     End;
+
+    Exit;
    End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { NOT (register/stackval) }
 Procedure op_NOT(const VM: PVM);
 Var reg: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg := Bytecode.read_param;
 
-  if not (reg.isReg or reg.isStackval) Then
-   VM^.ThrowException('''not'' requires the first parameter to be a register or a stackval.');
-
+  { NOT (register) }
   if (reg.isReg) Then
   Begin
-   { NOT (register) }
    Case reg.Typ of
     mvBool: Regs.b[reg.RegIndex] := not Regs.b[reg.RegIndex]; { bool }
     mvInt : Regs.i[reg.RegIndex] := not Regs.i[reg.RegIndex]; { int }
 
     else
-     VM^.ThrowException('''not'' called with argument: '+getTypeName(reg));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { NOT (stackval) }
+  if (reg.isStackval) Then
   Begin
-   { NOT (stackval) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvBool: Value.Bool := not Value.Bool; { bool }
      mvInt : Value.Int  := not Value.Int; { int }
 
      else
-      VM^.ThrowException('''not'' called with argument: '+getTypeName(reg));
+      goto Fail;
     End;
+
+    Exit;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg]);
 End;
 
 { OR (lvalue, value) }
 Procedure op_OR(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''or'' requires the first parameter to be an L-value.');
-
-  if (reg.isMemRef) THen
+  { OR (memory reference, value) }
+  if (reg.isMemRef) Then
   Begin
-   { OR (memory reference, value) }
    Case param.Typ of
     mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ or getBool(param); { bool }
     mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ or getInt(Param); { int }
 
     else
-     VM^.ThrowException('''or'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { OR (register, value) }
   if (reg.isReg) Then
   Begin
-   { OR (register, value) }
    Case reg.Typ of
     mvBool: Regs.b[reg.RegIndex] := Regs.b[reg.RegIndex] or getBool(param); { bool }
     mvInt : Regs.i[reg.RegIndex] := Regs.i[reg.RegIndex] or getInt(param); { int }
 
     else
-     VM^.ThrowException('''or'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { OR (stackval, value) }
+  if (reg.isStackval) Then
   Begin
-   { OR (stackval, value) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvBool: Value.Bool := Value.Bool or getBool(param); { bool }
      mvInt : Value.Int  := Value.Int or getInt(param); { int }
 
      else
-      VM^.ThrowException('''or'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto Fail;
     End;
+
+    Exit;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { XOR (lvalue, value) }
 Procedure op_XOR(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''xor'' requires the first parameter to be an L-value.');
-
-  if (reg.isMemRef) THen
+  { XOR (memory reference, value) }
+  if (reg.isMemRef) Then
   Begin
-   { XOR (memory reference, value) }
    Case param.Typ of
     mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ xor getBool(param); { bool }
     mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ xor getInt(Param); { int }
 
     else
-     VM^.ThrowException('''xor'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { XOR (register, value) }
   if (reg.isReg) Then
   Begin
-   { XOR (register, value) }
    Case reg.Typ of
     mvBool: Regs.b[reg.RegIndex] := Regs.b[reg.RegIndex] xor getBool(param); { bool }
     mvInt : Regs.i[reg.RegIndex] := Regs.i[reg.RegIndex] xor getInt(param); { int }
 
     else
-     VM^.ThrowException('''xor'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { XOR (stackval, value) }
+  if (reg.isStackval) Then
   Begin
-   { XOR (stackval, value) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvBool: Value.Bool := Value.Bool xor getBool(param); { bool }
      mvInt : Value.Int  := Value.Int xor getInt(param); { int }
 
      else
-      VM^.ThrowException('''xor'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto Fail;
     End;
+
+    Exit;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { AND (lvalue, value) }
 Procedure op_AND(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''and'' requires the first parameter to be an L-value.');
-
+  { AND (memory reference, value) }
   if (reg.isMemRef) THen
   Begin
-   { AND (memory reference, value) }
    Case param.Typ of
     mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ and getBool(param); { bool }
     mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ and getInt(Param); { int }
 
     else
-     VM^.ThrowException('''and'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { AND (register, value) }
   if (reg.isReg) Then
   Begin
-   { AND (register, value) }
    Case reg.Typ of
     mvBool: Regs.b[reg.RegIndex] := Regs.b[reg.RegIndex] and getBool(param); { bool }
     mvInt : Regs.i[reg.RegIndex] := Regs.i[reg.RegIndex] and getInt(param); { int }
 
     else
-     VM^.ThrowException('''and'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { AND (stackval, value) }
+  if (reg.isStackval) Then
   Begin
-   { AND (stackval, value) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvBool: Value.Bool := Value.Bool and getBool(param); { bool }
      mvInt : Value.Int  := Value.Int and getInt(param); { int }
 
      else
-      VM^.ThrowException('''and'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto Fail;
     End;
+
+    Exit;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { SHL (lvalue, value) }
 Procedure op_SHL(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''shl'' requires the first parameter to be an L-value.');
-
-  if (reg.isMemRef) THen
+  { SHL (memory reference, value) }
+  if (reg.isMemRef) Then
   Begin
-   { OR (memory reference, value) }
    Case param.Typ of
     mvInt: PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ shl getInt(Param); { int }
 
     else
-     VM^.ThrowException('''shl'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { SHL (register, value) }
   if (reg.isReg) Then
   Begin
-   { SHL (register, value) }
    Case reg.Typ of
     mvInt: Regs.i[reg.RegIndex] := Regs.i[reg.RegIndex] shl getInt(param); { int }
 
     else
-     VM^.ThrowException('''shl'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { SHL (stackval, value) }
+  if (reg.isStackval) Then
   Begin
-   { SHL (stackval, value) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvInt: Value.Int := Value.Int shl getInt(param); { int }
 
      else
-      VM^.ThrowException('''shl'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto Fail;
     End;
+
+    Exit;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { SHR (lvalue, value) }
 Procedure op_SHR(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''shr'' requires the first parameter to be an L-value.');
-
-  if (reg.isMemRef) THen
+  { SHR (memory reference, value) }
+  if (reg.isMemRef) Then
   Begin
-   { OR (memory reference, value) }
    Case param.Typ of
     mvInt: PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ shr getInt(Param); { int }
 
     else
-     VM^.ThrowException('''shr'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { SHR (register, value) }
   if (reg.isReg) Then
   Begin
-   { SHr (register, value) }
    Case reg.Typ of
     mvInt: Regs.i[reg.RegIndex] := Regs.i[reg.RegIndex] shr getInt(param); { int }
 
     else
-     VM^.ThrowException('''shr'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { SHR (stackval, value) }
+  if (reg.isStackval) Then
   Begin
-   { Sr (stackval, value) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvInt: Value.Int := Value.Int shr getInt(param); { int }
 
      else
-      VM^.ThrowException('''shr'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto Fail;
     End;
+
+    Exit;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { MOD (lvalue, value) }
 Procedure op_MOD(const VM: PVM);
 Var reg, param: TMixedValue;
+Label Fail;
 Begin
  With VM^ do
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  if (not reg.isLValue) Then
-   VM^.ThrowException('''mod'' requires the first parameter to be an L-value.');
-
-  // if (getInt(param) = 0) Then
-  //  div_by_zero(); // @TODO
-
-  if (reg.isMemRef) THen
+  { MOD (memory reference, value) }
+  if (reg.isMemRef) Then
   Begin
-   { MOD (memory reference, value) }
    Case param.Typ of
     mvChar: PVMChar(reg.MemAddr)^ := VMChar(VMIChar(PVMChar(reg.MemAddr)^) mod VMIChar(getChar(Param))); { char }
     mvInt : PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ mod getInt(Param); { int }
 
     else
-     VM^.ThrowException('''mod'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
-  End Else
+
+   Exit;
+  End;
+
+  { MOD (register, value) }
   if (reg.isReg) Then
   Begin
-   { MOD (register, value) }
    Case reg.Typ of
     mvChar: Regs.c[reg.RegIndex] := VMChar(VMIChar(Regs.c[reg.RegIndex]) mod VMIChar(getChar(param))); { char }
     mvInt : Regs.i[reg.RegIndex] := Regs.i[reg.RegIndex] mod getInt(param); { int }
 
     else
-     VM^.ThrowException('''mod'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+     goto Fail;
    End;
+
+   Exit;
   End Else
+
+  { MOD (stackval, value) }
+  if (reg.isReg) Then
   Begin
-   { MOD (stackval, value) }
    With reg.Stackval^ do
+   Begin
     Case reg.Typ of
      mvChar: Value.Char := VMChar(VMIChar(Value.Char) mod VMIChar(getInt(param))); { char }
      mvInt : Value.Int := Value.Int mod getInt(param); { int }
 
      else
-      VM^.ThrowException('''mod'' called with arguments: '+getTypeName(reg)+', '+getTypeName(param));
+      goto Fail;
     End;
+
+    Exit;
+   End;
   End;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [reg, param]);
 End;
 
 { ARSET (reg/stvl/mem arrayReference, int indexCount, newValue) }
@@ -1078,6 +1237,7 @@ Var arrayReference, indexCount, newValue: TMixedValue;
     Typ     : TMixedValueType;
 
     I: uint32;
+Label Fail;
 Begin
  With VM^ do
  Begin
@@ -1114,7 +1274,7 @@ Begin
 
   // throw an exception if something other
   Begin
-   VM^.ThrowException('''arset'' requires the first parameter to be a register, stackval or memory reference.');
+   goto Fail;
   End;
 
   // do magic
@@ -1127,9 +1287,14 @@ Begin
 
    // invalid
    else
-    VM^.ThrowException('''arset'' called with arguments: %s, %s, %s', [getTypeName(arrayReference), getTypeName(indexCount), getTypeName(newValue)]);
+    goto Fail;
   End;
+
+  Exit;
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [arrayReference, indexCount, newValue]);
 End;
 
 { ARGET (reg/stvl/mem arrayReference, int indexCount, out outValue) }
@@ -1227,10 +1392,10 @@ Begin
   End;
 
   Exit;
-
- Fail:
-  VM^.ThrowException('''arget'' called with arguments: %s, %s, %s', [getTypeName(arrayReference), getTypeName(indexCount), getTypeName(outValue)]);
  End;
+
+Fail:
+ InvalidArgumentsException(VM, [arrayReference, indexCount, outValue]);
 End;
 
 { ARCRT (reg/stvl/mem arrayReference, int arrayType, const int dimensionCount) }
@@ -1494,28 +1659,24 @@ Begin
   strreg := Bytecode.read_param;
   outreg := Bytecode.read_param;
 
-  if (not (strreg.isReg or strreg.isStackval or (strreg.Typ = mvString))) Then
-   VM^.ThrowException('''strlen'' requires the first parameter to be a register, stackval or string.');
-
-  if (not ((outreg.isReg and (outreg.Typ = mvInt)) or outreg.isStackval)) Then
-   VM^.ThrowException('''strlen'' requires the second parameter to be an int register or a stackval.');
-
   TmpStr := getString(strreg);
 
+  { STRLEN (string, register) }
+  if (outreg.isReg) Then
+  Begin
+   Regs.i[outreg.RegIndex] := TmpStr^.Length;
+   Exit;
+  End;
+
+  { STRLEN (string, stackval) }
   if (outreg.isStackval) Then
   Begin
    outreg.Stackval^.Typ       := mvInt;
    outreg.Stackval^.Value.Int := TmpStr^.Length;
-  End Else
-  Begin
-   Regs.i[outreg.RegIndex] := TmpStr^.Length;
+   Exit;
   End;
  End;
-End;
 
-{ LOCATION }
-Procedure op_LOCATION(const VM: PVM);
-Begin
- VM^.Bytecode.read_param; // do nothing, just skip the parameter
+ InvalidArgumentsException(VM, [strreg, outreg]);
 End;
 End.

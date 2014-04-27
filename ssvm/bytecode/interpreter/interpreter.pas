@@ -211,21 +211,6 @@ Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  { ADD (memory reference, value) }
-  if (reg.isMemRef) Then
-  Begin
-   Case param.Typ of
-    mvChar : PByte(reg.MemAddr)^    += getInt(param); { char }
-    mvInt  : PVMInt(reg.MemAddr)^   += getInt(param); { int }
-    mvFloat: PVMFloat(reg.MemAddr)^ += getFloat(param); { float }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
-
   { ADD (register, value) }
   if (reg.isReg) Then
   Begin
@@ -258,6 +243,21 @@ Begin
     Exit;
    End;
   End;
+
+  { ADD (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvChar : PByte(reg.MemAddr)^    += getInt(param); { char }
+    mvInt  : PVMInt(reg.MemAddr)^   += getInt(param); { int }
+    mvFloat: PVMFloat(reg.MemAddr)^ += getFloat(param); { float }
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
+  End;
  End;
 
 Fail:
@@ -273,21 +273,6 @@ Begin
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
-
-  { SUB (memory reference, value) }
-  if (reg.isMemRef) Then
-  Begin
-   Case param.Typ of
-    mvChar : PByte(reg.MemAddr)^    -= getInt(param); { char }
-    mvInt  : PVMInt(reg.MemAddr)^   -= getInt(param); { int }
-    mvFloat: PVMFloat(reg.MemAddr)^ -= getFloat(param); { float }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
 
   { SUB (register, value) }
   if (reg.isReg) Then
@@ -321,6 +306,21 @@ Begin
     Exit;
    End;
   End;
+
+  { SUB (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvChar : PByte(reg.MemAddr)^    -= getInt(param); { char }
+    mvInt  : PVMInt(reg.MemAddr)^   -= getInt(param); { int }
+    mvFloat: PVMFloat(reg.MemAddr)^ -= getFloat(param); { float }
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
+  End;
  End;
 
 Fail:
@@ -336,21 +336,6 @@ Begin
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
-
-  { MUL (memory reference, value) }
-  if (reg.isMemRef) Then
-  Begin
-   Case param.Typ of
-    mvChar : PByte(reg.MemAddr)^    *= getInt(param); { char }
-    mvInt  : PVMInt(reg.MemAddr)^   *= getInt(param); { int }
-    mvFloat: PVMFloat(reg.MemAddr)^ *= getFloat(param); { float }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
 
   { MUL (register, value) }
   if (reg.isReg) Then
@@ -384,6 +369,21 @@ Begin
 
    Exit;
   End;
+
+  { MUL (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvChar : PByte(reg.MemAddr)^    *= getInt(param); { char }
+    mvInt  : PVMInt(reg.MemAddr)^   *= getInt(param); { int }
+    mvFloat: PVMFloat(reg.MemAddr)^ *= getFloat(param); { float }
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
+  End;
  End;
 
 Fail:
@@ -399,21 +399,6 @@ Begin
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
-
-  { DIV (memory reference, value) }
-  if (reg.isMemRef) Then
-  Begin
-   Case param.Typ of
-    mvChar : PByte(reg.MemAddr)^    := PByte(reg.MemAddr)^ div getInt(param); { char }
-    mvInt  : PVMInt(reg.MemAddr)^   := PVMInt(reg.MemAddr)^ div getInt(param); { int }
-    mvFloat: PVMFloat(reg.MemAddr)^ /= getFloat(param); { float }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
 
   { DIV (register, value) }
   if (reg.isReg) Then
@@ -446,6 +431,21 @@ Begin
 
     Exit;
    End;
+  End;
+
+  { DIV (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvChar : PByte(reg.MemAddr)^    := PByte(reg.MemAddr)^ div getInt(param); { char }
+    mvInt  : PVMInt(reg.MemAddr)^   := PVMInt(reg.MemAddr)^ div getInt(param); { int }
+    mvFloat: PVMFloat(reg.MemAddr)^ /= getFloat(param); { float }
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
   End;
  End;
 
@@ -488,6 +488,8 @@ Begin
      else
       goto Fail;
     End;
+
+    Exit;
    End;
   End;
  End;
@@ -505,24 +507,6 @@ Begin
  Begin
   reg := Bytecode.read_param;
   val := Bytecode.read_param(True);
-
-  { MOV (memory reference, value) }
-  if (reg.isMemRef) Then
-  Begin
-   Case val.Typ of
-    mvBool     : PVMBool(reg.MemAddr)^  := getBool(val); { bool }
-    mvChar     : PVMChar(reg.MemAddr)^  := getChar(val); { char }
-    mvInt      : PVMInt(reg.MemAddr)^   := getInt(val); { int }
-    mvFloat    : PVMFloat(reg.MemAddr)^ := getFloat(val); { float }
-    mvString   : PPointer(reg.MemAddr)^ := getString(val); { string }
-    mvReference: PPointer(reg.MemAddr)^ := getReference(val); { reference }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
 
   { MOV (register, value) }
   if (reg.isReg) Then
@@ -546,6 +530,24 @@ Begin
   if (reg.isStackval) Then
   Begin
    reg.Stackval^ := val;
+   Exit;
+  End;
+
+  { MOV (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case val.Typ of
+    mvBool     : PVMBool(reg.MemAddr)^  := getBool(val); { bool }
+    mvChar     : PVMChar(reg.MemAddr)^  := getChar(val); { char }
+    mvInt      : PVMInt(reg.MemAddr)^   := getInt(val); { int }
+    mvFloat    : PVMFloat(reg.MemAddr)^ := getFloat(val); { float }
+    mvString   : PPointer(reg.MemAddr)^ := getString(val); { string }
+    mvReference: PPointer(reg.MemAddr)^ := getReference(val); { reference }
+
+    else
+     goto Fail;
+   End;
+
    Exit;
   End;
  End;
@@ -779,20 +781,6 @@ Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  { STRJOIN (memory reference, char/string) }
-  if (reg.isMemRef) Then
-  Begin
-   Case param.Typ of
-    mvChar  : StringConcat(reg.MemAddr, getChar(Param)); // char
-    mvString: StringConcat(reg.MemAddr, getString(Param)); // string
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
-
   { STRJOIN (register, char/string) }
   if (reg.isReg) Then
   Begin
@@ -822,6 +810,20 @@ Begin
 
     Exit;
    End;
+  End;
+
+  { STRJOIN (memory reference, char/string) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvChar  : StringConcat(reg.MemAddr, getChar(Param)); // char
+    mvString: StringConcat(reg.MemAddr, getString(Param)); // string
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
   End;
  End;
 
@@ -884,20 +886,6 @@ Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
 
-  { OR (memory reference, value) }
-  if (reg.isMemRef) Then
-  Begin
-   Case param.Typ of
-    mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ or getBool(param); { bool }
-    mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ or getInt(Param); { int }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
-
   { OR (register, value) }
   if (reg.isReg) Then
   Begin
@@ -928,6 +916,20 @@ Begin
     Exit;
    End;
   End;
+
+  { OR (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ or getBool(param); { bool }
+    mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ or getInt(Param); { int }
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
+  End;
  End;
 
 Fail:
@@ -943,20 +945,6 @@ Begin
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
-
-  { XOR (memory reference, value) }
-  if (reg.isMemRef) Then
-  Begin
-   Case param.Typ of
-    mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ xor getBool(param); { bool }
-    mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ xor getInt(Param); { int }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
 
   { XOR (register, value) }
   if (reg.isReg) Then
@@ -988,6 +976,20 @@ Begin
     Exit;
    End;
   End;
+
+  { XOR (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ xor getBool(param); { bool }
+    mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ xor getInt(Param); { int }
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
+  End;
  End;
 
 Fail:
@@ -1003,20 +1005,6 @@ Begin
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
-
-  { AND (memory reference, value) }
-  if (reg.isMemRef) THen
-  Begin
-   Case param.Typ of
-    mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ and getBool(param); { bool }
-    mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ and getInt(Param); { int }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
 
   { AND (register, value) }
   if (reg.isReg) Then
@@ -1048,6 +1036,20 @@ Begin
     Exit;
    End;
   End;
+
+  { AND (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ and getBool(param); { bool }
+    mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ and getInt(Param); { int }
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
+  End;
  End;
 
 Fail:
@@ -1063,19 +1065,6 @@ Begin
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
-
-  { SHL (memory reference, value) }
-  if (reg.isMemRef) Then
-  Begin
-   Case param.Typ of
-    mvInt: PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ shl getInt(Param); { int }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
 
   { SHL (register, value) }
   if (reg.isReg) Then
@@ -1105,6 +1094,19 @@ Begin
     Exit;
    End;
   End;
+
+  { SHL (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvInt: PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ shl getInt(Param); { int }
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
+  End;
  End;
 
 Fail:
@@ -1120,19 +1122,6 @@ Begin
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
-
-  { SHR (memory reference, value) }
-  if (reg.isMemRef) Then
-  Begin
-   Case param.Typ of
-    mvInt: PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ shr getInt(Param); { int }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
 
   { SHR (register, value) }
   if (reg.isReg) Then
@@ -1162,6 +1151,19 @@ Begin
     Exit;
    End;
   End;
+
+  { SHR (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvInt: PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ shr getInt(Param); { int }
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
+  End;
  End;
 
 Fail:
@@ -1177,20 +1179,6 @@ Begin
  Begin
   reg   := Bytecode.read_param;
   param := Bytecode.read_param;
-
-  { MOD (memory reference, value) }
-  if (reg.isMemRef) Then
-  Begin
-   Case param.Typ of
-    mvChar: PVMChar(reg.MemAddr)^ := VMChar(VMIChar(PVMChar(reg.MemAddr)^) mod VMIChar(getChar(Param))); { char }
-    mvInt : PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ mod getInt(Param); { int }
-
-    else
-     goto Fail;
-   End;
-
-   Exit;
-  End;
 
   { MOD (register, value) }
   if (reg.isReg) Then
@@ -1221,6 +1209,20 @@ Begin
 
     Exit;
    End;
+  End;
+
+  { MOD (memory reference, value) }
+  if (reg.isMemRef) Then
+  Begin
+   Case param.Typ of
+    mvChar: PVMChar(reg.MemAddr)^ := VMChar(VMIChar(PVMChar(reg.MemAddr)^) mod VMIChar(getChar(Param))); { char }
+    mvInt : PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ mod getInt(Param); { int }
+
+    else
+     goto Fail;
+   End;
+
+   Exit;
   End;
  End;
 

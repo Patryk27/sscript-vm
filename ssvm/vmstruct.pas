@@ -383,7 +383,7 @@ Var OldLen: uint32;
     MV.MemAddr  := Pnt;
     MV.isMemRef := True;
 
-    Result := TVM.getString(MV);
+    Result := getString(MV);
    End Else
    Begin
     Result := PVMString(Pnt);

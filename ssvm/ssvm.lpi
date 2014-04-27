@@ -75,6 +75,11 @@
     <Parsing>
       <Style Value="1"/>
     </Parsing>
+    <CodeGeneration>
+      <Optimizations>
+        <OptimizationLevel Value="3"/>
+      </Optimizations>
+    </CodeGeneration>
     <Linking>
       <Options>
         <ExecutableType Value="Library"/>

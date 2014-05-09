@@ -17,14 +17,14 @@ Unit VMElement;
        Protected
         Function getLoaderData: TBCLoaderData;
 
-        Function getBoolReg(const ID: uint8): VMBool;
-        Function getCharReg(const ID: uint8): VMChar;
-        Function getIntReg(const ID: uint8): VMInt;
-        Function getFloatReg(const ID: uint8): VMFloat;
-        Function getStringReg(const ID: uint8): PVMString;
-        Function getReferenceReg(const ID: uint8): VMReference;
+        Function getBoolReg(const ID: uint8): VMBool; //inline;
+        Function getCharReg(const ID: uint8): VMChar; //inline;
+        Function getIntReg(const ID: uint8): VMInt; //inline;
+        Function getFloatReg(const ID: uint8): VMFloat; //inline;
+        Function getStringReg(const ID: uint8): PVMString; //inline;
+        Function getReferenceReg(const ID: uint8): VMReference; //inline;
 
-        Function getStackPos: VMInt;
+        Function getStackPos: VMInt; inline;
 
         Procedure CheckMemory;
 

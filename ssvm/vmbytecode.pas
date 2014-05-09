@@ -3,6 +3,7 @@
  All rights reserved.
 *)
 {$H+}
+{$CODEALIGN PROC=16}
 Unit VMBytecode;
 
  Interface
@@ -169,43 +170,98 @@ End;
  Used eg.in "push(string reg)" opcode.
 }
 Function TVMBytecode.read_param(const CloneIfString: Boolean): TMixedValue;
+Const TypeMap: Array[TOpcodeArgType] of TMixedValueType =
+(
+ mvBool, // <- ptBoolReg
+ mvChar, // <- ptCharReg
+ mvInt,
+ mvFloat,
+ mvString,
+ mvReference,
+
+ mvBool, // <- ptBool
+ mvChar, // <- ptChar
+ mvInt,
+ mvFloat,
+ mvString,
+
+ mvInt, mvInt
+);
+
+  // ReadReg
+  Procedure ReadReg; inline;
+  Begin
+   Result.isReg    := True;
+   Result.RegIndex := read_uint8;
+  End;
+
 Var Typ: TOpcodeArgType;
 Begin
  Result.Reset;
 
+ // read argument type
  Typ := TOpcodeArgType(read_uint8);
 
- Result.isReg := (Typ in [ptBoolReg..ptReferenceReg]);
+ // fetch type
+ Result.Typ := TypeMap[Typ];
 
- if (Result.isReg) Then // if it's a register, read this register's ID
-  Result.RegIndex := read_uint8;
-
+ // fill appropriate value field
  Case Typ of
-  ptBoolReg, ptBool    : Result.Typ := mvBool;
-  ptCharReg, ptChar    : Result.Typ := mvChar;
-  ptIntReg, ptInt      : Result.Typ := mvInt;
-  ptFloatReg, ptFloat  : Result.Typ := mvFloat;
-  ptStringReg, ptString: Result.Typ := mvString;
-  ptReferenceReg       : Result.Typ := mvReference;
-  ptConstantMemRef     : Result.Typ := mvReference;
+  { bool reg }
+  ptBoolReg:
+  Begin
+   ReadReg;
 
-  else
-   Result.Typ := mvInt;
- End;
+   Result.MemAddr    := @PVM(VMPnt)^.Regs.b[Result.RegIndex];
+   Result.Value.Bool := PVMBool(Result.MemAddr)^;
+  End;
 
- Case Typ of
-  { register value }
-  ptBoolReg     : Result.Value.Bool  := getBoolReg(Result.RegIndex);
-  ptCharReg     : Result.Value.Char  := getCharReg(Result.RegIndex);
-  ptIntReg      : Result.Value.Int   := getIntReg(Result.RegIndex);
-  ptFloatReg    : Result.Value.Float := getFloatReg(Result.RegIndex);
-  ptReferenceReg: Result.Value.Int   := VMInt(getReferenceReg(Result.RegIndex));
+  { char reg }
+  ptCharReg:
+  Begin
+   ReadReg;
 
+   Result.MemAddr     := @PVM(VMPnt)^.Regs.c[Result.RegIndex];
+   Result.Value.Char  := PVMChar(Result.MemAddr)^;
+  End;
+
+  { int reg }
+  ptIntReg:
+  Begin
+   ReadReg;
+
+   Result.MemAddr   := @PVM(VMPnt)^.Regs.i[Result.RegIndex];
+   Result.Value.Int := PVMInt(Result.MemAddr)^;
+  End;
+
+  { float reg }
+  ptFloatReg:
+  Begin
+   ReadReg;
+
+   Result.MemAddr     := @PVM(VMPnt)^.Regs.f[Result.RegIndex];
+   Result.Value.Float := PVMFloat(Result.MemAddr)^;
+  End;
+
+  { string reg }
   ptStringReg:
   Begin
+   ReadReg;
+
+   Result.MemAddr   := @PVM(VMPnt)^.Regs.s[Result.RegIndex];
+   Result.Value.Str := PPVMString(Result.MemAddr)^;
+
    if (CloneIfString) Then
-    Result.Value.Str := PVM(VMPnt)^.VMStringList.CloneVMString(getStringReg(Result.RegIndex)) Else
-    Result.Value.Str := getStringReg(Result.RegIndex);
+    Result.Value.Str := PVM(VMPnt)^.VMStringList.CloneVMString(Result.Value.Str) Else
+  End;
+
+  { reference reg }
+  ptReferenceReg:
+  Begin
+   ReadReg;
+
+   Result.MemAddr   := @PVM(VMPnt)^.Regs.r[Result.RegIndex];
+   Result.Value.Int := VMInt(Result.MemAddr);
   End;
 
   { constant value }
@@ -214,25 +270,17 @@ Begin
   ptInt           : Result.Value.Int   := read_int64;
   ptFloat         : Result.Value.Float := read_float;
   ptString        : Result.Value.Str   := PVM(VMPnt)^.VMStringList.StringToVMString(read_string);
-  ptConstantMemRef: Result.MemAddr     := Pointer(read_int64);
+  ptConstantMemRef: Result.MemAddr     := BytecodeRelativeToAbsolute(Pointer(read_int64));
 
-  else
-   Result.Value.Int := read_int32;
- End;
+  { stackval }
+  ptStackval:
+  Begin
+   Result.isStackval := True;
 
- Result.isStackval := (Typ = ptStackval);
- Result.isMemRef   := (Typ = ptConstantMemRef);
-
- if (Result.isStackval) Then // if stackval
- Begin
-  Result.Stackval := PVM(VMPnt)^.Stack.getPointer(getStackPos+Result.Value.Int-1);
-  Result.Typ      := Result.Stackval^.Typ;
-  Result.Value    := Result.Stackval^.Value;
- End;
-
- if (Result.isMemRef) Then // if memory reference
- Begin
-  Result.MemAddr := BytecodeRelativeToAbsolute(Result.MemAddr); // make an absolute address from relative
+   Result.Stackval := PVM(VMPnt)^.Stack.getPointer(getStackPos+read_int32-1);
+   Result.Typ      := Result.Stackval^.Typ;
+   Result.Value    := Result.Stackval^.Value;
+  End;
  End;
 End;
 
@@ -249,11 +297,23 @@ End;
  Executes the bytecode.
 }
 Procedure TVMBytecode.Execute;
+Var Stop: PBoolean;
+Label loop;
 Begin
- While (not PVM(VMPnt)^.Stop) Do
- Begin
-  CurrentOpcode := Position;
+ Stop := @PVM(VMPnt)^.Stop;
 
+ While (true) Do
+ Begin
+  if (Stop^) Then
+   Exit;
+
+  CurrentOpcode := Position;
+  OpcodeTable[TOpcodeKind(read_uint8)](VMPnt);
+
+  if (Stop^) Then
+   Exit;
+
+  CurrentOpcode := Position;
   OpcodeTable[TOpcodeKind(read_uint8)](VMPnt);
  End;
 End;

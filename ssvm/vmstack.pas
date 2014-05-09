@@ -44,7 +44,6 @@ Unit VMStack;
        Class Function Create(const NewValue: Int64): TMixedValue; static;
        Class Function Create(const NewValue: Extended): TMixedValue; static;
 
-       Function isLValue: Boolean;
        Procedure Reset;
       End;
 
@@ -211,15 +210,6 @@ Begin
  Result.Value.Float := NewValue;
 End;
 
-(* TMixedValue.isLValue *)
-{
- Returns 'true' if this MixedValue is one of those: register, stackval, memory reference
-}
-Function TMixedValue.isLValue: Boolean;
-Begin
- Result := (isReg or isStackval or isMemRef);
-End;
-
 (* TMixedValue.Reset *)
 {
  Clears all structure fields.
@@ -230,7 +220,5 @@ Begin
  isStackval := False;
  isReg      := False;
  isMemRef   := False;
- RegIndex   := 0;
- MemAddr    := nil;
 End;
 End.

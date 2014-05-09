@@ -26,12 +26,12 @@ Unit VMStruct;
       Record
        Regs: // registers
        Record
-        b: Array[1..5] of VMBool;      // bool     : eb1, eb2, eb3, eb4, if
-        c: Array[1..4] of VMChar;      // char     : ec1, ec2, ec3, ec4
-        i: Array[1..5] of VMInt;       // int      : ei1, ei2, ei3, ei4, stp
-        f: Array[1..4] of VMFloat;     // float    : ef1, ef1, ef3, ef4
-        s: Array[1..4] of PVMString;   // string   : es1, es2, es3, es4
-        r: Array[1..4] of VMReference; // reference: er1, er2, er3, er4
+        b: Array[0..5] of VMBool;      // bool     : unused, eb1, eb2, eb3, eb4, if
+        c: Array[0..4] of VMChar;      // char     : unused, ec1, ec2, ec3, ec4
+        i: Array[0..5] of VMInt;       // int      : unused, ei1, ei2, ei3, ei4, stp
+        f: Array[0..4] of VMFloat;     // float    : unused, ef1, ef1, ef3, ef4
+        s: Array[0..4] of PVMString;   // string   : unused, es1, es2, es3, es4
+        r: Array[0..4] of VMReference; // reference: unused, er1, er2, er3, er4
        End;
 
        LoaderData: TBCLoaderData; // filled by TBCLoader
@@ -638,7 +638,7 @@ Begin
  For I := 1 To 4 Do
   WriteLog('ef%d = %f', [I, Regs.f[I]]);
 
- // es1
+ // es
  WriteLog;
  For I := 1 To 4 Do
  Begin

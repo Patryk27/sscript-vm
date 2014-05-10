@@ -216,7 +216,10 @@ Begin
   { ADD (register/memory reference, value) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvChar : PByte(reg.MemAddr)^    += getInt(param); { char }
     mvInt  : PVMInt(reg.MemAddr)^   += getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ += getFloat(param); { float }
@@ -264,7 +267,10 @@ Begin
   { SUB (register/memory reference, value) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvChar : PByte(reg.MemAddr)^    -= getInt(param); { char }
     mvInt  : PVMInt(reg.MemAddr)^   -= getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ -= getFloat(param); { float }
@@ -312,7 +318,10 @@ Begin
   { MUL (register/memory reference, value) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvChar : PByte(reg.MemAddr)^    *= getInt(param); { char }
     mvInt  : PVMInt(reg.MemAddr)^   *= getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ *= getFloat(param); { float }
@@ -360,7 +369,10 @@ Begin
   { DIV (register/memory reference, value) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvChar : PByte(reg.MemAddr)^    := PByte(reg.MemAddr)^ div getInt(param); { char }
     mvInt  : PVMInt(reg.MemAddr)^   := PVMInt(reg.MemAddr)^ div getInt(param); { int }
     mvFloat: PVMFloat(reg.MemAddr)^ /= getFloat(param); { float }
@@ -453,7 +465,10 @@ Begin
   { MOV (register/memory reference, value) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case val.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := val.Typ;
+
+   Case reg.Typ of
     mvBool     : PVMBool(reg.MemAddr)^  := getBool(val); { bool }
     mvChar     : PVMChar(reg.MemAddr)^  := getChar(val); { char }
     mvInt      : PVMInt(reg.MemAddr)^   := getInt(val); { int }
@@ -708,7 +723,10 @@ Begin
   { STRJOIN (register/memory reference, char/string) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvChar  : StringConcat(reg.MemAddr, getChar(Param)); // char
     mvString: StringConcat(reg.MemAddr, getString(Param)); // string
 
@@ -799,7 +817,10 @@ Begin
   { OR (register/memory reference, value) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ or getBool(param); { bool }
     mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ or getInt(Param); { int }
 
@@ -845,7 +866,10 @@ Begin
   { XOR (register/memory reference, value) }
   if (reg.isReg) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ xor getBool(param); { bool }
     mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ xor getInt(Param); { int }
 
@@ -891,7 +915,10 @@ Begin
   { AND (register/memory reference, value) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvBool: PVMBool(reg.MemAddr)^ := PVMBool(reg.MemAddr)^ and getBool(param); { bool }
     mvInt : PVMInt(reg.MemAddr)^  := PVMInt(reg.MemAddr)^ and getInt(Param); { int }
 
@@ -937,7 +964,10 @@ Begin
   { SHL (register/memory reference, value) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvInt: PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ shl getInt(Param); { int }
 
     else
@@ -981,7 +1011,10 @@ Begin
   { SHR (register/memory reference, value) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvInt: PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ shr getInt(Param); { int }
 
     else
@@ -1025,7 +1058,10 @@ Begin
   { MOD (register/memory reference, value) }
   if (reg.isReg) or (reg.isMemRef) Then
   Begin
-   Case param.Typ of
+   if (reg.isMemRef) Then
+    reg.Typ := param.Typ;
+
+   Case reg.Typ of
     mvChar: PVMChar(reg.MemAddr)^ := VMChar(VMIChar(PVMChar(reg.MemAddr)^) mod VMIChar(getChar(Param))); { char }
     mvInt : PVMInt(reg.MemAddr)^ := PVMInt(reg.MemAddr)^ mod getInt(Param); { int }
 

@@ -30,6 +30,8 @@ Var opt_logo, opt_wait, opt_time, opt_jit: Boolean;
 
     GCMemorySize: uint32;
 
+    DisplayingExceptionInfo: Boolean;
+
     VM  : Pointer;
     Time: uint32;
 
@@ -222,16 +224,20 @@ Begin
 End;
 
 (* DisplayExceptionInfo *)
-Procedure DisplayExceptionInfo;
+Procedure DisplayExceptionInfo(const ShowVMExceptionMessage: Boolean);
 Var FileName, FunctionName: PChar;
     FunctionLine          : uint32;
 
     Frame, Address: uint32;
 Begin
- Writeln('Virtual machine threw an exception:');
- Writeln(PChar(SSGetException(VM).Data));
+ DisplayingExceptionInfo := True;
 
- Writeln;
+ if (ShowVMExceptionMessage) Then
+ Begin
+  Writeln('Virtual machine threw an exception:');
+  Writeln(PChar(SSGetException(VM).Data));
+  Writeln;
+ End;
 
  // display stacktrace
  Writeln('Exception stacktrace:');
@@ -312,7 +318,7 @@ Begin
 
   if (SSGetStopReason(VM) = srException) Then
   Begin
-   DisplayExceptionInfo;
+   DisplayExceptionInfo(True);
   End;
 
   { free VM }
@@ -349,8 +355,14 @@ Begin
 
   On E: Exception Do
   Begin
-   Writeln('Unexpected exception was raised:');
-   Writeln(E.Message);
+   Writeln('SScript virtual machine crashed!');
+   Writeln('> ', E.Message);
+
+   if (not DisplayingExceptionInfo) Then
+   Begin
+    Writeln;
+    DisplayExceptionInfo(False);
+   End;
   End;
  End;
 End.

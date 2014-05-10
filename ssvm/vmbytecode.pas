@@ -261,16 +261,22 @@ Begin
    ReadReg;
 
    Result.MemAddr   := @PVM(VMPnt)^.Regs.r[Result.RegIndex];
-   Result.Value.Int := VMInt(Result.MemAddr);
+   Result.Value.Int := VMInt(PVMReference(Result.MemAddr)^);
   End;
 
   { constant value }
-  ptBool          : Result.Value.Bool  := Boolean(read_uint8);
-  ptChar          : Result.Value.Char  := chr(read_uint8);
-  ptInt           : Result.Value.Int   := read_int64;
-  ptFloat         : Result.Value.Float := read_float;
-  ptString        : Result.Value.Str   := PVM(VMPnt)^.VMStringList.StringToVMString(read_string);
-  ptConstantMemRef: Result.MemAddr     := BytecodeRelativeToAbsolute(Pointer(read_int64));
+  ptBool  : Result.Value.Bool  := Boolean(read_uint8);
+  ptChar  : Result.Value.Char  := chr(read_uint8);
+  ptInt   : Result.Value.Int   := read_int64;
+  ptFloat : Result.Value.Float := read_float;
+  ptString: Result.Value.Str   := PVM(VMPnt)^.VMStringList.StringToVMString(read_string);
+
+  { constant memory reference }
+  ptConstantMemRef:
+  Begin
+   Result.isMemRef := True;
+   Result.MemAddr  := BytecodeRelativeToAbsolute(Pointer(read_int64));
+  End;
 
   { stackval }
   ptStackval:

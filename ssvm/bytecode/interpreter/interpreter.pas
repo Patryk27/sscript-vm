@@ -44,7 +44,9 @@ Unit Interpreter;
  Procedure op_SHR(const VM: PVM);
  Procedure op_MOD(const VM: PVM);
  Procedure op_ARSET(const VM: PVM);
+ Procedure op_ARSET1(const VM: PVM);
  Procedure op_ARGET(const VM: PVM);
+ Procedure op_ARGET1(const VM: PVM);
  Procedure op_ARCRT(const VM: PVM);
  Procedure op_ARLEN(const VM: PVM);
  Procedure op_STRSET(const VM: PVM);
@@ -87,7 +89,9 @@ Unit Interpreter;
   @op_SHR,
   @op_MOD,
   @op_ARSET,
+  @op_ARSET1,
   @op_ARGET,
+  @op_ARGET1,
   @op_ARCRT,
   @op_ARLEN,
   @op_STRSET,
@@ -1163,6 +1167,69 @@ Fail:
  InvalidArgumentsException(VM, [arrayReference, indexCount, newValue]);
 End;
 
+{ ARSET1 (reg/stvl/mem arrayReference, int indexId, newValue) }
+Procedure op_ARSET1(const VM: PVM);
+Var arrayReference, indexId, newValue: TMixedValue;
+
+    ArrayPnt: VMReference;
+    Typ     : TMixedValueType;
+
+    I: uint32;
+Label Fail;
+Begin
+ With VM^ do
+ Begin
+  // read parameters
+  arrayReference := Bytecode.read_param;
+  indexId        := Bytecode.read_param;
+  newValue       := Bytecode.read_param;
+
+  // prepare pointers if register
+  if (arrayReference.isReg) Then
+  Begin
+   ArrayPnt := getReference(arrayReference);
+   Typ      := arrayReference.Typ;
+  End Else
+
+  // prepare pointers if stackval
+  if (arrayReference.isStackval) Then
+  Begin
+   ArrayPnt := Pointer(arrayReference.Value.Int);
+   Typ      := arrayReference.Stackval^.Typ;
+  End Else
+
+  // prepare pointers if memory reference
+  if (arrayReference.isMemRef) Then
+  Begin
+   ArrayPnt := PPointer(arrayReference.MemAddr)^;
+   Typ      := mvReference;
+  End Else
+
+  // throw an exception if something other
+  Begin
+   goto Fail;
+  End;
+
+  // do magic
+  Case Typ of
+   // array reference
+   mvReference:
+   Begin
+    TMArray(CheckObject(ArrayPnt)).setValue(getInt(indexId), newValue);
+   End;
+
+   // invalid
+   else
+    goto Fail;
+  End;
+
+  Exit;
+ End;
+
+Fail:
+ InvalidArgumentsException(VM, [arrayReference, indexId, newValue]);
+End;
+
 { ARGET (reg/stvl/mem arrayReference, int indexCount, out outValue) }
 Procedure op_ARGET(const VM: PVM);
 Var arrayReference, indexCount, outValue: TMixedValue;
@@ -1262,6 +1329,101 @@ Begin
 
 Fail:
  InvalidArgumentsException(VM, [arrayReference, indexCount, outValue]);
+End;
+
+{ ARGET1 (reg/stvl/mem arrayReference, int indexId, out outValue) }
+Procedure op_ARGET1(const VM: PVM);
+Var arrayReference, indexId, outValue: TMixedValue;
+
+    ArrayPnt: Pointer;
+    Typ     : TMixedValueType;
+
+    AValue: TMixedValue;
+
+    I: uint32;
+Label Fail;
+Begin
+ With VM^ do
+ Begin
+  // reset temporary variable
+  AValue.Reset;
+
+  // read parameters
+  arrayReference := Bytecode.read_param;
+  indexId        := Bytecode.read_param;
+  outValue       := Bytecode.read_param;
+
+  // prepare variables if register
+  if (arrayReference.isReg) Then
+  Begin
+   ArrayPnt := getReference(arrayReference);
+   Typ      := arrayReference.Typ;
+  End Else
+
+  // prepare variables if stackval
+  if (arrayReference.isStackval) Then
+  Begin
+   ArrayPnt := Pointer(arrayReference.Stackval^.Value.Int);
+   Typ      := arrayReference.Stackval^.Typ;
+  End Else
+
+  // prepare variables if memory reference
+  if (arrayReference.isMemRef) Then
+  Begin
+   ArrayPnt := PPointer(arrayReference.MemAddr)^;
+   Typ      := mvReference;
+  End Else
+
+  // throw an exception otherwise
+  Begin
+   goto Fail;
+  End;
+
+  // do magic
+  Case Typ of
+   // array reference
+   mvReference:
+   Begin
+    AValue := TMArray(CheckObject(ArrayPnt)).getValue(getInt(indexId));
+   End;
+
+   // invalid
+   else
+    goto Fail;
+  End;
+
+  // save result (register)
+  if (outValue.isReg) Then
+  Begin
+   Case outValue.Typ of
+    mvBool     : Regs.b[outValue.RegIndex] := getBool(AValue);
+    mvChar     : Regs.c[outValue.RegIndex] := getChar(AValue);
+    mvInt      : Regs.i[outValue.RegIndex] := getInt(AValue);
+    mvFloat    : Regs.f[outValue.RegIndex] := getFloat(AValue);
+    mvString   : Regs.s[outValue.RegIndex] := getString(AValue);
+    mvReference: Regs.r[outValue.RegIndex] := getReference(AValue);
+
+    else
+     goto Fail;
+   End;
+  End Else
+
+  // save result (stackval)
+  if (outValue.isStackval) Then
+  Begin
+   outValue.Stackval^ := AValue;
+  End Else
+
+  // throw exception if invalid result parameter
+  Begin
+   goto Fail;
+  End;
+
+  Exit;
+ End;
+
+Fail:
+ InvalidArgumentsException(VM, [arrayReference, indexId, outValue]);
 End;
 
 { ARCRT (reg/stvl/mem arrayReference, int arrayType, const int dimensionCount) }

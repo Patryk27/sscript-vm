@@ -25,6 +25,7 @@ Unit DbgParser;
  Type TDBGFunctionData =
       Record
        FunctionName, LabelName: String;
+       RangeBegin, RangeEnd   : uint32;
       End;
 
  { TDBGLineData }
@@ -120,6 +121,8 @@ Begin
    Begin
     FunctionList[I].FunctionName := Stream.read_string;
     FunctionList[I].LabelName    := Stream.read_string;
+    FunctionList[I].RangeBegin   := Stream.read_uint32;
+    FunctionList[I].RangeEnd     := Stream.read_uint32;
    End;
   End;
 

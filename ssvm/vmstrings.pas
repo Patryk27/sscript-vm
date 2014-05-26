@@ -90,7 +90,7 @@ End;
 }
 Function TVMStringList.CharToVMString(const Value: Char): PVMString;
 Begin
- Result := StringToVMString(Value); // affirmative - I'm lazy as hell
+ Result := StringToVMString(Value); // I'm lazy as hell
 End;
 
 (* TVMString.CloneVMString *)

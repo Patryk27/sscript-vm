@@ -731,8 +731,7 @@ Begin
     reg.Typ := param.Typ;
 
    Case reg.Typ of
-    mvChar  : StringConcat(reg.MemAddr, getChar(Param)); // char
-    mvString: StringConcat(reg.MemAddr, getString(Param)); // string
+    mvString: StringConcat(PPVMString(reg.MemAddr)^, getString(param)); // string
 
     else
      goto Fail;
@@ -747,7 +746,6 @@ Begin
    With reg.Stackval^ do
    Begin
     Case reg.Typ of
-     mvChar  : StringConcat(Value.Str, getChar(param)); // char
      mvString: StringConcat(Value.Str, getString(param)); // string
 
      else

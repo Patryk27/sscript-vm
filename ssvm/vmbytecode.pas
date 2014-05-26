@@ -304,15 +304,11 @@ End;
 }
 Procedure TVMBytecode.Execute;
 Var Stop: PBoolean;
-Label loop;
 Begin
  Stop := @PVM(VMPnt)^.Stop;
 
- While (true) Do
+ While (not Stop^) Do
  Begin
-  if (Stop^) Then
-   Exit;
-
   CurrentOpcode := Position;
   OpcodeTable[TOpcodeKind(read_uint8)](VMPnt);
 

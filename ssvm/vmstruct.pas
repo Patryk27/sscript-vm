@@ -372,7 +372,7 @@ End;
 Procedure TVM.StringConcat(A, B: PVMString);
 Var OldLen: uint32;
 
-  { SpecialCase } // see: TVM.getString()
+  { SpecialCase } // see TVM.getString()
   Function SpecialCase(const Pnt: Pointer): PVMString;
   Var MV: TMixedValue;
   Begin
@@ -389,7 +389,6 @@ Var OldLen: uint32;
     Result := PVMString(Pnt);
    End;
   End;
-
 Begin
  A := SpecialCase(A);
  B := SpecialCase(B);
@@ -405,7 +404,7 @@ Begin
  A^.Length += B^.Length;
 
  // reallocate memory block
- ReallocMem(A^.Data, A^.Length);
+ A^.Data := ReallocMem(A^.Data, A^.Length);
 
  // copy data
  Move(B^.Data[0], A^.Data[OldLen], B^.Length);

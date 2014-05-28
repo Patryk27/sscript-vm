@@ -505,8 +505,7 @@ Var NewAddr: VMInt;
 Begin
  With VM^ do
  Begin
-  NewAddr := Bytecode.getRelativePosition;
-  NewAddr += getInt(Bytecode.read_param)-1; // '-1' because instruction pointer will be incremented after this JMP finishes executing and finally we'd jump one byte further than we want to
+  NewAddr := Bytecode.getRelativePosition + BEtoN(Pint32(Bytecode.getCurrentOpcode+1)^)-1; // '-1' because instruction pointer will be incremented after this JMP finishes executing and finally we'd jump one byte further than we want to
   Bytecode.setRelativePosition(NewAddr);
  End;
 End;
@@ -517,11 +516,16 @@ Var NewAddr: VMInt;
 Begin
  With VM^ do
  Begin
-  NewAddr := Bytecode.getRelativePosition;
-  NewAddr += getInt(Bytecode.read_param)-1;
-
   if (Regs.b[5]) Then
+  Begin
+   // read parameter and jump
+   NewAddr := Bytecode.getRelativePosition + BEtoN(Pint32(Bytecode.getCurrentOpcode+1)^)-1;
    Bytecode.setRelativePosition(NewAddr);
+  End Else
+  Begin
+   // skip opcode
+   Bytecode.setRelativePosition(Bytecode.getRelativePosition+4);
+  End;
  End;
 End;
 
@@ -531,11 +535,17 @@ Var NewAddr: VMInt;
 Begin
  With VM^ do
  Begin
-  NewAddr := Bytecode.getRelativePosition;
-  NewAddr += getInt(Bytecode.read_param)-1;
+  if (Regs.b[5]) Then
+  Begin
+   // skip opcode
+   Bytecode.setRelativePosition(Bytecode.getRelativePosition+4);
+  End Else
+  Begin
+   // read parameter and jump
+   NewAddr := Bytecode.getRelativePosition + BEtoN(Pint32(Bytecode.getCurrentOpcode+1)^)-1;
 
-  if (not Regs.b[5]) Then
    Bytecode.setRelativePosition(NewAddr);
+  End;
  End;
 End;
 
@@ -546,12 +556,11 @@ Var NewAddr: VMInt;
 Begin
  With VM^ do
  Begin
-  NewAddr := Bytecode.getRelativePosition;
-  NewAddr += getInt(Bytecode.read_param)-1;
+  NewAddr := Bytecode.getRelativePosition + BEtoN(Pint32(Bytecode.getCurrentOpcode+1)^)-1;
 
   Elem.Reset;
   Elem.Typ       := mvCallstackRef;
-  Elem.Value.Int := VMInt(Bytecode.getPosition);
+  Elem.Value.Int := VMInt(Bytecode.getPosition+4);
   Stack.Push(Elem); // push the old position onto the stack
 
   Bytecode.setRelativePosition(NewAddr);
@@ -1171,8 +1180,6 @@ Var arrayReference, indexId, newValue: TMixedValue;
 
     ArrayPnt: VMReference;
     Typ     : TMixedValueType;
-
-    I: uint32;
 Label Fail;
 Begin
  With VM^ do
@@ -1337,8 +1344,6 @@ Var arrayReference, indexId, outValue: TMixedValue;
     Typ     : TMixedValueType;
 
     AValue: TMixedValue;
-
-    I: uint32;
 Label Fail;
 Begin
  With VM^ do

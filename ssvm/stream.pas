@@ -127,15 +127,10 @@ End;
 Procedure TStream.write_string(const V: String);
 Var Ch: Char;
 Begin
+ write_uint16(Length(V));
+
  For Ch in V Do
- Begin
-  if (Ch = #0) Then
-   raise EStreamException.Create('Terminator char (0x00) found in the string content!');
-
   write_uint8(ord(Ch));
- End;
-
- write_uint8(0);
 End;
 
 (* TStream.read_uint8 *)
@@ -212,18 +207,12 @@ End;
 
 (* TStream.read_string *)
 Function TStream.read_string: String;
-Var Ch: uint8;
+Var Len: uint16;
 Begin
  Result := '';
 
- While (true) Do
- Begin
-  Ch := read_uint8;
-
-  if (Ch = 0) Then
-   Break Else
-   Result += chr(Ch);
- End;
+ For Len := 1 To read_uint16 Do
+  Result += chr(read_uint8);
 End;
 
 (* TStream.Can *)

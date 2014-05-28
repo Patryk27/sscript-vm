@@ -605,8 +605,10 @@ Begin
  Frames := ExceptFrames;
 
  if (ExceptFrameCount > 0) Then
+ Begin
   For I := 0 To ExceptFrameCount-1 Do
    WriteLog('%s', [BacktraceStrFunc(Frames[I])]);
+ End;
 End;
 
 (* TVM.DumpExceptionData *)

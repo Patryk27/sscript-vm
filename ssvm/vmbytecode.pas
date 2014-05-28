@@ -149,16 +149,12 @@ End;
  Reads a string
 }
 Function TVMBytecode.read_string: String;
+Var Len: uint16;
 Begin
  Result := '';
 
- While (Position^ <> 0) Do
- Begin
-  Result += chr(Position^);
-  Inc(Position);
- End;
-
- Inc(Position); // skip the null termintor char
+ For Len := 1 To read_uint16 Do
+  Result += chr(read_uint8);
 End;
 
 (* TVMBytecode.read_param *)
@@ -283,7 +279,7 @@ Begin
   Begin
    Result.isStackval := True;
 
-   Result.Stackval := PVM(VMPnt)^.Stack.getPointer(getStackPos+read_int32-1);
+   Result.Stackval := PVM(VMPnt)^.Stack.getPointer(getStackPos+read_int8-1);
    Result.Typ      := Result.Stackval^.Typ;
    Result.Value    := Result.Stackval^.Value;
   End;
@@ -307,8 +303,11 @@ Var Stop: PBoolean;
 Begin
  Stop := @PVM(VMPnt)^.Stop;
 
- While (not Stop^) Do
+ While (true) Do
  Begin
+  if (Stop^) Then
+   Exit;
+
   CurrentOpcode := Position;
   OpcodeTable[TOpcodeKind(read_uint8)](VMPnt);
 

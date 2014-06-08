@@ -138,7 +138,11 @@ Begin
   Throw := True;
 
  if (Throw) Then
-  VM^.ThrowException('String index out of bounds: index %d is outside string range 1..%d', [Index, Len]);
+ Begin
+  if (Len = 0) Then
+   VM^.ThrowException('String index out of bounds: string is empty') Else
+   VM^.ThrowException('String index out of bounds: index %d is outside string range 1..%d', [Index, Len]);
+ End;
 End;
 
 { _ }

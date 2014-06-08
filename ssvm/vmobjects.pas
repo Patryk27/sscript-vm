@@ -147,6 +147,9 @@ End;
 (* TMArray.getElement *)
 Function TMArray.getElement(const Index: TIndex): Pointer;
 Begin
+ if (Index >= DimensionSize) Then
+  VM^.ThrowException('Array index out of bounds: index %d is outside array range 0..%d', [Index, DimensionSize-1]);
+
  Result := Pointer(uint32(Data) + Index * TypeSize);
 End;
 

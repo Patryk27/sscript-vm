@@ -505,69 +505,74 @@ End;
 
 { JMP (const int) }
 Procedure op_JMP(const VM: PVM);
-Var NewAddr: VMInt;
+Var NewAddr: VMIReference;
 Begin
  With VM^ do
  Begin
-  NewAddr := Bytecode.getRelativePosition + BEtoN(Pint32(Bytecode.getCurrentOpcode+1)^)-1; // '-1' because instruction pointer will be incremented after this JMP finishes executing and finally we'd jump one byte further than we want to
-  Bytecode.setRelativePosition(NewAddr);
+  NewAddr := VMIReference(Bytecode.getPosition) + BEtoN(Pint64(Bytecode.getCurrentOpcode+1)^)-1;
+  {
+   @Note: '-1' because instruction pointer will be incremented after this JMP finishes executing and finally we'd jump one byte further
+  }
+
+  Bytecode.setPosition(Pointer(NewAddr));
  End;
 End;
 
 { TJMP (const int) }
 Procedure op_TJMP(const VM: PVM);
-Var NewAddr: VMInt;
+Var NewAddr: VMIReference;
 Begin
  With VM^ do
  Begin
   if (Regs.b[5]) Then
   Begin
    // read parameter and jump
-   NewAddr := Bytecode.getRelativePosition + BEtoN(Pint32(Bytecode.getCurrentOpcode+1)^)-1;
-   Bytecode.setRelativePosition(NewAddr);
+   NewAddr := VMIReference(Bytecode.getPosition) + BEtoN(Pint64(Bytecode.getCurrentOpcode+1)^)-1;
+   Bytecode.setPosition(Pointer(NewAddr));
   End Else
   Begin
    // skip opcode
-   Bytecode.setRelativePosition(Bytecode.getRelativePosition+4);
+   Bytecode.setPosition(Bytecode.getPosition+8);
   End;
  End;
 End;
 
 { FJMP (const int) }
 Procedure op_FJMP(const VM: PVM);
-Var NewAddr: VMInt;
+Var NewAddr: VMIReference;
 Begin
  With VM^ do
  Begin
   if (Regs.b[5]) Then
   Begin
    // skip opcode
-   Bytecode.setRelativePosition(Bytecode.getRelativePosition+4);
+   Bytecode.setPosition(Bytecode.getPosition+8);
   End Else
   Begin
    // read parameter and jump
-   NewAddr := Bytecode.getRelativePosition + BEtoN(Pint32(Bytecode.getCurrentOpcode+1)^)-1;
-
-   Bytecode.setRelativePosition(NewAddr);
+   NewAddr := VMIReference(Bytecode.getPosition) + BEtoN(Pint64(Bytecode.getCurrentOpcode+1)^)-1;
+   Bytecode.setPosition(Pointer(NewAddr));
   End;
  End;
 End;
 
 { CALL (const int) }
 Procedure op_CALL(const VM: PVM);
-Var NewAddr: VMInt;
+Var NewAddr: VMIReference;
     Elem   : TStackElement;
 Begin
  With VM^ do
  Begin
-  NewAddr := Bytecode.getRelativePosition + BEtoN(Pint32(Bytecode.getCurrentOpcode+1)^)-1;
+  NewAddr := VMIReference(Bytecode.getPosition) + BEtoN(Pint64(Bytecode.getCurrentOpcode+1)^)-1;
 
+  // push the old position onto the stack
   Elem.Reset;
   Elem.Typ       := mvCallstackRef;
-  Elem.Value.Int := VMInt(Bytecode.getPosition+4);
-  Stack.Push(Elem); // push the old position onto the stack
+  Elem.Value.Int := VMInt(Bytecode.getPosition+8);
+  Stack.Push(Elem);
 
-  Bytecode.setRelativePosition(NewAddr);
+  // jump
+  Bytecode.setPosition(Pointer(NewAddr));
  End;
 End;
 

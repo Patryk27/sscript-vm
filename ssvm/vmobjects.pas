@@ -15,8 +15,8 @@ Unit VMObjects;
  Type PIndexArray = ^TIndexArray;
       TIndexArray = Array of TIndex;
 
- { TMObject }
- Type TMObject =
+ { TSSVMObject }
+ Type TSSVMObject =
       Class
        Private
         VM: PVM;
@@ -30,9 +30,9 @@ Unit VMObjects;
         Procedure GCMark; virtual;
        End;
 
- { TMArray }
- Type TMArray =
-      Class (TMObject)
+ { TSSVMArray }
+ Type TSSVMArray =
+      Class (TSSVMObject)
        Private
         Data: Pointer;
 
@@ -68,22 +68,22 @@ Unit VMObjects;
  Implementation
 Uses GarbageCollector, VMTypes;
 
-(* TMObject.Create *)
-Constructor TMObject.Create(const fVM: PVM);
+(* TSSVMObject.Create *)
+Constructor TSSVMObject.Create(const fVM: PVM);
 Begin
  VM := fVM;
  TGarbageCollector(VM^.GarbageCollector).PutObject(self);
 End;
 
-(* TMObject.GCMark *)
-Procedure TMObject.GCMark;
+(* TSSVMObject.GCMark *)
+Procedure TSSVMObject.GCMark;
 Begin
  isMarked := True;
 End;
 
 // -------------------------------------------------------------------------- //
-(* TMArray.__set *)
-Procedure TMArray.__set(const DataPos: Pointer; const NewValue: TMixedValue; const aType: uint8);
+(* TSSVMArray.__set *)
+Procedure TSSVMArray.__set(const DataPos: Pointer; const NewValue: TMixedValue; const aType: uint8);
 Begin
  Case aType of
   TYPE_BOOL_id  : PVMBool(DataPos)^  := VM^.getBool(NewValue);
@@ -112,8 +112,8 @@ Begin
  End;
 End;
 
-(* TMArray.__get *)
-Function TMArray.__get(const DataPos: Pointer; const aType: uint8): TMixedValue;
+(* TSSVMArray.__get *)
+Function TSSVMArray.__get(const DataPos: Pointer; const aType: uint8): TMixedValue;
 Begin
  // make sure result is empty
  Result.Reset;
@@ -146,8 +146,8 @@ Begin
  End;
 End;
 
-(* TMArray.getElement *)
-Function TMArray.getElement(const Index: TIndex): Pointer;
+(* TSSVMArray.getElement *)
+Function TSSVMArray.getElement(const Index: TIndex): Pointer;
 Begin
  if (Index >= DimensionSize) Then
   VM^.ThrowException('Array index out of bounds: index %d is outside array range 0..%d', [Index, DimensionSize-1]);
@@ -155,10 +155,10 @@ Begin
  Result := Pointer(uint32(Data) + Index * TypeSize);
 End;
 
-(* TMArray.getElement *)
-Function TMArray.getElement(Indexes: TIndexArray; out Typ: uint8): Pointer;
+(* TSSVMArray.getElement *)
+Function TSSVMArray.getElement(Indexes: TIndexArray; out Typ: uint8): Pointer;
 Var VMStr: PVMString;
-    Arr  : TMArray;
+    Arr  : TSSVMArray;
     I    : uint8;
 Begin
  Typ := TypeID;
@@ -170,7 +170,7 @@ Begin
  if (TypeID = $FF) Then
  Begin
   // fetch pointer
-  Arr := TMArray(PPointer(getElement(Indexes[0]))^);
+  Arr := TSSVMArray(PPointer(getElement(Indexes[0]))^);
 
   // check if pointer is valid
   if (not VM^.isValidObject(Arr)) Then
@@ -207,12 +207,12 @@ Begin
 
  // invalid argument
  Begin
-  VM^.ThrowException('TMArray.getElement() invalid argument');
+  VM^.ThrowException('TSSVMArray.getElement() invalid argument');
  End;
 End;
 
-(* TMArray.Create *)
-Constructor TMArray.Create(const fVM: Pointer; const fType: uint8; const fDimensionSize: uint32);
+(* TSSVMArray.Create *)
+Constructor TSSVMArray.Create(const fVM: Pointer; const fType: uint8; const fDimensionSize: uint32);
 Begin
  inherited Create(fVM);
 
@@ -230,8 +230,8 @@ Begin
  Data    := AllocMem(MemSize);
 End;
 
-(* TMArray.Create *)
-Constructor TMArray.Create(const fVM: Pointer; const fType: uint8; fDimensions: TIndexArray);
+(* TSSVMArray.Create *)
+Constructor TSSVMArray.Create(const fVM: Pointer; const fType: uint8; fDimensions: TIndexArray);
 Var I: uint32;
 Begin
  if (Length(fDimensions) = 1) Then
@@ -250,12 +250,12 @@ Begin
 
  For I := 0 To getSize-1 Do
  Begin
-  PPointer(getElement(I))^ := TMArray.Create(fVM, fType, fDimensions);
+  PPointer(getElement(I))^ := TSSVMArray.Create(fVM, fType, fDimensions);
  End;
 End;
 
-(* TMArray.Destroy *)
-Destructor TMArray.Destroy;
+(* TSSVMArray.Destroy *)
+Destructor TSSVMArray.Destroy;
 Var Mem, MemEnd: PPointer;
 Begin
  // strings needs special memory freeing (in fact - it doesn't have to be done here, but why not? Let's not waste memory.)
@@ -279,14 +279,14 @@ Begin
  inherited;
 End;
 
-(* TMArray.setValue *)
-Procedure TMArray.setValue(const Index: TIndex; const NewValue: TMixedValue);
+(* TSSVMArray.setValue *)
+Procedure TSSVMArray.setValue(const Index: TIndex; const NewValue: TMixedValue);
 Begin
  __set(getElement(Index), NewValue, TypeID);
 End;
 
-(* TMArray.setValue *)
-Procedure TMArray.setValue(const Indexes: TIndexArray; const NewValue: TMixedValue);
+(* TSSVMArray.setValue *)
+Procedure TSSVMArray.setValue(const Indexes: TIndexArray; const NewValue: TMixedValue);
 Var Typ: uint8;
     Pos: Pointer;
 Begin
@@ -294,14 +294,14 @@ Begin
  __set(Pos, NewValue, Typ);
 End;
 
-(* TMArray.getValue *)
-Function TMArray.getValue(const Index: TIndex): TMixedValue;
+(* TSSVMArray.getValue *)
+Function TSSVMArray.getValue(const Index: TIndex): TMixedValue;
 Begin
  Result := __get(getElement(Index), TypeID);
 End;
 
-(* TMArray.getValue *)
-Function TMArray.getValue(const Indexes: TIndexArray): TMixedValue;
+(* TSSVMArray.getValue *)
+Function TSSVMArray.getValue(const Indexes: TIndexArray): TMixedValue;
 Var Typ: uint8;
     Pos: Pointer;
 Begin
@@ -309,14 +309,14 @@ Begin
  Result := __get(Pos, Typ);
 End;
 
-(* TMArray.getSize *)
-Function TMArray.getSize: TIndex;
+(* TSSVMArray.getSize *)
+Function TSSVMArray.getSize: TIndex;
 Begin
  Result := DimensionSize;
 End;
 
-(* TMArray.Resize *)
-Procedure TMArray.Resize(const NewSize: TIndex);
+(* TSSVMArray.Resize *)
+Procedure TSSVMArray.Resize(const NewSize: TIndex);
 Var Mem, MemEnd: Pointer;
     Pnt        : PPointer;
 
@@ -369,10 +369,10 @@ Begin
  DimensionSize := NewSize;
 End;
 
-(* TMArray.GCMark *)
-Procedure TMArray.GCMark;
+(* TSSVMArray.GCMark *)
+Procedure TSSVMArray.GCMark;
 Var Mem, MemEnd: Pointer;
-    Obj        : TMObject;
+    Obj        : TSSVMObject;
 Begin
  inherited;
 
@@ -383,7 +383,7 @@ Begin
 
   While (Mem < MemEnd) Do
   Begin
-   Obj := TMObject(PPointer(Mem)^);
+   Obj := TSSVMObject(PPointer(Mem)^);
 
    if (VM^.isValidObject(Obj)) Then
     Obj.GCMark;

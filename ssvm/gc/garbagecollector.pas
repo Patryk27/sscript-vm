@@ -11,7 +11,7 @@ Unit GarbageCollector;
 
  Const ObjectListCount = 1; // Number of object allocation lists; keep in mind that the higher number you put here, the higher amount of threads will be executed during the GC's mark stage (1 object list = 1 thread) and that doesn't mean it will be any faster. In fact, more than 2 sweeping-threads will most likely just slow down everything.
 
- Type TObjectList = specialize TFPGList<TMObject>;
+ Type TObjectList = specialize TFPGList<TSSVMObject>;
 
  { TGarbageCollector }
  Type TGarbageCollector =
@@ -30,8 +30,8 @@ Unit GarbageCollector;
         Constructor Create(const fVM: PVM; const fMemoryLimit: uint32);
         Destructor Destroy; override;
 
-        Procedure PutObject(const Obj: TMObject);
-        Function FindObject(const Obj: TMObject): Boolean;
+        Procedure PutObject(const Obj: TSSVMObject);
+        Function FindObject(const Obj: TSSVMObject): Boolean;
 
         Procedure DoGarbageCollection;
 
@@ -97,14 +97,14 @@ Procedure TGarbageCollector.Mark(const ObjectList: TObjectList);
 
   { TryToMark }
   Procedure TryToMark(const Address: Pointer);
-  Var Obj: TMObject;
+  Var Obj: TSSVMObject;
   Begin
-   Obj := TMObject(Address);
+   Obj := TSSVMObject(Address);
    if (ObjectList.IndexOf(Obj) > -1) and (not Obj.isMarked) Then
     Obj.GCMark;
   End;
 
-Var Obj: TMObject;
+Var Obj: TSSVMObject;
     I  : Integer;
 Begin
  For Obj in ObjectList Do
@@ -188,7 +188,7 @@ End;
 }
 Destructor TGarbageCollector.Destroy;
 Var List: TObjectList;
-    Obj : TMObject;
+    Obj : TSSVMObject;
     Mem : uint32;
 Begin
  VM^.WriteLog('GC is about to be destroyed - %d objects left to free...', [getObjectsCount]);
@@ -211,7 +211,7 @@ End;
 {
  Puts an object instance on the list.
 }
-Procedure TGarbageCollector.PutObject(const Obj: TMObject);
+Procedure TGarbageCollector.PutObject(const Obj: TSSVMObject);
 Var List: TObjectList;
     I   : uint8;
 Begin
@@ -230,7 +230,7 @@ End;
 {
  Returns "true" if given object is on the object list, i.e. - returns "true" if it's a valid object address.
 }
-Function TGarbageCollector.FindObject(const Obj: TMObject): Boolean;
+Function TGarbageCollector.FindObject(const Obj: TSSVMObject): Boolean;
 Var List: TObjectList;
 Begin
  Result := False;

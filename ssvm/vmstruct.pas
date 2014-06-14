@@ -518,7 +518,7 @@ Begin
  if (Address = nil) Then
   ThrowException('Null pointer reference');
 
- if (not TGarbageCollector(GarbageCollector).findObject(TMObject(Address))) Then
+ if (not TGarbageCollector(GarbageCollector).findObject(TSSVMObject(Address))) Then
   ThrowException('Not a valid object reference: 0x'+IntToHex(VMIReference(Address), 2*sizeof(VMIReference)));
 End;
 
@@ -528,7 +528,7 @@ End;
 }
 Function TVM.isValidObject(const Obj: Pointer): Boolean;
 Begin
- Result := TGarbageCollector(GarbageCollector).findObject(TMObject(Obj));
+ Result := TGarbageCollector(GarbageCollector).findObject(TSSVMObject(Obj));
 End;
 
 (* TVM.FlushLog *)
@@ -621,7 +621,7 @@ End;
 Procedure TVM.DumpExceptionData;
 Var I  : uint8;
     Str: String;
-    Obj: TMObject;
+    Obj: TSSVMObject;
 Begin
  // eb
  For I := 1 To 4 Do
@@ -668,7 +668,7 @@ Begin
  WriteLog;
  For I := 1 To 4 Do
  Begin
-  Obj := TMObject(Regs.r[I]);
+  Obj := TSSVMObject(Regs.r[I]);
 
   Str := SysUtils.Format('er%d = 0x%x', [I, VMIReference(Obj)]);
 

@@ -1121,7 +1121,7 @@ Procedure op_ARSET(const VM: PVM);
 Var arrayReference, indexCount, newValue: TMixedValue;
     IndexArray                          : TIndexArray;
 
-    ArrayPnt: TMArray;
+    ArrayPnt: TSSVMArray;
 
     I: uint32;
 Label Fail;
@@ -1139,7 +1139,7 @@ Begin
    IndexArray[I] := getInt(Stack.Pop);
 
   // fetch pointer
-  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
+  ArrayPnt := TSSVMArray(CheckObject(getReference(arrayReference)));
 
   // set value
   ArrayPnt.setValue(IndexArray, newValue);
@@ -1150,7 +1150,7 @@ End;
 Procedure op_ARSET1(const VM: PVM);
 Var arrayReference, indexId, newValue: TMixedValue;
 
-    ArrayPnt: TMArray;
+    ArrayPnt: TSSVMArray;
 Begin
  With VM^ do
  Begin
@@ -1160,7 +1160,7 @@ Begin
   newValue       := Bytecode.read_param;
 
   // fetch pointer
-  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
+  ArrayPnt := TSSVMArray(CheckObject(getReference(arrayReference)));
 
   // set value
   ArrayPnt.setValue(getInt(indexId), newValue);
@@ -1172,7 +1172,7 @@ Procedure op_ARGET(const VM: PVM);
 Var arrayReference, indexCount, outValue: TMixedValue;
     IndexArray                          : TIndexArray;
 
-    ArrayPnt: TMArray;
+    ArrayPnt: TSSVMArray;
     AValue  : TMixedValue;
 
     I: uint32;
@@ -1194,7 +1194,7 @@ Begin
    IndexArray[I] := getInt(Stack.Pop);
 
   // fetch pointer
-  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
+  ArrayPnt := TSSVMArray(CheckObject(getReference(arrayReference)));
 
   // get value
   AValue := ArrayPnt.getValue(IndexArray);
@@ -1236,7 +1236,7 @@ End;
 { ARGET1 (reg/stvl/mem arrayReference, int indexId, out outValue) }
 Procedure op_ARGET1(const VM: PVM);
 Var arrayReference, indexId, outValue: TMixedValue;
-    ArrayPnt                         : TMArray;
+    ArrayPnt                         : TSSVMArray;
     AValue                           : TMixedValue;
 Label Fail;
 Begin
@@ -1251,7 +1251,7 @@ Begin
   outValue       := Bytecode.read_param;
 
   // fetch pointer
-  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
+  ArrayPnt := TSSVMArray(CheckObject(getReference(arrayReference)));
 
   // get value
   AValue := ArrayPnt.getValue(getInt(indexId));
@@ -1295,7 +1295,7 @@ Procedure op_ARCRT(const VM: PVM);
 Var arrayReference, arrayType, dimensionCount: TMixedValue;
     SizeArray                                : TIndexArray;
 
-    ArrayObj: TMArray;
+    ArrayObj: TSSVMArray;
 
     I: uint32;
 Label Fail;
@@ -1313,7 +1313,7 @@ Begin
    SizeArray[I] := getInt(Stack.Pop);
 
   // create array
-  ArrayObj := TMArray.Create(VM, getInt(arrayType), SizeArray);
+  ArrayObj := TSSVMArray.Create(VM, getInt(arrayType), SizeArray);
 
   // save result if register
   if (arrayReference.isReg) Then
@@ -1366,10 +1366,10 @@ Begin
   arrayLength    := Bytecode.read_param;
 
   // fetch pointer
-  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
+  ArrayPnt := TSSVMArray(CheckObject(getReference(arrayReference)));
 
   // fetch array size
-  DimSize := TMArray(CheckObject(ArrayPnt)).getSize;
+  DimSize := TSSVMArray(CheckObject(ArrayPnt)).getSize;
 
   // save array size to register
   if (arrayLength.isReg) Then
@@ -1408,7 +1408,7 @@ End;
 { ARRES (reg/stvl/mem arrayReference, reg/stvl/mem int newLength) }
 Procedure op_ARRES(const VM: PVM);
 Var arrayReference, newLength: TMixedValue;
-    ArrayPnt                 : TMArray;
+    ArrayPnt                 : TSSVMArray;
 Begin
  With VM^ do
  Begin
@@ -1417,7 +1417,7 @@ Begin
   newLength      := Bytecode.read_param;
 
   // fetch pointer
-  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
+  ArrayPnt := TSSVMArray(CheckObject(getReference(arrayReference)));
 
   // resize
   ArrayPnt.Resize(getInt(newLength));

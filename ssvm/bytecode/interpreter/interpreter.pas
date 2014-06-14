@@ -1121,8 +1121,7 @@ Procedure op_ARSET(const VM: PVM);
 Var arrayReference, indexCount, newValue: TMixedValue;
     IndexArray                          : TIndexArray;
 
-    ArrayPnt: VMReference;
-    Typ     : TMixedValueType;
+    ArrayPnt: TMArray;
 
     I: uint32;
 Label Fail;
@@ -1139,59 +1138,19 @@ Begin
   For I := 0 To High(IndexArray) Do
    IndexArray[I] := getInt(Stack.Pop);
 
-  // prepare pointers if register
-  if (arrayReference.isReg) Then
-  Begin
-   ArrayPnt := getReference(arrayReference);
-   Typ      := arrayReference.Typ;
-  End Else
+  // fetch pointer
+  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
 
-  // prepare pointers if stackval
-  if (arrayReference.isStackval) Then
-  Begin
-   ArrayPnt := Pointer(arrayReference.Value.Int);
-   Typ      := arrayReference.Stackval^.Typ;
-  End Else
-
-  // prepare pointers if memory reference
-  if (arrayReference.isMemRef) Then
-  Begin
-   ArrayPnt := PPointer(arrayReference.MemAddr)^;
-   Typ      := mvReference;
-  End Else
-
-  // throw an exception if something other
-  Begin
-   goto Fail;
-  End;
-
-  // do magic
-  Case Typ of
-   // array reference
-   mvReference:
-   Begin
-    TMArray(CheckObject(ArrayPnt)).setValue(IndexArray, newValue);
-   End;
-
-   // invalid
-   else
-    goto Fail;
-  End;
-
-  Exit;
+  // set value
+  ArrayPnt.setValue(IndexArray, newValue);
  End;
-
-Fail:
- InvalidArgumentsException(VM, [arrayReference, indexCount, newValue]);
 End;
 
 { ARSET1 (reg/stvl/mem arrayReference, int indexId, newValue) }
 Procedure op_ARSET1(const VM: PVM);
 Var arrayReference, indexId, newValue: TMixedValue;
 
-    ArrayPnt: VMReference;
-    Typ     : TMixedValueType;
-Label Fail;
+    ArrayPnt: TMArray;
 Begin
  With VM^ do
  Begin
@@ -1200,50 +1159,12 @@ Begin
   indexId        := Bytecode.read_param;
   newValue       := Bytecode.read_param;
 
-  // prepare pointers if register
-  if (arrayReference.isReg) Then
-  Begin
-   ArrayPnt := getReference(arrayReference);
-   Typ      := arrayReference.Typ;
-  End Else
+  // fetch pointer
+  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
 
-  // prepare pointers if stackval
-  if (arrayReference.isStackval) Then
-  Begin
-   ArrayPnt := Pointer(arrayReference.Value.Int);
-   Typ      := arrayReference.Stackval^.Typ;
-  End Else
-
-  // prepare pointers if memory reference
-  if (arrayReference.isMemRef) Then
-  Begin
-   ArrayPnt := PPointer(arrayReference.MemAddr)^;
-   Typ      := mvReference;
-  End Else
-
-  // throw an exception if something other
-  Begin
-   goto Fail;
-  End;
-
-  // do magic
-  Case Typ of
-   // array reference
-   mvReference:
-   Begin
-    TMArray(CheckObject(ArrayPnt)).setValue(getInt(indexId), newValue);
-   End;
-
-   // invalid
-   else
-    goto Fail;
-  End;
-
-  Exit;
+  // set value
+  ArrayPnt.setValue(getInt(indexId), newValue);
  End;
-
-Fail:
- InvalidArgumentsException(VM, [arrayReference, indexId, newValue]);
 End;
 
 { ARGET (reg/stvl/mem arrayReference, int indexCount, out outValue) }
@@ -1251,10 +1172,8 @@ Procedure op_ARGET(const VM: PVM);
 Var arrayReference, indexCount, outValue: TMixedValue;
     IndexArray                          : TIndexArray;
 
-    ArrayPnt: Pointer;
-    Typ     : TMixedValueType;
-
-    AValue: TMixedValue;
+    ArrayPnt: TMArray;
+    AValue  : TMixedValue;
 
     I: uint32;
 Label Fail;
@@ -1274,44 +1193,11 @@ Begin
   For I := 0 To High(IndexArray) Do
    IndexArray[I] := getInt(Stack.Pop);
 
-  // prepare variables if register
-  if (arrayReference.isReg) Then
-  Begin
-   ArrayPnt := getReference(arrayReference);
-   Typ      := arrayReference.Typ;
-  End Else
+  // fetch pointer
+  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
 
-  // prepare variables if stackval
-  if (arrayReference.isStackval) Then
-  Begin
-   ArrayPnt := Pointer(arrayReference.Stackval^.Value.Int);
-   Typ      := arrayReference.Stackval^.Typ;
-  End Else
-
-  // prepare variables if memory reference
-  if (arrayReference.isMemRef) Then
-  Begin
-   ArrayPnt := PPointer(arrayReference.MemAddr)^;
-   Typ      := mvReference;
-  End Else
-
-  // throw an exception otherwise
-  Begin
-   goto Fail;
-  End;
-
-  // do magic
-  Case Typ of
-   // array reference
-   mvReference:
-   Begin
-    AValue := TMArray(CheckObject(ArrayPnt)).getValue(IndexArray);
-   End;
-
-   // invalid
-   else
-    goto Fail;
-  End;
+  // get value
+  AValue := ArrayPnt.getValue(IndexArray);
 
   // save result (register)
   if (outValue.isReg) Then
@@ -1350,11 +1236,8 @@ End;
 { ARGET1 (reg/stvl/mem arrayReference, int indexId, out outValue) }
 Procedure op_ARGET1(const VM: PVM);
 Var arrayReference, indexId, outValue: TMixedValue;
-
-    ArrayPnt: Pointer;
-    Typ     : TMixedValueType;
-
-    AValue: TMixedValue;
+    ArrayPnt                         : TMArray;
+    AValue                           : TMixedValue;
 Label Fail;
 Begin
  With VM^ do
@@ -1367,44 +1250,11 @@ Begin
   indexId        := Bytecode.read_param;
   outValue       := Bytecode.read_param;
 
-  // prepare variables if register
-  if (arrayReference.isReg) Then
-  Begin
-   ArrayPnt := getReference(arrayReference);
-   Typ      := arrayReference.Typ;
-  End Else
+  // fetch pointer
+  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
 
-  // prepare variables if stackval
-  if (arrayReference.isStackval) Then
-  Begin
-   ArrayPnt := Pointer(arrayReference.Stackval^.Value.Int);
-   Typ      := arrayReference.Stackval^.Typ;
-  End Else
-
-  // prepare variables if memory reference
-  if (arrayReference.isMemRef) Then
-  Begin
-   ArrayPnt := PPointer(arrayReference.MemAddr)^;
-   Typ      := mvReference;
-  End Else
-
-  // throw an exception otherwise
-  Begin
-   goto Fail;
-  End;
-
-  // do magic
-  Case Typ of
-   // array reference
-   mvReference:
-   Begin
-    AValue := TMArray(CheckObject(ArrayPnt)).getValue(getInt(indexId));
-   End;
-
-   // invalid
-   else
-    goto Fail;
-  End;
+  // get value
+  AValue := ArrayPnt.getValue(getInt(indexId));
 
   // save result (register)
   if (outValue.isReg) Then
@@ -1515,28 +1365,8 @@ Begin
   arrayReference := Bytecode.read_param;
   arrayLength    := Bytecode.read_param;
 
-  // get array pointer if arrayReference is register
-  if (arrayReference.isReg) Then
-  Begin
-   ArrayPnt := getReference(arrayReference);
-  End Else
-
-  // get array pointer if stackval
-  if (arrayReference.isStackval) Then
-  Begin
-   ArrayPnt := getReference(arrayReference.Stackval^);
-  End Else
-
-  // get array pointer if memory reference
-  if (arrayReference.isMemRef) Then
-  Begin
-   ArrayPnt := PPointer(arrayReference.MemAddr)^;
-  End Else
-
-  // fail otherwise
-  Begin
-   goto Fail;
-  End;
+  // fetch pointer
+  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
 
   // fetch array size
   DimSize := TMArray(CheckObject(ArrayPnt)).getSize;
@@ -1578,9 +1408,7 @@ End;
 { ARRES (reg/stvl/mem arrayReference, reg/stvl/mem int newLength) }
 Procedure op_ARRES(const VM: PVM);
 Var arrayReference, newLength: TMixedValue;
-    DimSize                  : uint32;
-
-    ArrayPnt: TMArray;
+    ArrayPnt                 : TMArray;
 Begin
  With VM^ do
  Begin

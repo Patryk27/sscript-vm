@@ -317,7 +317,10 @@ End;
 
 (* TMArray.Resize *)
 Procedure TMArray.Resize(const NewSize: TIndex);
-Var Mem, MemEnd: PPointer;
+Var Mem, MemEnd: Pointer;
+    Pnt        : PPointer;
+
+    OldSize: TIndex;
 Begin
  // if new size is equal to current, nothing have to be done
  if (NewSize = DimensionSize) Then
@@ -331,18 +334,36 @@ Begin
 
   While (Mem < MemEnd) Do
   Begin
-   if (Mem^ <> nil) Then
-    VM^.VMStringList.Dispose(Mem^);
+   Pnt := PPointer(Mem);
+
+   if (Pnt^ <> nil) Then
+    VM^.VMStringList.Dispose(Pnt^);
 
    Inc(Mem);
   End;
  End;
+
+ // save old size
+ OldSize := DimensionSize;
 
  // compute new size
  MemSize := NewSize * TypeSize;
 
  // reallocate memory block
  ReallocMem(Data, MemSize);
+
+ // zero 'new' clean memory block (leaving the old data untouched, ofc.)
+ if (NewSize > DimensionSize) Then
+ Begin
+  Mem    := Data + OldSize*TypeSize;
+  MemEnd := Data + MemSize;
+
+  While (Mem < MemEnd) Do
+  Begin
+   Puint32(Mem)^ := 0;
+   Inc(Mem);
+  End;
+ End;
 
  // update other data
  DimensionSize := NewSize;

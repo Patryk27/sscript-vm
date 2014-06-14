@@ -184,7 +184,7 @@ Const TypeMap: Array[TOpcodeArgType] of TMixedValueType =
  mvInt, mvInt
 );
 
-  // ReadReg
+  { ReadReg }
   Procedure ReadReg; inline;
   Begin
    Result.isReg    := True;

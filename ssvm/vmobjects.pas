@@ -60,6 +60,8 @@ Unit VMObjects;
 
         Function getSize: TIndex;
 
+        Procedure Resize(const NewSize: TIndex);
+
         Procedure GCMark; override;
        End;
 
@@ -155,10 +157,9 @@ End;
 
 (* TMArray.getElement *)
 Function TMArray.getElement(Indexes: TIndexArray; out Typ: uint8): Pointer;
-Var Arr: TMArray;
-    I  : uint8;
-
-    VMStr: PVMString;
+Var VMStr: PVMString;
+    Arr  : TMArray;
+    I    : uint8;
 Begin
  Typ := TypeID;
 
@@ -312,6 +313,39 @@ End;
 Function TMArray.getSize: TIndex;
 Begin
  Result := DimensionSize;
+End;
+
+(* TMArray.Resize *)
+Procedure TMArray.Resize(const NewSize: TIndex);
+Var Mem, MemEnd: PPointer;
+Begin
+ // if new size is equal to current, nothing have to be done
+ if (NewSize = DimensionSize) Then
+  Exit;
+
+ // if new size if lower than current and we have a string array, we need to clean string memory (as the array will shrink which could and would lead to memory leaks)
+ if (NewSize < DimensionSize) and (TypeID = TYPE_STRING_id) Then
+ Begin
+  Mem    := Data + NewSize*TypeSize;
+  MemEnd := Data + MemSize;
+
+  While (Mem < MemEnd) Do
+  Begin
+   if (Mem^ <> nil) Then
+    VM^.VMStringList.Dispose(Mem^);
+
+   Inc(Mem);
+  End;
+ End;
+
+ // compute new size
+ MemSize := NewSize * TypeSize;
+
+ // reallocate memory block
+ ReallocMem(Data, MemSize);
+
+ // update other data
+ DimensionSize := NewSize;
 End;
 
 (* TMArray.GCMark *)

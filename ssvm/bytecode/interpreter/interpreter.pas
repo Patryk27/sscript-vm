@@ -49,6 +49,7 @@ Unit Interpreter;
  Procedure op_ARGET1(const VM: PVM);
  Procedure op_ARCRT(const VM: PVM);
  Procedure op_ARLEN(const VM: PVM);
+ Procedure op_ARRES(const VM: PVM);
  Procedure op_STRSET(const VM: PVM);
  Procedure op_STRGET(const VM: PVM);
  Procedure op_STRLEN(const VM: PVM);
@@ -94,6 +95,7 @@ Unit Interpreter;
   @op_ARGET1,
   @op_ARCRT,
   @op_ARLEN,
+  @op_ARRES,
   @op_STRSET,
   @op_STRGET,
   @op_STRLEN
@@ -1571,6 +1573,27 @@ Begin
 
 Fail:
  InvalidArgumentsException(VM, [arrayReference, arrayLength]);
+End;
+
+{ ARRES (reg/stvl/mem arrayReference, reg/stvl/mem int newLength) }
+Procedure op_ARRES(const VM: PVM);
+Var arrayReference, newLength: TMixedValue;
+    DimSize                  : uint32;
+
+    ArrayPnt: TMArray;
+Begin
+ With VM^ do
+ Begin
+  // read parameters
+  arrayReference := Bytecode.read_param;
+  newLength      := Bytecode.read_param;
+
+  // fetch pointer
+  ArrayPnt := TMArray(CheckObject(getReference(arrayReference)));
+
+  // resize
+  ArrayPnt.Resize(getInt(newLength));
+ End;
 End;
 
 { STRSET (reg/stvl/mem string modString, int charIndex, char newValue) }

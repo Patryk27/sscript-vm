@@ -337,6 +337,9 @@ Begin
   if (isMemRef) Then
    Exit(PVMReference(MemAddr)^);
 
+  if (isStackval) Then
+   Exit(getReference(MV.Stackval^));
+
   Case Typ of
    { int, reference, callstack ref }
    mvInt, mvReference, mvCallstackRef: Exit(VMReference(Value.Int));

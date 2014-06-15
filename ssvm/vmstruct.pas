@@ -9,7 +9,7 @@ Unit VMStruct;
  Interface
  Uses VMStack, VMTypes, VMStrings, VMICall, VMExceptions, VMBytecode, BCLoader, SysUtils;
 
- Const VMVersion = '0.3.4 nightly';
+ Const VMVersion = '0.3.4';
 
  { EBackToMainException }
  Type EBackToMainException = Class(Exception);

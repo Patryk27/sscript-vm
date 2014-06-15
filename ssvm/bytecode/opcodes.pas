@@ -19,7 +19,7 @@ Unit Opcodes;
        o_strjoin,
        o_not, o_or, o_xor, o_and, o_shl, o_shr,
        o_mod,
-       o_arset, o_arset1, o_arget, o_arget1, o_arcrt,
+       o_arcrt, o_arcrt1, o_arset, o_arset1, o_arget, o_arget1,
        o_arlen, o_arres,
        o_strset, o_strget, o_strlen
       );
@@ -35,7 +35,7 @@ Unit Opcodes;
         2,
         1, 2, 2, 2, 2, 2,
         2,
-        3, 3, 3, 3, 3,
+        3, 3, 3, 3, 3, 3,
         2, 2,
         3, 3, 2
        );

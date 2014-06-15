@@ -43,11 +43,12 @@ Unit Interpreter;
  Procedure op_SHL(const VM: PVM);
  Procedure op_SHR(const VM: PVM);
  Procedure op_MOD(const VM: PVM);
+ Procedure op_ARCRT(const VM: PVM);
+ Procedure op_ARCRT1(const VM: PVM);
  Procedure op_ARSET(const VM: PVM);
  Procedure op_ARSET1(const VM: PVM);
  Procedure op_ARGET(const VM: PVM);
  Procedure op_ARGET1(const VM: PVM);
- Procedure op_ARCRT(const VM: PVM);
  Procedure op_ARLEN(const VM: PVM);
  Procedure op_ARRES(const VM: PVM);
  Procedure op_STRSET(const VM: PVM);
@@ -89,11 +90,12 @@ Unit Interpreter;
   @op_SHL,
   @op_SHR,
   @op_MOD,
+  @op_ARCRT,
+  @op_ARCRT1,
   @op_ARSET,
   @op_ARSET1,
   @op_ARGET,
   @op_ARGET1,
-  @op_ARCRT,
   @op_ARLEN,
   @op_ARRES,
   @op_STRSET,
@@ -1116,6 +1118,120 @@ Fail:
  InvalidArgumentsException(VM, [reg, param]);
 End;
 
+{ ARCRT (reg/stvl/mem arrayReference, int arrayType, const int dimensionCount) }
+Procedure op_ARCRT(const VM: PVM);
+Var arrayReference, arrayType, dimensionCount: TMixedValue;
+    SizeArray                                : TIndexArray;
+
+    ArrayObj: TSSVMArray;
+    I       : uint32;
+Label Fail;
+Begin
+ With VM^ do
+ Begin
+  // read parameters
+  arrayReference := Bytecode.read_param;
+  arrayType      := Bytecode.read_param;
+  dimensionCount := Bytecode.read_param;
+
+  // read dimension sizes
+  SetLength(SizeArray, getInt(dimensionCount));
+  For I := 0 To High(SizeArray) Do
+   SizeArray[I] := getInt(Stack.Pop);
+
+  // create array
+  ArrayObj := TSSVMArray.Create(VM, getInt(arrayType), SizeArray);
+
+  // save result if register
+  if (arrayReference.isReg) Then
+  Begin
+   if (arrayReference.Typ = mvReference) Then
+    Regs.r[arrayReference.RegIndex] := ArrayObj Else
+    goto Fail;
+  End Else
+
+  // save result if stackval
+  if (arrayReference.isStackval) Then
+  Begin
+   With arrayReference do
+   Begin
+    Stackval^.Typ       := mvReference;
+    Stackval^.Value.Int := VMIReference(ArrayObj);
+   End;
+  End Else
+
+  // save result if memref
+  if (arrayReference.isMemRef) Then
+  Begin
+   PPointer(arrayReference.MemAddr)^ := ArrayObj;
+  End Else
+
+  // fail otherwise
+  Begin
+   goto Fail;
+  End;
+
+  Exit;
+ End;
+
+Fail:
+ InvalidArgumentsException(VM, [arrayReference, arrayType, dimensionCount]);
+End;
+
+{ ARCRT1 (reg/stvl/mem arrayReference, int arrayType, int dimensionSize) }
+Procedure op_ARCRT1(const VM: PVM);
+Var arrayReference, arrayType, dimensionSize: TMixedValue;
+
+    ArrayObj: TSSVMArray;
+    I       : uint32;
+Label Fail;
+Begin
+ With VM^ do
+ Begin
+  // read parameters
+  arrayReference := Bytecode.read_param;
+  arrayType      := Bytecode.read_param;
+  dimensionSize  := Bytecode.read_param;
+
+  // create array
+  ArrayObj := TSSVMArray.Create(VM, getInt(arrayType), getInt(dimensionSize));
+
+  // save result if register
+  if (arrayReference.isReg) Then
+  Begin
+   if (arrayReference.Typ = mvReference) Then
+    Regs.r[arrayReference.RegIndex] := ArrayObj Else
+    goto Fail;
+  End Else
+
+  // save result if stackval
+  if (arrayReference.isStackval) Then
+  Begin
+   With arrayReference do
+   Begin
+    Stackval^.Typ       := mvReference;
+    Stackval^.Value.Int := VMIReference(ArrayObj);
+   End;
+  End Else
+
+  // save result if memref
+  if (arrayReference.isMemRef) Then
+  Begin
+   PPointer(arrayReference.MemAddr)^ := ArrayObj;
+  End Else
+
+  // fail otherwise
+  Begin
+   goto Fail;
+  End;
+
+  Exit;
+ End;
+
+Fail:
+ InvalidArgumentsException(VM, [arrayReference, arrayType, dimensionSize]);
+End;
+
 { ARSET (reg/stvl/mem arrayReference, int indexCount, newValue) }
 Procedure op_ARSET(const VM: PVM);
 Var arrayReference, indexCount, newValue: TMixedValue;
@@ -1288,67 +1404,6 @@ Begin
 
 Fail:
  InvalidArgumentsException(VM, [arrayReference, indexId, outValue]);
-End;
-
-{ ARCRT (reg/stvl/mem arrayReference, int arrayType, const int dimensionCount) }
-Procedure op_ARCRT(const VM: PVM);
-Var arrayReference, arrayType, dimensionCount: TMixedValue;
-    SizeArray                                : TIndexArray;
-
-    ArrayObj: TSSVMArray;
-
-    I: uint32;
-Label Fail;
-Begin
- With VM^ do
- Begin
-  // read parameters
-  arrayReference := Bytecode.read_param;
-  arrayType      := Bytecode.read_param;
-  dimensionCount := Bytecode.read_param;
-
-  // read dimension sizes
-  SetLength(SizeArray, getInt(dimensionCount));
-  For I := 0 To High(SizeArray) Do
-   SizeArray[I] := getInt(Stack.Pop);
-
-  // create array
-  ArrayObj := TSSVMArray.Create(VM, getInt(arrayType), SizeArray);
-
-  // save result if register
-  if (arrayReference.isReg) Then
-  Begin
-   if (arrayReference.Typ = mvReference) Then
-    Regs.r[arrayReference.RegIndex] := ArrayObj Else
-    goto Fail;
-  End Else
-
-  // save result if stackval
-  if (arrayReference.isStackval) Then
-  Begin
-   With arrayReference do
-   Begin
-    Stackval^.Typ       := mvReference;
-    Stackval^.Value.Int := VMIReference(ArrayObj);
-   End;
-  End Else
-
-  // save result if memref
-  if (arrayReference.isMemRef) Then
-  Begin
-   PPointer(arrayReference.MemAddr)^ := ArrayObj;
-  End Else
-
-  // fail otherwise
-  Begin
-   goto Fail;
-  End;
-
-  Exit;
- End;
-
-Fail:
- InvalidArgumentsException(VM, [arrayReference, arrayType, dimensionCount]);
 End;
 
 { ARLEN (reg/stvl/mem arrayReference, reg/stvl/mem int arrayLength) }

@@ -9,21 +9,19 @@ Unit GarbageCollector;
  Interface
  Uses Classes, SysUtils, FGL, VMStruct, VMObjects;
 
- Const ObjectListCount = 1; // Number of object allocation lists; keep in mind that the higher number you put here, the higher amount of threads will be executed during the GC's mark stage (1 object list = 1 thread) and that doesn't mean it will be any faster. In fact, more than 2 sweeping-threads will most likely just slow down everything.
-
  Type TObjectList = specialize TFPGList<TSSVMObject>;
 
  { TGarbageCollector }
  Type TGarbageCollector =
       Class
        Private
-        ObjectLists: Array[1..ObjectListCount] of TObjectList;
-
         VM         : PVM;
         MemoryLimit: uint32;
 
+        ObjectList, NewObjectList: TObjectList;
+
        Private
-        Procedure Mark(const ObjectList: TObjectList);
+        Procedure Mark;
         Procedure Sweep;
 
        Public
@@ -42,58 +40,11 @@ Unit GarbageCollector;
  Implementation
 Uses VMStack;
 
-{ TGCSweepWorker }
-Type TGCSweepWorker =
-     Class(TThread)
-      Private
-      ObjectList: TObjectList;
-      isWorking : Boolean;
-
-      Public
-       Constructor Create(const fObjectList: TObjectList);
-
-      Protected
-       Procedure Execute; override;
-      End;
-
-(* TGCSweepWorker.Create *)
-Constructor TGCSweepWorker.Create(const fObjectList: TObjectList);
-Begin
- ObjectList := fObjectList;
- isWorking  := True;
-
- inherited Create(False);
-End;
-
-(* TGCSweepWorker.Execute *)
-Procedure TGCSweepWorker.Execute;
-Var I, ObjectCount: int32;
-Begin
- isWorking := True;
-
- ObjectCount := ObjectList.Count;
- I           := 0;
-
- While (I < ObjectCount) Do
- Begin
-  if (not ObjectList[I].isMarked) Then
-  Begin
-   ObjectList[I].Free;
-   ObjectList[I] := nil;
-  End;
-
-  Inc(I);
- End;
-
- isWorking := False;
-End;
-
-// -------------------------------------------------------------------------- //
 (* TGarbageCollector.Mark *)
 {
  Does the "mark" stage of GC.
 }
-Procedure TGarbageCollector.Mark(const ObjectList: TObjectList);
+Procedure TGarbageCollector.Mark;
 
   { TryToMark }
   Procedure TryToMark(const Address: Pointer);
@@ -105,19 +56,22 @@ Procedure TGarbageCollector.Mark(const ObjectList: TObjectList);
   End;
 
 Var Obj: TSSVMObject;
-    I  : Integer;
+    I  : int32;
 Begin
- For Obj in ObjectList Do
-  Obj.isMarked := False;
+ // unmark all objects
+ For I := 0 To ObjectList.Count-1 Do
+  ObjectList[I].isMarked := False;
 
- if (VM^.StackPos^ > 0) Then // traverse the stack, if it's not empty
+ // traverse the stack
+ if (VM^.StackPos^ > 0) Then
  Begin
   For I := 0 To VM^.StackPos^-1 Do
    if (VM^.Stack[I].Typ = mvReference) Then
     TryToMark(Pointer(VM^.Stack[I].Value.Int));
  End;
 
- For I := Low(VM^.Regs.r) To High(VM^.Regs.r) Do // check the reference registers
+ // check the reference registers
+ For I := Low(VM^.Regs.r) To High(VM^.Regs.r) Do
   TryToMark(VM^.Regs.r[i]);
 End;
 
@@ -126,47 +80,23 @@ End;
  Does the "sweep" stage of GC.
 }
 Procedure TGarbageCollector.Sweep;
-Var Workers: Array[1..ObjectListCount] of TGCSweepWorker;
-    I      : uint8;
-
-  { isWorking }
-  Function isWorking: Boolean;
-  Var I: uint8;
-  Begin
-   Result := False;
-
-   For I := Low(Workers) To High(Workers) Do
-    if (Workers[I].isWorking) Then
-     Exit(True);
-  End;
-
-  { CreateNewList }
-  Procedure CreateNewList(var ObjectList: TObjectList);
-  Var NewList: TObjectList;
-      I      : Integer;
-  Begin
-   NewList := TObjectList.Create;
-
-   For I := 0 To ObjectList.Count-1 Do // usually creating an entire new list is faster than removing elements from the previous one (especially when a lot of objects were removed during the sweep stage).
-    if (ObjectList[I] <> nil) Then
-     NewList.Add(ObjectList[I]);
-
-   ObjectList.Free;
-   ObjectList := NewList;
-  End;
-
+Var Tmp: TObjectList;
+    I  : int32;
 Begin
- For I := Low(Workers) To High(Workers) Do
-  Workers[I] := TGCSweepWorker.Create(ObjectLists[I]);
+ // remove unwanted objects
+ For I := 0 To ObjectList.Count-1 Do
+ Begin
+  if (ObjectList[I].isMarked) Then
+   NewObjectList.Add(ObjectList[I]) Else
+   ObjectList[I].Free;
+ End;
 
- While (isWorking) Do; // wait while workers are sweeping memory
+ // swap lists
+ ObjectList.Clear;
 
- For I := Low(Workers) To High(Workers) Do
-  Workers[I].Free;
-
- // create new lists
- For I := Low(ObjectLists) To High(ObjectLists) Do
-  CreateNewList(ObjectLists[I]);
+ Tmp           := ObjectList;
+ ObjectList    := NewObjectList;
+ NewObjectList := Tmp;
 End;
 
 (* TGarbageCollector.Create *)
@@ -176,10 +106,10 @@ Begin
  VM          := fVM;
  MemoryLimit := fMemoryLimit;
 
- For I := Low(ObjectLists) To High(ObjectLists) Do
-  ObjectLists[I] := TObjectList.Create;
+ ObjectList    := TObjectList.Create;
+ NewObjectList := TObjectList.Create;
 
- VM^.WriteLog('GC instance created - %d objects list(s) allocated.', [Length(ObjectLists)]);
+ VM^.WriteLog('GC instance created.');
 End;
 
 (* TGarbageCollector.Destroy *)
@@ -187,23 +117,25 @@ End;
  Frees all the objects registered by the GC and then frees itself.
 }
 Destructor TGarbageCollector.Destroy;
-Var List: TObjectList;
-    Obj : TSSVMObject;
-    Mem : uint32;
+Var Mem: uint32;
+    I  : int32;
 Begin
+ // log
  VM^.WriteLog('GC is about to be destroyed - %d objects left to free...', [getObjectsCount]);
 
+ // get memory status
  Mem := GetFPCHeapStatus.CurrHeapFree;
 
- For List in ObjectLists Do
- Begin
-  For Obj in List Do
-   Obj.Free;
-  List.Free;
- End;
+ // destroy objects and the object list
+ For I := 0 To ObjectList.Count-1 Do
+  ObjectList[I].Free;
+ ObjectList.Free;
+ NewObjectList.Free;
 
+ // update memory status
  Mem := GetFPCHeapStatus.CurrHeapFree - Mem;
 
+ // log
  VM^.WriteLog('Freed %d kB of memory (%d bytes), destroying GC instance...', [Mem div 1024, Mem]);
 End;
 
@@ -212,18 +144,12 @@ End;
  Puts an object instance on the list.
 }
 Procedure TGarbageCollector.PutObject(const Obj: TSSVMObject);
-Var List: TObjectList;
-    I   : uint8;
 Begin
+ // check memory status
  VM^.CheckMemory;
 
- List := ObjectLists[Low(ObjectLists)];
-
- For I := Low(ObjectLists)+1 To High(ObjectLists) Do
-  if (ObjectLists[I].Count < List.Count) Then // choose the list with the least number of elements
-   List := ObjectLists[I];
-
- List.Add(Obj);
+ // put object on the list
+ ObjectList.Add(Obj);
 End;
 
 (* TGarbageCollector.FindObject *)
@@ -233,11 +159,7 @@ End;
 Function TGarbageCollector.FindObject(const Obj: TSSVMObject): Boolean;
 Var List: TObjectList;
 Begin
- Result := False;
-
- For List in ObjectLists Do
-  if (List.IndexOf(Obj) > -1) Then
-   Exit(True);
+ Result := (ObjectList.indexOf(Obj) > 0);
 End;
 
 (* TGarbageCollector.DoGarbageCollection *)
@@ -248,28 +170,31 @@ Procedure TGarbageCollector.DoGarbageCollection;
 Var List: TObjectList;
     Mem : uint32;
 Begin
+ // log
  VM^.WriteLog('Doing garbage collection...');
 
- For List in ObjectLists Do
-  Mark(List);
-
+ // get memory status
  Mem := GetFPCHeapStatus.CurrHeapFree;
+
+ // stage 1: mark
+ Mark();
+
+ // stage 2: sweep
  Sweep();
+
+ // update memory status
  Mem := GetFPCHeapStatus.CurrHeapFree - Mem;
 
+ // log
  VM^.WriteLog('Freed %d kB of memory', [Mem div 1024]);
 End;
 
 (* TGarbageCollector.getObjectsCount *)
 {
- Returns number of objects on the lists.
+ Returns number of objects on the list.
 }
 Function TGarbageCollector.getObjectsCount: uint32;
-Var List: TObjectList;
 Begin
- Result := 0;
-
- For List in ObjectLists Do
-  Result += uint32(List.Count);
+ Result := ObjectList.Count;
 End;
 End.

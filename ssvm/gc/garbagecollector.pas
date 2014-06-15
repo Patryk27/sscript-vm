@@ -159,7 +159,7 @@ End;
 Function TGarbageCollector.FindObject(const Obj: TSSVMObject): Boolean;
 Var List: TObjectList;
 Begin
- Result := (ObjectList.indexOf(Obj) > 0);
+ Result := (ObjectList.indexOf(Obj) >= 0);
 End;
 
 (* TGarbageCollector.DoGarbageCollection *)
